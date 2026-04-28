@@ -1,0 +1,95 @@
+{
+  "_comment": "5-day investigation cycle for the Linnehan subtherapeutic INR thread. Cross-bucket (results_followup → secure_chat → patient_call), cross-source (system → nurse → outside_clinician → patient). Time tokens are resolved at load time by lib/state/investigations.js so the demo always reads as fresh.",
+  "id": "investigation_linnehan_001",
+  "patientId": "linnehan_sample_001",
+  "title": "Subtherapeutic INR on adjusted warfarin dose",
+  "clinicalConcern": "INR 1.6 on day 3 post-dose-reduction. AFib stroke risk vs hematoma re-bleed risk requires balancing.",
+  "createdAt": "<days-ago:5 07:14>",
+  "lastActivityAt": "<minutes-ago:30>",
+  "status": "open",
+  "touchpoints": [
+    {
+      "id": "tp_linnehan_001_lab",
+      "kind": "lab_result",
+      "bucket": "results_followup",
+      "occurredAt": "<days-ago:5 07:14>",
+      "summary": "INR 1.6 (goal 2.0–3.0) — subtherapeutic",
+      "sourceActor": "system",
+      "data": {
+        "test": "INR",
+        "loinc": "6301-6",
+        "value": 1.6,
+        "unit": "",
+        "refRange": "2.0–3.0",
+        "flag": "low",
+        "priorValue": 2.4,
+        "priorDate": "<days-ago:7 07:14>"
+      }
+    },
+    {
+      "id": "tp_linnehan_001_enc1",
+      "kind": "encounter",
+      "bucket": "results_followup",
+      "occurredAt": "<days-ago:5 08:02>",
+      "summary": "Nurse triage of subtherapeutic INR",
+      "sourceActor": "nurse",
+      "sourceDetail": "Brandon, RN",
+      "data": {
+        "encounterId": "linnehan_encounter_001",
+        "notes": "Generated 12 chart-aware questions. Top concerns: missed doses since last check, GI symptoms or new bleeding, vitamin-K dietary changes, new interacting meds. Paused pending home health input via Secure Chat."
+      }
+    },
+    {
+      "id": "tp_linnehan_001_sc_out",
+      "kind": "secure_chat",
+      "bucket": "secure_chat",
+      "occurredAt": "<days-ago:5 08:15>",
+      "summary": "Outbound: question to Amanda Trahan re: dose adherence",
+      "sourceActor": "nurse",
+      "sourceDetail": "Brandon, RN",
+      "data": {
+        "threadId": "sc_linnehan_001",
+        "message": "Hi Amanda — Mr. Linnehan has INR of 1.6 today (subtherapeutic, goal 2-3). On his current adjusted regimen 5mg M/W/F and 2.5mg the rest. Any chance you can confirm he's taking the doses correctly during your visits? Also any new bleeding or unusual bruising? Thanks!"
+      }
+    },
+    {
+      "id": "tp_linnehan_001_sc_in",
+      "kind": "secure_chat",
+      "bucket": "secure_chat",
+      "occurredAt": "<days-ago:5 14:32>",
+      "summary": "Inbound: Amanda Trahan reply re: dose adherence",
+      "sourceActor": "outside_clinician",
+      "sourceDetail": "Amanda Trahan, home health RN",
+      "data": {
+        "threadId": "sc_linnehan_001",
+        "message": "Hi! Was there yesterday for safety check. Pillbox showed Tuesday and Wednesday doses missing — he said he had a \"stomach bug\" Tuesday-Wednesday and didn't take them. Otherwise pillbox correct. No new bruising, hematoma site healed completely. Will reinforce taking with food when stomach is off. Want me to call you next visit Friday?"
+      }
+    },
+    {
+      "id": "tp_linnehan_001_enc2",
+      "kind": "encounter",
+      "bucket": "patient_call",
+      "occurredAt": "<days-ago:3 10:18>",
+      "summary": "Patient call — confirm missed doses, plan recheck",
+      "sourceActor": "nurse",
+      "sourceDetail": "Brandon, RN",
+      "data": {
+        "encounterId": "linnehan_encounter_002",
+        "notes": "Patient confirmed 2 missed doses Tue/Wed during stomach bug, otherwise on schedule. Resumed regimen Thursday. Plan: recheck INR in 3–4 days. No bleeding, hematoma resolved."
+      }
+    },
+    {
+      "id": "tp_linnehan_001_enc3",
+      "kind": "encounter",
+      "bucket": "patient_call",
+      "occurredAt": "<minutes-ago:30>",
+      "summary": "Recheck call queued — confirm INR draw and dose since last contact",
+      "sourceActor": "nurse",
+      "sourceDetail": "Brandon, RN",
+      "data": {
+        "encounterId": "linnehan_encounter_003",
+        "notes": "Investigation reopened to plan next outreach. Confirm patient went for INR draw today as planned, document any further missed doses, prepare SBAR for Dr. Ballinger if recheck is still subtherapeutic."
+      }
+    }
+  ]
+}

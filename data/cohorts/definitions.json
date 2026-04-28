@@ -1,0 +1,10 @@
+[
+  {
+    "id": "inr_reminder",
+    "name": "INR Reminder",
+    "clinicalRationale": "Warfarin patients overdue for INR check or trending out of therapeutic range",
+    "criteriaDescription": "Patients on active warfarin with last INR >14 days ago, OR INR trending toward sub/supratherapeutic across 3 measurements, OR no clinic contact in >90 days",
+    "ownedBy": "nurse",
+    "reviewCadenceDays": 7
+  }
+]

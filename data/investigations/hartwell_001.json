@@ -1,0 +1,57 @@
+{
+  "_comment": "Bidirectional MyChart round-trip: provider Result Note in (6:51 AM) → outbound MyChart message (10:07 AM) → patient inbound reply (10:15 AM) — bucket transition from results_followup to pt_advice_request mid-investigation. Time tokens resolved at load time to keep the demo fresh.",
+  "id": "investigation_hartwell_001",
+  "patientId": "hartwell_sample_001",
+  "title": "Statin follow-up: LDL response + AST elevation",
+  "clinicalConcern": "LDL 95 (target met). AST 42 (mildly elevated, ULN 35) on new atorvastatin 40 mg started ~6 weeks ago — likely med-related, monitor.",
+  "createdAt": "<today 06:51>",
+  "lastActivityAt": "<today 10:15>",
+  "status": "open",
+  "touchpoints": [
+    {
+      "id": "tp_hartwell_001_resnote",
+      "kind": "result_note",
+      "bucket": "results_followup",
+      "occurredAt": "<today 06:51>",
+      "summary": "Dr. Ballinger Result Note: 5-question follow-up template",
+      "sourceActor": "provider",
+      "sourceDetail": "Dr. Ballinger",
+      "data": {
+        "encounterId": "hartwell_encounter_001",
+        "subject": "Statin follow-up — LDL/LFT recheck",
+        "body": "Pt with new statin 6 weeks ago. LDL 95 (target met), AST 42 (mildly up, ULN 35). Please follow up:\n\n1. Any muscle aches/cramps/weakness?\n2. Tea-colored urine or unusual fatigue?\n3. New supplements, OTC meds, or dietary changes since starting?\n4. Tolerating once-daily evening dose?\n5. Reinforce continue current dose, recheck LFTs in 6 weeks.\n\nDraft MyChart message and Nurse Note for my cosign."
+      }
+    },
+    {
+      "id": "tp_hartwell_001_mc_out",
+      "kind": "mychart_outbound",
+      "bucket": "pt_advice_request",
+      "occurredAt": "<today 10:07>",
+      "summary": "Outbound MyChart: lipid + LFT follow-up",
+      "sourceActor": "nurse",
+      "sourceDetail": "Brandon, RN (cosigned by Dr. Ballinger)",
+      "data": {
+        "messageId": "mc_hartwell_outbound_001",
+        "subject": "Your recent lab results — quick check-in",
+        "body": "Hi! Your recent lab results are back from a couple of weeks ago and Dr. Ballinger wanted me to follow up with you about a few quick things now that you've been on the new cholesterol pill (atorvastatin) for about six weeks.\n\nGreat news first: your bad cholesterol number (LDL) came down nicely to 95, which is in the goal range — the medicine is doing its job.\n\nOne of the liver enzymes we check (called AST) was a tiny bit above the normal range (42, normal goes up to 35). This is a fairly common thing we see when someone starts a new cholesterol medicine, and it's usually not a problem. We'd just like to keep an eye on it.\n\nA few quick questions for you, please reply when you have a moment:\n\n1. Any new muscle aches, cramps, or weakness anywhere — especially in your legs or back?\n2. Have you noticed your urine looking darker than usual (tea-colored), or felt unusually tired?\n3. Have you started any new vitamins, supplements, or over-the-counter medicines since you started the cholesterol pill?\n4. Are you taking the pill once a day in the evening, and is that working for you?\n\nFor now, please keep taking the medicine the same way. We'll plan to recheck a small blood test in about 6 weeks just to make sure the liver number trends back down. No need to come in.\n\nThanks!\nBrandon, RN — Riverbend Cardiology",
+        "status": "sent",
+        "readAt": "<today 10:07>"
+      }
+    },
+    {
+      "id": "tp_hartwell_001_mc_in",
+      "kind": "mychart_inbound",
+      "bucket": "pt_advice_request",
+      "occurredAt": "<today 10:15>",
+      "summary": "Inbound MyChart: patient reply (introduces turmeric supplement)",
+      "sourceActor": "patient",
+      "sourceDetail": "Diane Hartwell",
+      "data": {
+        "messageId": "mc_hartwell_inbound_001",
+        "replyTo": "mc_hartwell_outbound_001",
+        "subject": "Re: Your recent lab results — quick check-in",
+        "body": "Thanks for checking in! No muscle aches at all, urine looks normal, energy is fine. I started a turmeric supplement about 3 weeks ago for my joints — is that okay with the cholesterol med? I take it once at night. Happy to keep going on the cholesterol med."
+      }
+    }
+  ]
+}
