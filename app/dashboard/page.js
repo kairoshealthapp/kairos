@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Inbox, Link2, Users, ArrowUpRight, ShieldCheck, ShieldAlert, FileText } from "lucide-react";
+import { Inbox, Link2, Users, ArrowUpRight, ShieldCheck, ShieldAlert, FileText, Mail, Printer, Search } from "lucide-react";
 import { listEncounters } from "@/lib/fhir/encounters";
 import { getInvestigations } from "@/lib/state/investigations";
 import {
@@ -12,6 +12,9 @@ import {
 } from "@/lib/state/cohorts";
 import { getPreVisitTask } from "@/lib/state/preVisitTasks";
 import { getPriorAuthRequest } from "@/lib/state/priorAuth";
+import { getReferralMessages } from "@/lib/state/referralMessages";
+import { ACTIONABLE_CATEGORIES } from "@/lib/types/referralMessage";
+import { getIncomingFaxes } from "@/lib/state/incomingFaxes";
 import { getBundleForPatient } from "@/lib/fhir/mockData";
 import { reconcileMedications, attachResolutions } from "@/lib/clinical/medRecEngine";
 import {
@@ -63,6 +66,9 @@ function encounterPill(e) {
   }
   if (e.type === "prior_auth_inquiry") {
     return { label: "Prior Auth", tone: "patient" };
+  }
+  if (e.type === "anticoagulation_visit") {
+    return { label: "Anticoag Visit · Fax", tone: "neutral" };
   }
   return { label: e.type, tone: "neutral" };
 }
@@ -154,6 +160,30 @@ export default function DashboardPage() {
     .map((def) => ({ def, snapshot: getCohortSnapshot(def.id) }))
     .filter((c) => c.snapshot);
 
+  // Cross-cutting surface counts.
+  const referralMessages = getReferralMessages();
+  const referralActionableCount = referralMessages.filter(
+    (m) =>
+      m.classification &&
+      ACTIONABLE_CATEGORIES.includes(m.classification.category) &&
+      m.status !== "actioned" &&
+      m.status !== "dismissed"
+  ).length;
+  const incomingFaxes = getIncomingFaxes();
+  const faxAwaitingCount = incomingFaxes.filter(
+    (f) => f.status === "awaiting_review"
+  ).length;
+  const cohortAlertCount = cohortCards.reduce(
+    (acc, c) =>
+      acc +
+      (c.snapshot?.summary?.overdueCount || 0) +
+      (c.snapshot?.summary?.unseenCount || 0),
+    0
+  );
+  const activeInvestigationCount = investigations.filter(
+    (i) => i.status !== "closed"
+  ).length;
+
   // Inbox shows only encounters that still need attention. Completed encounters
   // remain reachable via the investigation timeline they belong to.
   const encounters = allEncounters.filter((e) => e.status !== "complete");
@@ -190,17 +220,46 @@ export default function DashboardPage() {
           </h1>
           <p className="text-[15px] text-fg-muted">Active encounters</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Link
-            href="/integrity-log"
-            className="inline-flex items-center gap-1.5 rounded-button px-3 py-1.5 text-[13px] text-fg-muted transition-colors hover:bg-muted hover:text-fg"
-          >
-            <ShieldCheck size={14} strokeWidth={1.75} />
-            Your integrity log
-          </Link>
-          <DashboardClock />
-        </div>
+        <DashboardClock />
       </header>
+
+      <nav className="flex flex-wrap items-center gap-2">
+        <NavPill
+          href="#cohort-surveillance"
+          icon={Users}
+          label="Cohorts"
+          count={cohortAlertCount}
+          tone={cohortAlertCount > 0 ? "low" : "muted"}
+        />
+        <NavPill
+          href="#"
+          icon={Search}
+          label="Investigations"
+          count={activeInvestigationCount}
+          tone="muted"
+          inert
+        />
+        <NavPill
+          href="/referral-inbox"
+          icon={Mail}
+          label="Referral Inbox"
+          count={referralActionableCount}
+          tone={referralActionableCount > 0 ? "accent" : "muted"}
+        />
+        <NavPill
+          href="/fax-inbox"
+          icon={Printer}
+          label="Fax Inbox"
+          count={faxAwaitingCount}
+          tone={faxAwaitingCount > 0 ? "low" : "muted"}
+        />
+        <NavPill
+          href="/integrity-log"
+          icon={ShieldCheck}
+          label="Integrity Log"
+          tone="muted"
+        />
+      </nav>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Stat label="Active encounters" value={counts.total} />
@@ -210,7 +269,7 @@ export default function DashboardPage() {
       </div>
 
       {cohortCards.length > 0 && (
-        <section className="space-y-3">
+        <section id="cohort-surveillance" className="space-y-3">
           <h2 className="text-[11px] font-semibold uppercase tracking-[0.05em] text-fg-muted">
             Cohort surveillance
           </h2>
@@ -391,5 +450,32 @@ function Stat({ label, value }) {
         {value}
       </div>
     </div>
+  );
+}
+
+const NAV_BADGE_TONE = {
+  accent: "bg-[color:var(--color-accent-soft)] text-[color:var(--color-accent)]",
+  low: "bg-[color:var(--color-flag-low-soft)] text-[color:var(--color-flag-low)]",
+  muted: "bg-muted text-fg-muted",
+};
+
+function NavPill({ href, icon: Icon, label, count, tone = "muted", inert }) {
+  const Wrapper = inert ? "span" : Link;
+  const wrapperProps = inert ? {} : { href };
+  return (
+    <Wrapper
+      {...wrapperProps}
+      className={`inline-flex items-center gap-1.5 rounded-pill border border-line-faint bg-surface px-3 py-1.5 text-[12px] transition-colors ${inert ? "cursor-default text-fg-faint" : "text-fg-muted hover:border-line hover:bg-muted hover:text-fg"}`}
+    >
+      <Icon size={13} strokeWidth={1.75} />
+      <span>{label}</span>
+      {count !== undefined && count !== null && (
+        <span
+          className={`ml-1 inline-flex min-w-[1.25rem] justify-center rounded-pill px-1.5 py-0.5 text-[10px] font-medium ${NAV_BADGE_TONE[tone] || NAV_BADGE_TONE.muted}`}
+        >
+          {count}
+        </span>
+      )}
+    </Wrapper>
   );
 }

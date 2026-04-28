@@ -533,3 +533,37 @@ Future Claude sessions read this file at session start before any code is writte
 **Dashboard cross-cutting nav updates.** Tysander's encounter card carries the discrepancy count badge (severity-weighted color, high-severity callout); Castellanos's card shows the PA stage pill + days-active + transitions count. Pill labels added for `pre_visit_med_rec` and `prior_auth_inquiry` encounter types. Inbox count is now 7 active encounters (Whitfield, Marbury, Linnehan recheck, Hartwell, Halberg, Tysander, Castellanos).
 
 **Architectural impact.** v5 closes the integrity-and-state primitives layer. The full primitive stack is now: chart-aware inquiry (v2) → investigation links across time (v3) → cohort surfaces populations on schedule (v4) → protocol applies guidelines as data (v4) → pre-visit task captures the before-the-room phase (v5) → documentation integrity records what was actually reviewed (v5) → state-machine workflow tracks durable cross-encounter PA (v5). The pitch frame ("Kairos is one primitive applied to ten surfaces, not ten features") is now structurally complete; every remaining workflow on the build roadmap is a composition of these primitives, not a new architectural piece.
+
+
+---
+
+## Recently Completed — v6 (2026-04-27)
+
+**Referral Message classifier (Sonnet 4.6).** `lib/types/referralMessage.js` defines `ReferralMessage` and `ReferralClassification` (8 categories: 3 informational, 4 actionable, 1 ambiguous "unable_to_classify"). `lib/state/referralMessages.js` is the in-memory store with `setClassification`, `appendOverride`, `markStatus`, `markManyStatus`. `lib/prompts/referralClassifier.js` runs against `claude-sonnet-4-6` (NOT Opus — first non-Opus clinical surface; the choice is per-route, not global) with a default-to-suppression system prompt. Classifier route at `/api/classify-referral` accepts both single (`{ messageId }`) and batch (`{ messages: [...] }`) shapes; batch uses sequential concurrency 3 to avoid blasting the API. Override route at `/api/classify-referral/override` is pure state mutation, no model call, requires an override note.
+
+**Referral Inbox surface.** `/referral-inbox` is the dense triage screen. 80 synthetic messages with realistic distribution (32 informational_ack, 18 informational_appointment_confirmation, 14 informational_records_received, 4 actionable_scheduling, 4 actionable_clinical_question, 3 actionable_info_request, 3 actionable_referral_response_pending, 2 unable_to_classify) — only ~14 are actionable. UI has a 200px category sidebar, "Actionable (all)" default filter, dense one-line message rows with confidence dots, hover-expand body, override modal, bulk-select toolbar with "Mark as read" / "Send to nurse review" / "Reclassify selected", and "Reclassify all" + "Mark all informational as read" header buttons. Triage screens optimize for scan rate, not aesthetics.
+
+**Override + reclassify flow.** Overrides set `humanOverridden: true` with the nurse's note attached to the classification. Accuracy metric on the inbox = % of messages where `humanOverridden=false`. Per-message reclassify button + bulk reclassify selected button both call the Sonnet classifier and persist results back to state.
+
+**IncomingFax data model.** `lib/types/incomingFax.js` defines `IncomingFax` + `ExtractedField` (bbox-tagged) + `PatientMatchCandidate` (matchScore + matchSignals + mismatchSignals + requiresHumanConfirmation). Status lifecycle: `awaiting_review → auto_matched | human_matched → processed`, plus `rejected`. `lib/state/incomingFaxes.js` provides `resolveFaxPatient` (auto vs nurse), `rejectFax`, `markFaxProcessed`.
+
+**OCR mock + match engine.** v6 mocks the OCR step — assume extraction has happened and the model output (with confidence + bbox) is the input. `lib/clinical/patientMatch.js` exports `scorePatientMatch` with weighted signals: exact_name 0.4, mrn_match 0.5, dob_match 0.3, name_phonetic 0.15, name_partial 0.10. Penalties: dob_mismatch -0.4, name_variant -0.10. `requiresHumanConfirmation` triggers on top score < 0.85, ambiguity (top two within 0.15), or any mismatch signal. `lib/clinical/faxProcessor.js` auto-flips home_inr clean matches to `auto_matched` and creates Anticoagulation Visit encounters via `createEncounterFromFax`. `lib/state/faxEncounters.js` holds runtime-created encounters; `lib/fhir/encounters.js` `listEncounters()` folds them into the dashboard inbox so a freshly-processed fax shows up immediately.
+
+**Patient match scoring (worked examples).** Linnehan clean fax: score 0.97, no human confirmation needed → auto_matched on processor pass. Marbury ambiguous fax (name OCR'd as "Marb_ry" at 0.62 confidence): two candidates score 0.72 and 0.58, both flagged requiresHumanConfirmation → status stays awaiting_review until nurse confirms. Linnehan DOB-conflict fax: single candidate scores 0.55 with `dob_mismatch` mismatch signal → still requires human confirmation.
+
+**Fax Inbox surface.** `/fax-inbox` two-column layout. Left sidebar (300px): all faxes sorted by receivedAt desc with type/status pills + page count + relative time. Right detail panel: extracted-fields table with confidence dots, match-candidate cards with match/mismatch signal pills, "Confirm match" primary on top candidate / ghost on others, "Reject fax" ghost-red. After confirming a home_inr match, `/api/fax-resolve` creates the encounter and the UI shows a green inline confirmation with a "View encounter" link to the dashboard. 8 synthetic faxes seeded covering the realistic distribution (clean auto-match, no-system-match, ambiguous, DOB-conflict, outside records, lab result, already-processed historical, junk/spam).
+
+**Dashboard cross-cutting nav row.** Replaced the single integrity-log link in the dashboard header with a `<nav>` row of pill links: Cohorts (overdue+unseen count), Investigations (active count), Referral Inbox (actionable count), Fax Inbox (awaiting review count), Integrity Log. Encounter inbox stays the primary visual focus; cross-cutting surfaces are nav, not primary content. Added `encounterPill` case for `anticoagulation_visit` → "Anticoag Visit · Fax" so fax-derived encounters render correctly when they land in the inbox.
+
+**v6 completes the new-primitives roadmap.** The architecture now has 9 primitives:
+1. Chart-aware inquiry (v2)
+2. Investigation links across time (v3)
+3. Cohort surveillance (v4)
+4. Protocol library (v4)
+5. Pre-visit phase capture (v5)
+6. Documentation integrity / attestation log (v5)
+7. State-machine workflow / PA tracking (v5)
+8. **High-volume classification / noise suppression (v6)** — Referral Inbox
+9. **OCR / analog input ingestion (v6)** — Fax Inbox
+
+**Every remaining workflow on the 18-stream build roadmap (Devereaux orthostatic hypotension, Pemberton 5-question template, Caldwell rapid-cycle hypokalemia, Okafor Coumadin dosing, secure chat threading) is a composition of these 9 primitives, not a new architectural piece.** The pitch frame ("Kairos is one primitive applied to ten surfaces, not ten features") is structurally complete; the next phase of the build is wiring those compositions, then the FHIR write-back layer, then nurse shadow validation.
