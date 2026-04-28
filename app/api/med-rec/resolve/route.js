@@ -1,7 +1,4 @@
-import {
-  getPreVisitTask,
-  updateDiscrepancyResolution,
-} from "@/lib/state/preVisitTasks";
+import { appendDiscrepancyResolutionServer } from "@/lib/state/preVisitTasks";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,19 +21,17 @@ export async function POST(request) {
   if (!["dismissed", "escalated", "updated"].includes(action)) {
     return Response.json({ error: `Unknown action: ${action}` }, { status: 400 });
   }
-  const task = getPreVisitTask(taskId);
-  if (!task) {
-    return Response.json({ error: `No task ${taskId}` }, { status: 404 });
+
+  try {
+    const resolution = await appendDiscrepancyResolutionServer(taskId, discrepancyId, {
+      action,
+      actor: actor || "ma_demo",
+      actorRole: actorRole || "MA",
+      reason: reason || "",
+      timestamp: new Date().toISOString(),
+    });
+    return Response.json({ resolution });
+  } catch (err) {
+    return Response.json({ error: err.message }, { status: 500 });
   }
-
-  const resolution = {
-    action,
-    actor: actor || "ma_demo",
-    actorRole: actorRole || "MA",
-    reason: reason || "",
-    timestamp: new Date().toISOString(),
-  };
-  updateDiscrepancyResolution(taskId, discrepancyId, resolution);
-
-  return Response.json({ resolution });
 }

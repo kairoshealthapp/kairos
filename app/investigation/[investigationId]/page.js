@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { fhirClient } from "@/lib/fhir/client";
 import { assembleChartContext } from "@/lib/fhir/chartContext";
-import { getInvestigation } from "@/lib/state/investigations";
+import { getInvestigationServer } from "@/lib/state/investigations";
 import { summarizeInvestigation } from "@/lib/types/investigation";
 import ChartContext from "@/components/ChartContext";
 import InvestigationTimeline from "@/components/InvestigationTimeline";
@@ -42,7 +42,7 @@ const BUCKET_LABEL = {
 
 export default async function InvestigationPage({ params }) {
   const { investigationId } = await params;
-  const investigation = getInvestigation(investigationId);
+  const investigation = await getInvestigationServer(investigationId);
 
   if (!investigation) {
     return (

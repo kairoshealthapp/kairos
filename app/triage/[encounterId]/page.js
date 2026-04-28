@@ -11,7 +11,7 @@ import {
 import ChartContext from "@/components/ChartContext";
 import BPLogTable from "@/components/BPLogTable";
 import TriageWorkspace from "@/components/TriageWorkspace";
-import { getPreVisitTask } from "@/lib/state/preVisitTasks";
+import { getPreVisitTaskServer } from "@/lib/state/preVisitTasks";
 import { getPriorAuthRequest } from "@/lib/state/priorAuth";
 import { reconcileMedications, attachResolutions } from "@/lib/clinical/medRecEngine";
 import { getBundleForPatient } from "@/lib/fhir/mockData";
@@ -58,7 +58,7 @@ export default async function TriagePage({ params }) {
       };
 
   const patientName = chartContext?.patient?.name;
-  const investigation = findInvestigationForEncounter(getInvestigations(), encounterId);
+  const investigation = findInvestigationForEncounter(await getInvestigationsServer(), encounterId);
   const investigationSummary = investigation ? summarizeInvestigation(investigation) : null;
 
   // For results_followup encounters that have a Result Note touchpoint linked
@@ -104,7 +104,7 @@ export default async function TriagePage({ params }) {
   // compute discrepancies on the server and pass them to the workspace.
   let medRecBundle = null;
   if (meta?.type === "pre_visit_med_rec" && meta.preVisitTaskId) {
-    const task = getPreVisitTask(meta.preVisitTaskId);
+    const task = await getPreVisitTaskServer(meta.preVisitTaskId);
     if (task) {
       const bundle = getBundleForPatient(patientId);
       const epicMeds = (bundle?.entry || [])

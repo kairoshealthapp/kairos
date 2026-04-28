@@ -610,3 +610,56 @@ After v6 the architecture has 9 primitives. Every remaining workflow on the 18-s
 - `app/dashboard/page.js` (cross-cutting nav row, anticoagulation_visit pill, badge counts)
 
 Dev server tested on :3000 — all 10 verified routes 200. No git push.
+
+## v7 — Persistence migration to Supabase (kairos_* multi-tenant prefix)
+
+### What v7 persists
+- Investigations + touchpoints (multi-day clinical threads)
+- Evidence captured per encounter
+- SBAR versions (history retained per encounter)
+- Attestation log (documentation integrity audit trail)
+- Pre-visit tasks + discrepancy resolutions (one row per resolution click)
+
+### What v7 does NOT persist (by design)
+- Patient/encounter base data — still mocked from JSON (real Epic FHIR is v8+)
+- Cohort snapshots — recomputed each session
+- Today's referral message inbox + incoming fax queue — short-lived
+- Protocol library — static config
+
+### Architecture decisions
+- **Multi-tenant DB**: reused the existing SupperMates Supabase project (inxtnmsjlvpdofxovbpb) instead of creating a dedicated kairos project. Supabase free-tier limits the firekraker org owner to 2 projects, both already in use (HVC, SupperMates). All Kairos tables prefixed `kairos_*` to coexist with the SupperMates dk_/lo_/sm_ tenants. Migration to a dedicated project documented as deferred technical debt — see CONTEXT.md "Known Migration Debt".
+- **Server-side writes only**: all Supabase writes flow through Next.js API routes using the service role key. The browser client uses the anon key with RLS-enforced denial (no policies defined → anon sees zero rows).
+- **TEXT primary keys for stable demo URLs**: `kairos_investigations.id`, `kairos_investigation_touchpoints.id`, `kairos_pre_visit_tasks.id` are TEXT (not UUID) so seeded IDs like `investigation_linnehan_001` survive across reseeds and URL bookmarks remain stable.
+- **Smart trigger**: `kairos_touch_last_activity` uses `GREATEST(last_activity_at, NEW.occurred_at)` so historical touchpoint seeds don't get clobbered to NOW().
+
+### Phases
+- **Phase 1** — `supabase/migrations/0001_init.sql` defines 7 tables, indexes, RLS, last-activity trigger. Applied via Supabase MCP. Migrations 0002 (TEXT PK conversion), 0003 (smarter trigger), 0004 (TEXT PK for pre_visit_tasks + attestation display columns) followed as schema iterated.
+- **Phase 2** — `lib/supabase/client.js` exports `getServerClient()` (server-only, hard error if called from browser) and `getBrowserClient()`. `@supabase/supabase-js` installed.
+- **Phase 3** — `lib/state/investigations.js` rewritten with `getInvestigationsServer/getInvestigationServer/createInvestigationServer/addTouchpointServer`. API routes: `/api/investigations`, `/api/investigations/[id]`, `/api/investigations/[id]/touchpoints`. `scripts/seed-investigations.js` (idempotent, --force) loads Linnehan + Hartwell investigations + 9 touchpoints. Dashboard, investigation page, and triage page converted to async server components.
+- **Phase 4** — `lib/state/evidence.js`, `lib/state/sbarVersions.js`. API routes for evidence (GET/POST list, DELETE single) and SBAR versions (GET). `/api/regenerate-sbar` requires `encounterId` and persists each generation as new row with monotonic version. `TriageWorkspace.js` hydrates from API on mount with optimistic UI + rollback. `SBARDraft.js` accepts `initialVersions` + `encounterId`. `scripts/seed-evidence.js` seeds Whitfield (3 family/outside_clinician items) + Marbury (3 patient items).
+- **Phase 5** — `lib/state/attestations.js`. `/api/med-rec/attest` writes through Supabase. New `GET /api/attestations/me` (hardcoded actor `ma_demo` until v8 auth). `/integrity-log` page is async server component reading directly from `getAttestationsForActorServer`.
+- **Phase 6** — `lib/state/preVisitTasks.js` rewritten. `discrepancyResolutions` map on the returned task is reconstructed from `kairos_discrepancy_resolutions` rows (latest-write-wins per discrepancy_id, full audit history retained). API routes: `/api/pre-visit-tasks/[id]`, `/api/pre-visit-tasks/[id]/resolutions`. `/api/med-rec/resolve` writes through. Dashboard `buildMedRecBadge` made async, pre-computes via `Promise.all`. `scripts/seed-pre-visit-tasks.js` loads Cosgrove's 17-med task.
+- **Phase 7** — `scripts/verify-phase7.mjs` exercises round-trips on all 7 tables: 14/14 checks pass. RLS posture confirmed (anon → 0 rows). Service-role-key exposure scan in `components/` returned 0 matches. Name-scrub regression: 0 matches for any of the 13 scrubbed terms. `npm run build` passes.
+
+### Files added
+- `supabase/migrations/0001_init.sql`, `0002_text_ids_for_investigations.sql`, `0003_smarter_last_activity_trigger.sql`, `0004_attestation_and_pvt_text_ids.sql`
+- `lib/supabase/client.js`
+- `lib/state/evidence.js`, `lib/state/sbarVersions.js`, `lib/state/attestations.js`
+- `app/api/investigations/route.js`, `app/api/investigations/[id]/route.js`, `app/api/investigations/[id]/touchpoints/route.js`
+- `app/api/encounters/[encounterId]/evidence/route.js`, `app/api/encounters/[encounterId]/evidence/[evidenceId]/route.js`, `app/api/encounters/[encounterId]/sbar/route.js`
+- `app/api/attestations/me/route.js`
+- `app/api/pre-visit-tasks/[id]/route.js`, `app/api/pre-visit-tasks/[id]/resolutions/route.js`
+- `scripts/seed-investigations.js`, `scripts/seed-evidence.js`, `scripts/seed-pre-visit-tasks.js`
+- `scripts/verify-supabase.mjs`, `scripts/verify-phase3.mjs`, `scripts/verify-phase7.mjs`
+
+### Files replaced/modified
+- `lib/state/investigations.js` (full replacement — Supabase-backed)
+- `lib/state/preVisitTasks.js` (full replacement — Supabase-backed)
+- `package.json` (+@supabase/supabase-js)
+- `.env.local` (Supabase keys appended; reuses SupperMates project)
+- `app/api/regenerate-sbar/route.js`, `app/api/med-rec/attest/route.js`, `app/api/med-rec/resolve/route.js` (write through Supabase)
+- `components/TriageWorkspace.js` (API-backed evidence + SBAR state)
+- `components/SBARDraft.js` (initialVersions + encounterId props)
+- `app/integrity-log/page.js`, `app/dashboard/page.js`, `app/investigation/[investigationId]/page.js`, `app/triage/[encounterId]/page.js` (async server components, await server helpers)
+
+No git push.

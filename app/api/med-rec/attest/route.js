@@ -1,4 +1,4 @@
-import { appendAttestationLog } from "@/lib/state/preVisitTasks";
+import { appendAttestationServer } from "@/lib/state/attestations";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,20 +26,22 @@ export async function POST(request) {
     return Response.json({ error: "taskId and clickType are required" }, { status: 400 });
   }
 
-  const entry = {
-    id: `att_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
-    taskId,
-    encounterId: encounterId || null,
-    patientId: patientId || null,
-    patientName: patientName || "",
-    actor: actor || "ma_demo",
-    actorRole: actorRole || "MA",
-    clickType,
-    clickedAt: new Date().toISOString(),
-    earned: (unresolvedCount ?? 0) === 0,
-    discrepancyCount: discrepancyCount ?? 0,
-    unresolvedCount: unresolvedCount ?? 0,
-  };
-  appendAttestationLog(entry);
-  return Response.json({ entry });
+  try {
+    const entry = await appendAttestationServer({
+      taskId,
+      encounterId: encounterId || null,
+      patientId: patientId || null,
+      patientName: patientName || "",
+      actor: actor || "ma_demo",
+      actorRole: actorRole || "MA",
+      clickType,
+      clickedAt: new Date().toISOString(),
+      earned: (unresolvedCount ?? 0) === 0,
+      discrepancyCount: discrepancyCount ?? 0,
+      unresolvedCount: unresolvedCount ?? 0,
+    });
+    return Response.json({ entry });
+  } catch (err) {
+    return Response.json({ error: err.message }, { status: 500 });
+  }
 }
