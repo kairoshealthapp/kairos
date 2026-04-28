@@ -1,0 +1,506 @@
+# Kairos — Project Context & Persistent Memory
+
+**Last updated:** 2026-04-27 (evening session — full ClinAI chat history integrated)
+**Maintained by:** Brandon (and future Claude sessions)
+**Purpose:** Single source of truth for Kairos. Read this at the start of every Kairos chat and every Claude Code session in the kairos repo. If anything in this file conflicts with assumptions a Claude session is making, this file wins.
+
+---
+
+## Identity & Naming
+
+- **Kairos** is the product name. Public-facing on `[kairoshealth.app](http://kairoshealth.app)`. This is what's in the Riverbend application.
+- **"ClinAI"** was the internal working name during planning sessions (ClinAI #1, #2, #3, #4 Planning). Same product, same architecture, same vision. Kairos and ClinAI refer to the same thing.
+- All future chats and code use **Kairos**. The "ClinAI" name is retired.
+
+---
+
+## CRITICAL: Kairos is NOT HVC. Do not bring HVC patterns into Kairos.
+
+This is the single most important section of this document. HVC and Kairos look superficially similar (both clinical AI, both for outpatient cardiology, both built by Brandon). They are architecturally opposite products and share zero infrastructure.
+
+**HVC patterns that DO NOT apply to Kairos:**
+
+1. **"Human as integration layer."** HVC works because Brandon copy-pastes chart context into the app, then copy-pastes output back into Epic. The nurse IS the data bridge. **Kairos rejects this entirely.** Kairos has bidirectional Epic FHIR integration. The nurse is the air traffic controller (cognitive authority who approves what flies), never the data bridge that moves it. Manual data movement is the defect surface Kairos eliminates.
+
+2. **Shared firekraker-monorepo infrastructure.** HVC lives alongside DebtKiller, LifeOS, etc. with shared `.env.master`, shared Vercel team, shared GitHub repo. **Kairos does not.** Kairos lives in its own private repo (`firekraker1272/kairos`), will eventually have its own Vercel team, dedicated Supabase project, dedicated Anthropic API key. Legal/IP cleanliness is non-negotiable from day one.
+
+3. **Cloudflare Worker as the API surface.** HVC is a Cloudflare Worker. **Kairos is a Next.js application** with proper Epic OAuth flow, FHIR client library, persistent investigation objects in a real database. Different shape entirely.
+
+4. **Anti-reversion architecture (banner blocks, post-processors).** HVC needs this because Sonnet ignores instruction-based rules intermittently and Claude Code edits unrelated logic. Kairos uses production-quality reasoning chains, structured outputs, and validated FHIR responses. Different reliability strategy.
+
+5. **Prompt-based clinical rules with named const blocks.** This is HVC's solution to LLM unreliability in a thin Worker. Kairos has typed schemas, evidence accumulation, versioned regeneratable artifacts, and explicit confidence calibration. Don't drop HVC's "DO NOT MODIFY" const blocks into Kairos.
+
+6. **Hardcoded clinical workflows (Coumadin preprocessor, MyChart attribution fixer).** HVC's workflows are baked into the Worker code. Kairos's workflows are data — cohort definitions, alert rules, investigation object schemas — not hardcoded prompts.
+
+**If a Claude session starts pattern-matching to HVC, stop and re-read this section.** The most common slip is in the early build phase when the prompt structure looks similar.
+
+---
+
+## The North Star
+
+> **Kairos automates the cognitive work nurses do today and removes the nurse from the data-movement loop entirely. The nurse becomes the cognitive authority who approves, denies, or modifies — not the data bridge who copies, pastes, or retypes.**
+
+Brandon's exact framing: *"Remove me from the loop. I just am there to make phone calls when needed, authorize suggestions etc. It needs to do all the research, data collection, note writing. Nurse just approves/denies/modifies as needed."*
+
+Every architectural decision in Kairos is judged against this north star.
+
+---
+
+## Foundational Thesis
+
+Kairos is an automated clinical workflow platform with bidirectional Epic FHIR integration. The systems talk to each other. The nurse never copies, pastes, or retypes anything.
+
+**Customer:** outpatient clinics on Epic.
+**Primary user:** outpatient RNs (Phase 1 nurse-only; MA/front desk/provider in later phases).
+**Beachhead specialty:** cardiology (proof-of-difficulty).
+**Generalization:** workflow shape is constant across specialties; specialty knowledge is a swappable module (acknowledged in post-mortem as multi-quarter investment per specialty, not configuration switch).
+**Surfaces:** nurse dashboard for cross-cutting work + Epic-embedded sidebar for single-encounter work. Both, not one.
+
+---
+
+## THE ARCHITECTURAL PRIMITIVE
+
+> **Kairos Phase 1 is not 7-10 separate features. It is ONE primitive — *Chart-Aware Structured Clinical Inquiry* — applied to multiple surfaces.**
+
+The same six-step pattern handles every workflow stream:
+
+1. **Read chart context** (automatic FHIR pull from Epic)
+2. **Generate structured inquiry artifact** (questions to ask, decision tree to evaluate, protocol to apply — informed by *that specific patient's* chart)
+3. **Capture human-collected evidence as structured data** (patient answers from MyChart pre-visit forms, kiosk tablets, voice transcription, OCR'd faxes, caller reports — all source-tagged: patient / family / outside_clinician / chart)
+4. **Regenerate output artifact against accumulated evidence** (versioned, prior reasoning chain preserved, never overwritten)
+5. **Nurse approves, edits, or rejects**
+6. **Write back to Epic on approval** (structured note, In Basket message, structured data field — all written via FHIR with the nurse as the signing user)
+
+This is the same loop for phone triage, MyChart messages, results follow-up, refills, Coumadin management, BP log analysis, pre-visit med rec, INR reminders, and referral message classification. Different inputs, different output formats, same primitive.
+
+**Pitch frame:** "Kairos is one primitive applied to ten surfaces, not ten features."
+
+---
+
+## The 10 Workflow Streams
+
+### Reactive streams (Phase 1)
+
+1. **Phone triage** — chart-aware question generation, bidirectional Q&A capture, evidence-accumulating SBAR. Whitfield workflow is the canonical proof point.
+2. **Results Follow-Up** — Ballinger sends Result Note + clinical questions → Kairos pulls patient context, drafts the patient outreach AND the structured forwarder note simultaneously, nurse approves both. Pemberton pattern.
+3. **Rx Request** — Surescripts refill protocol auto-applied (seen last month + future appt scheduled → 90 days/3 refills, dx-associated, cosign-routed to Ballinger). MAs are supposed to work this box but rarely do; pre-staging makes it 90 seconds instead of 5 minutes.
+4. **Patient Call** — phone-origin clinical signal, two sub-patterns:
+   - **Patient/family-origin** (Devereaux BP log) — answers route through patient (MyChart or callback), patient-friendly framing
+   - **Outside-clinician-origin** (Whitfield via Renee VA RN, Linnehan via Amanda Trahan home health RN) — peer-to-peer SBAR framing, higher inherent acuity, real-time stakes
+   - **Acuity is partially encoded in caller identity itself** — Kairos detects this signal and shifts framing accordingly.
+5. **Pt Advice Request** — patient-initiated MyChart messages OR replies to nurse-initiated outreach. Bidirectional. Diane Hartwell's full round-trip (Ballinger Result Note 6:51 AM → MyChart outreach → patient reply 10:15 AM) crossed three buckets in three hours.
+6. **Home INR Faxes** — mdINR paper faxes, 5-10/day. Pure manual transcription today. **Highest-friction analog input** — front desk pulls from fax, walks paper to nurse, nurse manually creates Anticoagulation - Warfarin Visit encounter, types result + history. Strongest "save the clinic from paper" demo. OCR pipeline target.
+7. **Secure Chat** — Epic's HIPAA Slack-equivalent, real-time, multi-party threaded messaging tied to MRN. Cross-clinic clarifications, outside records reconciliation, real-time coordination. Threads tie to persistent investigation objects (e.g., Amanda Trahan's note about Linnehan shows up in Linnehan's investigation, not as isolated message).
+8. **Pre-Visit Medication Reconciliation** — first pre-visit (not post-encounter) workflow. Patient enters meds via MyChart pre-visit task / kiosk tablet / paper-with-OCR. Kairos compares to Epic med list, surfaces discrepancies for the rooming MA and the nurse. **The defect surface here is documentation fraud at the workflow-step level** — see "MA Attestation Theater" section below.
+
+### Proactive / cohort streams (Phase 1.5 — surveillance, not inbox processing)
+
+9. **INR Reminder** — proactive cohort surveillance. Epic auto-reminds which patients are *due* for an INR check. Kairos surfaces overdue cohort + drift detection + un-seen patients. Different primitive: **patient cohort monitoring**, not single-encounter processing.
+10. **Referral Message classification** — high volume (108/day observed 4/27), mostly informational acknowledgments. Kairos auto-classifies and surfaces only the actionable ones. **Noise suppression** primitive.
+
+The **proactive vs reactive distinction is architecturally significant.** Phase 1 is reactive (process inbox events). Phase 1.5 adds the monitoring/alerting layer that runs on schedule.
+
+---
+
+## Canonical Patient Examples (the worked dataset)
+
+These are the real encounters Brandon documented across ClinAI #1-4 Planning. Anonymized synthetic versions of these become the Kairos mock dataset. Each one proves a different aspect of the architecture.
+
+### Phone triage — Whitfield (canonical proof point, currently built)
+- 76yo male, CHF + recurrent pleural effusion + COPD + aortic stenosis
+- Lasix discontinued 3/1/26 by cardiology; current concern: SOB worse than baseline, weight up 1.5 lb
+- Outside-clinician inbound: Renee (VA RN) called 11:01 AM
+- Wife answered the questions when Brandon called back
+- 31 chart-aware questions generated, organized by organ system
+- Evidence-accumulating SBAR with prior reasoning chain preserved across three calls
+- **Proves:** chart-aware question generation, outside-clinician peer-to-peer framing, evidence regeneration, answer source tagging (wife = family)
+
+### Phone triage — Marbury (canonical Phase 1 demo target)
+- Paper BP log, handwritten, handed to Brandon
+- HVC produced clinical signal: *"SBP remains predominantly in 130s-150s with intermittent readings >150 since labetalol initiation; persistent elevation despite five-agent regimen"*
+- Manual workflow: ~8-12 minutes. With Kairos: ~30 seconds review.
+- **Proves:** OCR pipeline + trend analysis + five-agent regimen failure detection
+
+### Coumadin — Okafor (Tier 2 dosing reasoning)
+- Three-factor dosing rationale (INR, dose history, recent labs)
+- Lab interpretation: K+ 6.1, hold spironolactone, recheck Thursday
+- Med rec embedded in the dosing decision
+- **Proves:** Coumadin cohort panel pattern + lab-driven med adjustment + protocol-linked safety chain
+
+### Patient Call (patient-origin) — Devereaux (orthostatic hypotension)
+- Raw home BP readings: 96/63, 101/64 — intermittent hypotensive readings post-midodrine start
+- Pattern recognition from raw readings, not summary
+- 3-day cycle, MyChart inactive → phone path
+- **Proves:** pattern recognition from raw clinical data + MyChart-vs-phone routing
+
+### Coumadin subtherapeutic — Linnehan (multi-day, multi-source investigation)
+- 5-day cycle including Secure Chat with home health RN Amanda Trahan
+- Cross-clinic, cross-source, cross-day
+- **Proves:** persistent investigation object across multiple buckets and days + Secure Chat integration
+
+### Hypokalemia — Caldwell
+- K+ 3.3, ~2-hour cycle
+- MyChart active path → triggered Ballinger re-route → 24-hr urine order placed → new round-trip starting
+- **Proves:** rapid-cycle clinical investigation that spawns derivative investigations
+
+### Results Follow-Up — Pemberton (5-question template)
+- Ballinger's Result Note triggered structured 5-question follow-up
+- **Proves:** structured clinical inquiry as a primitive, even when nurse isn't the inquiry author
+
+### Pt Advice Request bidirectional — Diane Hartwell (full MyChart round-trip)
+- 6:51 AM: Ballinger sends Result Note → nurse basket
+- 7:03 AM: Nurse pulls med list + last visit (Skarsdale Feb 2026), pastes into HVC
+- HVC writes TWO outputs: patient-friendly MyChart message + clinical Nurse Note (Epic addendum) with `[Brandon: verify when atorvastatin initiated]` flag
+- 10:07 AM: Patient reads. 10:15 AM: Patient replies via MyChart → lands in Pt Advice Request bucket (bucket transition!)
+- **Proves:** dual-output pattern (clinical synthesis + patient-friendly reply from same source) + bucket-crossing investigations + verify-flag pattern for nurse cognitive offload
+
+### MA rooming — Tysander Marisol (the attestation theater proof point)
+- 50+ medications visible on med list
+- 6 "Mark as Reviewed" buttons in 9 minutes (Leah RN's timestamps: 6:41, 6:48, 6:50)
+- Five sections (allergies, medications, history, social/family, violence) are pure attestation buttons; only vital signs has actual data entry
+- **Proves:** the institution-side ROI story (see MA Attestation Theater section)
+
+### Pre-procedure med management — Sharon Halberg (protocol-linked safety)
+- Pre-stress-test med holds: Levothyroxine continue, Metoprolol hold 24h before, Clonidine hold 24h before, both resume after
+- Initially missed Clonidine — caught by going back to other nurse (human-to-human verification)
+- **Proves:** protocol library hardens the safety chain — Kairos with a protocol library would have flagged the Clonidine omission on the first draft
+
+### Pharmacy / prior auth — Jean Castellanos (Repatha)
+- Frustrated multi-issue MyChart message: where is Repatha order, sent Walgreens Springfield address, offers to send again
+- Pharmacy benefit / prior authorization workflow
+- **Proves:** PA tracking is a distinct workflow with its own state machine — likely a Phase 2 specialized surface, but the primitive still applies
+
+### Other patients flagged for future detail
+- Bramwell, Sutherland, Norquist — referenced in PHI awareness, less detailed
+- These get filled out as the worked dataset expands across build sessions
+
+---
+
+## Daily Volume & Cognitive Load
+
+Real numbers from Brandon's 4/27 inbox snapshot at 11:25 AM:
+
+| Bucket | Active | Of Total |
+|---|---|---|
+| Results Follow-Up | 11 | 18 |
+| Rx Request | 4 | 12 |
+| Patient Call | 9 | 30 |
+| Pt Advice Request | 0 | 10 |
+| INR Reminder | 0 | 14 |
+| MyChart Notifications | 0 | 7 |
+| Outside Messages | 0 | 5 |
+| Referral Message | 0 | 108 |
+
+**~206 active inbox items, ~101 unread/new across the day so far.** Earlier 55-70 encounters/day estimate was a serious undercount. Even excluding the 108 Referral Messages (mostly informational), real cognitive load is ~100 items/day requiring real clinical processing.
+
+---
+
+## The MA Attestation Theater Finding (institution-side ROI story)
+
+The single most important institutional pitch finding from Brandon's 90 days at Riverbend:
+
+- **25-35% of patients have duplicate or questionable medications on their active med list** (HVC catches them as a byproduct of clinical reasoning)
+- MAs click "Medications Reviewed" in seconds despite 50+ medication lists — Tysander Marisol review showed 6 attestation buttons in 9 minutes for a patient with 50+ meds
+- Epic logs the click but **cannot distinguish the click from the action**
+- The MA workflow is structurally **attestation theater, not clinical work**
+
+**Kairos's institutional value here is not workflow efficiency. It is documentation integrity.**
+
+The Kairos pre-visit med rec primitive captures the patient's actual answer independently (via MyChart pre-visit task / kiosk tablet / paper-with-OCR). When the MA clicks "reviewed," Kairos already knows whether discrepancies exist. The "Mark as Reviewed" click only fires when:
+- The MA confirmed no discrepancies exist (and Kairos logs *what* was confirmed)
+- The MA resolved the discrepancies (and Kairos logs the resolution)
+
+Epic still gets its "medications reviewed" click. But Kairos knows whether the click was earned or fraudulent, because it captured the patient's input independently and can detect the gap.
+
+**The discrepancy surface is the personal cognitive aid for the individual nurse — never management dashboards in v1.** Per the post-mortem: aggregate compliance dashboards are a Phase 2 product requiring nursing leadership co-design before shipping. Discrepancy detection visible to management = "snitch tool" = nursing rebellion.
+
+**Pitch implication:** Kairos can prove the 25-35% med-rec defect rate with Epic's own audit trail data via FHIR query, before Kairos is even installed. That's a defensible, hospital-data-backed metric for the discovery-deliverable / free-audit pitch motion.
+
+---
+
+## Three-Role Architecture (the full clinic OS)
+
+```
+FRONT DESK (Phase 3)
+├── Kiosk check-in
+├── Twilio voice agent (replaces front desk phone-answering)
+└── Routes patient calls → nurse Patient Call basket
+
+PROVIDER (Phase 2)        PROVIDER (Phase 2 alt mode)
+├── Mode 1: live ordering ├── Mode 2: async notes
+├── Replaces Devin      ├── Replaces DAX subscription
+├── Live transcription    ├── Ambient transcription
+├── Real-time order       ├── Post-visit SOAP draft
+│   extraction            ├── Orders extracted on review
+└── Pends orders during   └── 
+    visit
+
+         ↓ (orders flow downstream)              
+
+NURSE WORKSTATION (Phase 1 — building first)
+├── 8 reactive streams (Results / Coumadin / Rx / Patient Call /
+│   Pt Advice / Home INR / Secure Chat / Pre-visit Med Rec)
+└── 2 proactive streams (INR Reminder / Referral classification)
+```
+
+**Replaced/automated jobs in this clinic OS:**
+- Front desk phone-answering (Twilio agent)
+- Devin (live ordering scribe) → Provider Mode 1
+- DAX subscription (~$369-600/provider/mo) → Provider Mode 2
+- Both nurses for Dr. E + Brandon for Ballinger → Nurse Workstation handles 80-90% of bucket work
+
+**Not replaced (intentionally):**
+- The providers themselves (clinical decision-making)
+- The nurses themselves (clinical judgment, patient relationships, edge cases the AI flags)
+- Front desk humans (in-person greeting, complex insurance, anything kiosk can't handle)
+
+This is a **labor-cost story**, not just a productivity story. Kairos eliminates entire SaaS line items (DAX) AND restructures clinical labor so 80-90% of nurse bucket work is automated.
+
+---
+
+## Three Knowledge Layers
+
+Kairos integrates three distinct knowledge sources (HVC currently has only #1):
+
+1. **Patient knowledge** — FHIR pull from Epic (chart data, current state, history)
+2. **Provider preferences** — per-clinician patterns (Ballinger's recheck intervals, Skarsdale's referral preferences, Marston abbreviations, etc.). Learned from prior notes. Personalized clinical drafts.
+3. **Clinical guidelines** — ACC/AHA cardiology protocols, drug interaction databases, anticoagulation rules, pre-procedure med management protocols, billing code logic (HCC, E/M, CCM 99490). The protocol-linked safety chain that catches the Sharon Halberg Clonidine omission.
+
+The **specialty-specific knowledge module** is the swappable layer for generalization. Cardiology guidelines are Phase 1; family practice guidelines are a future module; nephrology is another. Same architecture, different module.
+
+---
+
+## Post-Mortem Convergent Failure Modes (from ClinAI #3 stress test)
+
+These are HIGH-CONFIDENCE risks identified by ChatGPT and Gemini independently. Not theoretical — they change the build plan:
+
+1. **Epic write-back is political, not technical.** Hospital CIOs refuse to grant write-scopes to external vendors. Fix: Kairos must be Riverbend internal tool (or co-owned with explicit IP carve-outs), not external company selling to Riverbend. AI Informatics Specialist position is the vehicle. Legal structure pending Riverbend response.
+
+2. **Clinical accuracy is the whole game.** One near-miss attributed to Kairos changes nurse behavior from "approve by default" to "scrutinize everything" and time-savings collapse. Validation methodology: shadow 100 real nurse tasks, measure error rate vs human baseline, threshold <1% clinically meaningful error before any expansion.
+
+3. **Accountability surface as currently scoped will get the product killed.** Discrepancy detection visible to management = "snitch tool" = nursing rebellion. Fix: discrepancy surfacing is personal cognitive aid for individual nurse only. Aggregate compliance dashboards are Phase 2 product requiring nursing leadership co-design before shipping.
+
+4. **The uncomfortable truth (both reviewers):** healthcare IT is built to protect liability, not clinician experience. Kairos must deliver institutional value (audit, risk, control) **through** clinician experience, not pitch clinician experience as the value itself.
+
+5. **FHIR write latency 5-9s vs Epic-native 1s.** Fix: optimistic UI with async write-back. Solvable in engineering.
+
+6. **Specialty generalization is multi-quarter per specialty, not configuration.** Be honest in roadmap.
+
+---
+
+## Build Status (as of 2026-04-27 evening)
+
+### Epic FHIR sandbox: UNBLOCKED ✓
+
+```
+App Name:           Kairos Nurse Dashboard
+App ID:             54037
+Status:             Test (sandbox-ready)
+Production Status:  Dormant — requires Epic customer site approval (political phase)
+```
+
+**Credentials:**
+```
+Non-Production Client ID:  285f1c56-244a-4550-9850-d5e7c840240a
+Production Client ID:      cc163b1d-e634-4def-a1bc-f525c10f6f7e   (won't activate until production approval)
+```
+
+**Sandbox endpoints:**
+```
+FHIR Base URL:    https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4
+OAuth Token URL:  https://fhir.epic.com/interconnect-fhir-oauth/oauth2/token
+JWKS Endpoint:    Brandon's hosted JWKS endpoint (live)
+```
+
+**27 scopes saved (R4, Patient Chart contexts):**
+- Patient (2): Read Demographics, Search Demographics
+- Encounter (2): Read Patient Chart, Search Patient Chart
+- Condition (4): Read Problems, Read Encounter Diagnosis, Search Problems, Search Encounter Diagnosis
+- MedicationRequest (2): Read Signed Medication Order, Search Signed Medication Order
+- Observation (6): Read + Search × Vitals, Labs, Core Characteristics
+- AllergyIntolerance (2): Read Patient Chart, Search Patient Chart
+- ServiceRequest (3): Read Referral, Read Orders, Search Orders
+- DiagnosticReport (2): Read Results, Search Results
+- DocumentReference (4): Read + Search × Clinical Notes, Correspondences
+
+**Deferred scopes (not standard FHIR — require proprietary Epic API later):**
+- Communication (MyChart In Basket)
+- Task (work queue)
+
+### Repo: kairos (firekraker1272/kairos, private) — scaffold complete ✓
+
+Local: `C:\Users\kents\kairos`
+
+**Tonight's progress (2026-04-27 evening session):**
+- Next.js 16.2.4 App Router scaffold (JS-only, Tailwind v4, no TypeScript)
+- `@anthropic-ai/sdk@^0.91.1` installed
+- Whitfield synthetic FHIR R4 Bundle: 18 entries, real LOINC/SNOMED/RxNorm, fictional identifiers
+- Mock FHIR client with swap-to-real Epic interface (`getPatient`, `getEncounter`, `searchConditions`, etc.)
+- Chart context assembler (`lib/fhir/chartContext.js`)
+- Chart-aware question generator with `claude-opus-4-7` (`lib/prompts/chartAwareQuestions.js`)
+- API route `/api/chart-aware-questions`
+- Triage page at `/triage/[encounterId]` with chart context + questions UI
+- Dashboard page with Whitfield encounter link
+- EvidenceCapture stubbed (next session wires Calls 2 + 3 of Whitfield workflow)
+- Env var renamed `KAIROS_ANTHROPIC_KEY` (avoids Windows-level shadowing of empty `ANTHROPIC_API_KEY`)
+- maxTokens bumped to 16000 (4000 truncated mid-JSON for 31-question generation)
+- temperature parameter removed (claude-opus-4-7 rejects it)
+
+**Verified end-to-end:**
+- 32 clinically defensible questions generated for Whitfield encounter
+- Categorized by clinical concept (handoff_context, volume_status, respiratory_cardiac_differential, cardiac_aortic_stenosis, etc.)
+- Each question has rationale tied to specific chart finding
+- Calibrated confidence language ("based on chart, consider Y" vs "patient has X")
+- Catches data-freshness concerns (labs predate Lasix d/c — flagged as stale)
+- Honors prior thoracentesis poor-tolerance note explicitly
+
+---
+
+## Repo & Infrastructure Decisions
+
+**Decision: New private repo `kairos`, NOT firekraker-monorepo.**
+
+Reasoning:
+- Legal/IP cleanliness for any future ownership transfer
+- Blast radius isolation for eventual PHI handling
+- Compliance posture for future BAAs
+- Audit trail for legal review or acquisition
+- Cost accounting via dedicated Anthropic API key
+- Avoids any risk of accidentally pushing to firekraker-monorepo and triggering kairos/ Vercel deploy during Riverbend review
+
+**Riverbend review window constraint:**
+
+Two Vercel projects exist on firekraker-monorepo:
+- `clinai` project ([clinai.firekraker.net](http://clinai.firekraker.net)) — internal tooling, harmless
+- `kairos` project — **serves `[kairoshealth.app](http://kairoshealth.app)` and `[www.kairoshealth.app](http://www.kairoshealth.app)`** — Riverbend review surface
+
+**Zero commits to `firekraker-monorepo/kairos/` until at least 2026-05-04.** Vercel auto-deploys on push to main; any deploy creates risk of changing what the reviewer sees.
+
+The new `firekraker1272/kairos` repo is the build environment. **[Localhost](http://Localhost)-only.** No Vercel project. No public URL. No deploys.
+
+**Deferred infrastructure (do not create until needed):**
+- Vercel project for kairos repo: re-evaluate ~5/4
+- Supabase project: mock data in JSON for first build slice; add Supabase when schema stabilizes
+- Dedicated Anthropic API key: using HVC Monorepo key (`KAIROS_ANTHROPIC_KEY` in `.env.local`); create dedicated key when spend tracking matters
+- Custom domain on new repo: `[kairoshealth.app](http://kairoshealth.app)` stays pointed at firekraker-monorepo/kairos/ until after Riverbend review
+
+---
+
+## Build Principles (binding for all Kairos code)
+
+1. **Production-quality output from day one.** No demo-grade outputs that we'd "fix later."
+2. **Clinical accuracy is the whole game.** Every clinical output must be defensible. Calibrated confidence and explicit uncertainty in all reasoning ("based on X and Y, consider Z" — never "patient has Z").
+3. **Discrepancy surfacing for individual nurse only.** Never management dashboards in v1. Non-negotiable.
+4. **Optimistic UI for any async operation.** Instant confirmation, background processing.
+5. **Mock data designed to swap cleanly for real FHIR responses.** Mock objects match Epic FHIR R4 response shape exactly. The day Epic unblocks production, we change a config flag, not a schema.
+6. **Versioned regeneratable artifacts.** Clinical outputs regenerate against accumulated evidence; prior reasoning chain is preserved, not overwritten.
+7. **Answer source tagging.** Patient / family / outside_clinician / chart — every captured data point.
+8. **Bidirectional integration is the architecture, not a stretch goal.** Even mocked, the data flow is two-way from day one.
+9. **Every Claude Code prompt ends with: "Update docs/[log.md](http://log.md) and any affected docs/ files. Do NOT run git push."**
+10. **Every prompt explicitly forbids importing HVC patterns.** Re-read the "Kairos is NOT HVC" section if tempted.
+
+---
+
+## Build Roadmap (workflow-by-workflow progression)
+
+The architectural primitive is the same for every workflow stream. Each session takes one stream from the canonical patient examples list and builds it end-to-end. Sessions stack — each one adds to the same repo, the same architecture, the same dashboard.
+
+| # | Session | Workflow | Patient | Status |
+|---|---------|----------|---------|--------|
+| 1 | 2026-04-27 | Phone triage (outside-clinician) | Whitfield | ✅ Built end-to-end (chart-aware questions verified clinically defensible) |
+| 2 | next | EvidenceCapture wired into Whitfield (Calls 2+3 of round-trip) | Whitfield | ⏳ EvidenceCapture stub exists; wiring queued |
+| 3 | next | SBAR regenerator on accumulated evidence | Whitfield | ⏳ Queued |
+| 4 | future | Phone triage (paper BP log) + OCR pipeline | Marbury | ⏳ Roadmapped |
+| 5 | future | Coumadin cohort + Tier 2 dosing reasoning | Okafor | ⏳ Roadmapped |
+| 6 | future | Patient Call (patient-origin) + orthostatic pattern recognition | Devereaux | ⏳ Roadmapped |
+| 7 | future | Pt Advice Request (bidirectional MyChart round-trip) + dual-output | Diane Hartwell | ⏳ Roadmapped |
+| 8 | future | Results Follow-Up + structured 5-question template | Pemberton | ⏳ Roadmapped |
+| 9 | future | Persistent investigation object across days/buckets | Linnehan | ⏳ Roadmapped |
+| 10 | future | Rapid-cycle investigation with derivative spawn | Caldwell | ⏳ Roadmapped |
+| 11 | future | Pre-visit med rec (MyChart task / kiosk / paper-OCR) | Tysander | ⏳ Roadmapped |
+| 12 | future | Pre-procedure protocol library + safety chain | Halberg | ⏳ Roadmapped |
+| 13 | future | Prior auth tracking state machine | Castellanos | ⏳ Roadmapped |
+| 14 | future | INR Reminder cohort surveillance | (cohort, not individual) | ⏳ Roadmapped |
+| 15 | future | Referral Message classification + noise suppression | (cohort) | ⏳ Roadmapped |
+| 16 | future | Home INR fax OCR pipeline | (workflow, not patient) | ⏳ Roadmapped |
+| 17 | future | Nurse dashboard (unified across all 10 streams) | — | ⏳ Roadmapped |
+| 18 | future | Persistent investigation object (cross-bucket linking) | — | ⏳ Roadmapped |
+
+**Discipline:** each session ends with a working end-to-end slice. No partial workflows that "almost work." If a session can't finish a stream, it scopes down further until it can.
+
+---
+
+## Riverbend Application Status
+
+- **Submitted:** 4/27 morning
+- **Portfolio piece referenced:** [kairoshealth.app](http://kairoshealth.app) (existing prototype in firekraker-monorepo/kairos/)
+- **HVC not mentioned.** Kairos not mentioned by name in resume. ClinAI not mentioned. Preserves all options on legal structure.
+- **Awaiting response.** Estimated review window: 1-2 weeks minimum from 4/27.
+- **Build proceeds regardless of Riverbend outcome.** Kairos is not contingent on the job.
+
+---
+
+## Open Items (carries forward)
+
+### Recently Completed (2026-04-27 evening)
+- ✅ Created new private repo `firekraker1272/kairos`
+- ✅ Local clone to `C:\Users\kents\kairos`
+- ✅ docs/[CONTEXT.md](http://CONTEXT.md) v1 created and uploaded to Claude project knowledge
+- ✅ First Claude Code prompt: scaffold + Whitfield sample + chart-aware question generator
+- ✅ Env var renamed to `KAIROS_ANTHROPIC_KEY`
+- ✅ `claude-opus-4-7` integration verified (32 clinically defensible questions for Whitfield)
+- ✅ Vercel infrastructure audited (clinai project + kairos project on monorepo, [kairoshealth.app](http://kairoshealth.app) confirmed on kairos project — frozen until 5/4)
+- ✅ Full ClinAI #1-4 chat history integrated into [CONTEXT.md](http://CONTEXT.md) v2 (this update)
+
+### Recently Completed (continued, 2026-04-27 evening)
+- ✅ Dark/light/system theme toggle, FOUC-free (anti-flash inline script in `<head>` runs before hydration; `localStorage["kairos-theme"]` persistence)
+- ✅ Linear-inspired design system — full rebuild. Inter via `next/font/google`. Tailwind v4 `@theme` token palette (canvas/surface/muted/line/fg/fg-muted/fg-faint/accent + flag-high/low/success solid+soft). Dark-mode swap via `.dark { --color-* }` redefinition (no `dark:` utility prefixes in JSX). Lucide-react icons (only new dep). Sticky 56px top bar with Kairos wordmark + theme toggle. Every existing surface (dashboard, triage, ChartContext, TriageQuestions, EvidenceCapture) rebuilt against the system. `npm run build` clean.
+- ✅ **Evidence + SBAR primitive end-to-end (the heart of the demo).** New `lib/types/evidence.js` (typedefs, `hashEvidence`, `SOURCE_META`). New `lib/prompts/sbarRegenerator.js` (system prompt enforcing inline `[chart]`/`[pt]`/`[family]`/`[outside RN: name]`/`[nurse obs]` markers, calibrated confidence, explicit "unable to assess"). New `/api/regenerate-sbar` route on Opus 4.7. New `<EvidenceCapture>` (working: source-tagged answers, question picker + freeform mode, multi-source per question, optimistic UI). New `<SBARDraft>` (versioned regeneration, evidence-hash drift detection, inline source-marker pills, `Approve & Copy` clipboard write). New `<TriageWorkspace>` lifts evidence/questions state. Whitfield encounter seeds 3 evidence items on first load (gated by encounterId). Live API test against Opus 4.7 returned a clinically defensible SBAR: every claim source-tagged, missing data named explicitly, recommendation framed for the prescribing clinician. Source palette extended with `--color-source-family` (purple) and `--color-source-clinician` (teal) tokens.
+
+### Recently Completed (continued, 2026-04-27 evening — session 5)
+- ✅ **Marbury proof point built end-to-end** — second canonical patient working in the same primitive. Synthetic FHIR Bundle (`data/patients/marbury.json`, 24 entries: 5 conditions, 5-agent antihypertensive regimen w/ labetalol started 4/13/26, recent labs incl Cr 1.4 / eGFR 48 / A1c 7.4, two cardiology consult notes). 24-day home BP log (`data/encounters/marbury_bp_log.json`) with avg 148/86, 38% ≥150, 8% ≥160, two missed-evening-dose notes, one dizzy episode, one headache. New encounter-supplementary loader (`getEncounterSupplementary`) so per-encounter inputs (BP log today, OCR'd faxes / kiosk responses tomorrow) plug in via a registered map.
+- ✅ **BP trend analysis + UI** — `lib/clinical/bpTrend.js` produces `{count, dateRange, avgSBP/DBP, pctAbove140/150/160, max/minSBP, trend ('rising'|'falling'|'stable' from linear regression on SBP), significantReadings}`. New `<BPLogTable>` component renders three-stat header (color-coded by % ≥150 amber/red bands), reading list with SBP color-coded by severity, "Show all" toggle past 8 readings, captured-from-paper-log footer (the surface that becomes the OCR ingestion path). BPLogTable lives under ChartContext in the left column of the triage page when `chartContext.bpLog` is present.
+- ✅ **SBAR + question generator pick up BP log automatically.** Chart-aware question generator already serializes the entire chart context as JSON — no prompt change needed. SBAR regenerator's `summarizeChart` extended to render the BP log into the user prompt (count, range, trend, avg, outliers).
+- ✅ **Dashboard inbox view.** `app/dashboard/page.js` rewritten: Dashboard h1 + live `<DashboardClock />` (60s tick, aligned to minute boundary). Three-stat row (Active / Awaiting nurse review / In progress). Encounter cards sorted by status (`new` first, then `in_progress`, then `complete`), within each by `receivedAt` desc. Status dot, encounter-type pill (teal "Phone · Outside RN" for Whitfield, blue "Patient Call" for Marbury — channel/origin/type-driven), relative-time timestamp. Empty state with lucide `Inbox` icon. New `lib/fhir/encounters.js` registry for the dashboard list (production swap = work-queue layer).
+- ✅ **Live verification of both encounters via Opus 4.7.** Whitfield: 32 questions + clinically defensible SBAR (already verified session 4). Marbury: 32 questions in 13 categories, rationales tied to chart specifics (missed evening doses on 4/18 + 4/21 → elevated next-morning SBP; labetalol starting 4/13; orthostatic dizziness on 4/17). SBAR identifies the **adherence gap as the proximate driver** and recommends addressing evening dose adherence *before* escalating therapy — the call a competent nurse would make, and the call you can't get from a content prompt alone.
+- ✅ **Single-primitive transferability proven.** Same architecture ran end-to-end on two opposite clinical scenarios (outside-clinician phone triage vs patient-origin in-person paper-mediated drop-in). Deltas were a new synthetic bundle, a registered supplementary data file, one new presentational component (BPLogTable), and seed-evidence text. The chart-aware question generator, evidence capture, source-tagging palette, SBAR regenerator, and approve-and-copy flow were unchanged.
+
+### Open (next session)
+- [ ] Persist evidence + SBAR versions across reload (currently in-memory `useState`). Likely a small Supabase or local-IndexedDB layer when schema stabilizes.
+- [ ] Caller-context picker at top of triage page (currently driven by encounter metadata from `getEncounterMeta`; nurse override would be useful for "patient on the line, family on speaker, outside RN added later" mid-call shifts).
+- [ ] Pemberton Results Follow-Up workflow (5-question structured template, dual-output: patient-friendly MyChart message + clinical addendum). Stretches the primitive into a different output shape.
+- [ ] OCR pipeline for paper BP log — replace the JSON-fixture path in `data/encounters/marbury_bp_log.json` with a real upload + OCR + nurse-confirm-and-edit flow.
+
+### Open (future sessions, roadmapped)
+- [ ] Workflows #4-18 per the build roadmap
+- [ ] Riverbend interview/offer outcome
+- [ ] Legal structure decision (Kairos ownership) — deferred until Riverbend clarifies
+- [ ] Migration of Riverbend prototype out of firekraker-monorepo — deferred until after 5/4
+- [ ] Devin heads-up text about HVC confidentiality
+- [ ] Phantom "hvc" Worker deletion from Cloudflare dashboard
+- [ ] Playwright MCP setup in Claude Code
+
+---
+
+## Session Memory Protocol
+
+Every Kairos chat session ends with an updated version of this file. Specifically:
+
+1. **Build Status section** updated with current sandbox/repo state
+2. **Open Items section** updated — completed items move to "Recently Completed" with date, items still open carry forward
+3. **Build Roadmap** updated — completed sessions checked off, current work clearly marked
+4. **New principles or decisions** added under appropriate section
+5. **CRITICAL: Kairos is NOT HVC section** never gets removed or shortened, only added to if new HVC patterns are caught creeping in
+
+Future Claude sessions read this file at session start before any code is written.
+
+---
+
+## Quick Reference — What to do at the start of every Kairos chat
+
+1. Read this file
+2. Check the Build Status section for current state
+3. Check the Open Items section for what carries forward
+4. Re-read the "Kairos is NOT HVC" section if any HVC pattern-matching tempts you
+5. If unsure which workflow to build, follow the Build Roadmap
+6. Proceed with Brandon's request
