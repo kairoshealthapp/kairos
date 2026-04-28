@@ -1,0 +1,276 @@
+[
+  {
+    "patientId": "cohort_inr_001",
+    "patientName": "Whitcombe",
+    "ageSex": "74F",
+    "keyData": {
+      "lastINR": 1.8,
+      "lastINRDate": "<19 days ago>",
+      "goalRange": "2.0–3.0",
+      "last3Trend": [2.4, 2.1, 1.8],
+      "daysOverdue": 5,
+      "daysSinceClinicContact": 21,
+      "indication": "AFib",
+      "currentDose": "5mg M/W/F, 2.5mg other days"
+    },
+    "flags": ["overdue", "drift"],
+    "priorityScore": 92,
+    "lastReviewedAt": null
+  },
+  {
+    "patientId": "cohort_inr_002",
+    "patientName": "Annenberg",
+    "ageSex": "68M",
+    "keyData": {
+      "lastINR": 3.6,
+      "lastINRDate": "<11 days ago>",
+      "goalRange": "2.0–3.0",
+      "last3Trend": [2.8, 3.2, 3.6],
+      "daysOverdue": 0,
+      "daysSinceClinicContact": 11,
+      "indication": "Mechanical aortic valve (goal 2.5–3.5)",
+      "currentDose": "7.5mg daily",
+      "note": "Goal range adjusted higher per valve indication; current value at upper edge — monitoring trend"
+    },
+    "flags": ["drift"],
+    "priorityScore": 71,
+    "lastReviewedAt": null
+  },
+  {
+    "patientId": "cohort_inr_003",
+    "patientName": "Hollis",
+    "ageSex": "82F",
+    "keyData": {
+      "lastINR": 1.4,
+      "lastINRDate": "<27 days ago>",
+      "goalRange": "2.0–3.0",
+      "last3Trend": [2.1, 1.7, 1.4],
+      "daysOverdue": 13,
+      "daysSinceClinicContact": 32,
+      "indication": "AFib + prior CVA",
+      "currentDose": "4mg daily"
+    },
+    "flags": ["overdue", "drift"],
+    "priorityScore": 95,
+    "lastReviewedAt": null
+  },
+  {
+    "patientId": "cohort_inr_004",
+    "patientName": "Tranter",
+    "ageSex": "59M",
+    "keyData": {
+      "lastINR": 2.6,
+      "lastINRDate": "<98 days ago>",
+      "goalRange": "2.0–3.0",
+      "last3Trend": [2.9, 2.7, 2.6],
+      "daysOverdue": 84,
+      "daysSinceClinicContact": 98,
+      "indication": "VTE — provoked, on long-term per hematology",
+      "currentDose": "5mg daily"
+    },
+    "flags": ["unseen", "overdue"],
+    "priorityScore": 88,
+    "lastReviewedAt": null
+  },
+  {
+    "patientId": "cohort_inr_005",
+    "patientName": "Fernsby",
+    "ageSex": "76M",
+    "keyData": {
+      "lastINR": 4.1,
+      "lastINRDate": "<8 days ago>",
+      "goalRange": "2.0–3.0",
+      "last3Trend": [2.6, 3.4, 4.1],
+      "daysOverdue": 0,
+      "daysSinceClinicContact": 8,
+      "indication": "AFib",
+      "currentDose": "5mg daily",
+      "note": "Supratherapeutic and rising — recent abx course (azithromycin 1 week ago) noted in chart"
+    },
+    "flags": ["drift"],
+    "priorityScore": 79,
+    "lastReviewedAt": null
+  },
+  {
+    "patientId": "cohort_inr_006",
+    "patientName": "Pickerel",
+    "ageSex": "71F",
+    "keyData": {
+      "lastINR": 2.3,
+      "lastINRDate": "<22 days ago>",
+      "goalRange": "2.0–3.0",
+      "last3Trend": [2.2, 2.4, 2.3],
+      "daysOverdue": 8,
+      "daysSinceClinicContact": 22,
+      "indication": "AFib",
+      "currentDose": "5mg M/W/F, 2.5mg other days"
+    },
+    "flags": ["overdue"],
+    "priorityScore": 60,
+    "lastReviewedAt": null
+  },
+  {
+    "patientId": "cohort_inr_007",
+    "patientName": "Belcastro",
+    "ageSex": "65M",
+    "keyData": {
+      "lastINR": 2.5,
+      "lastINRDate": "<6 days ago>",
+      "goalRange": "2.0–3.0",
+      "last3Trend": [2.2, 2.4, 2.5],
+      "daysOverdue": 0,
+      "daysSinceClinicContact": 6,
+      "indication": "AFib",
+      "currentDose": "5mg daily"
+    },
+    "flags": ["stable"],
+    "priorityScore": 22,
+    "lastReviewedAt": "<3 days ago>"
+  },
+  {
+    "patientId": "cohort_inr_008",
+    "patientName": "Quintrell",
+    "ageSex": "70F",
+    "keyData": {
+      "lastINR": 2.7,
+      "lastINRDate": "<5 days ago>",
+      "goalRange": "2.0–3.0",
+      "last3Trend": [2.5, 2.6, 2.7],
+      "daysOverdue": 0,
+      "daysSinceClinicContact": 5,
+      "indication": "AFib",
+      "currentDose": "5mg daily"
+    },
+    "flags": ["stable"],
+    "priorityScore": 18,
+    "lastReviewedAt": "<3 days ago>"
+  },
+  {
+    "patientId": "cohort_inr_009",
+    "patientName": "Doblinger",
+    "ageSex": "63M",
+    "keyData": {
+      "lastINR": 2.4,
+      "lastINRDate": "<4 days ago>",
+      "goalRange": "2.0–3.0",
+      "last3Trend": [2.3, 2.4, 2.4],
+      "daysOverdue": 0,
+      "daysSinceClinicContact": 4,
+      "indication": "AFib",
+      "currentDose": "4mg daily"
+    },
+    "flags": ["stable"],
+    "priorityScore": 14,
+    "lastReviewedAt": "<2 days ago>"
+  },
+  {
+    "patientId": "cohort_inr_010",
+    "patientName": "Marwood",
+    "ageSex": "78F",
+    "keyData": {
+      "lastINR": 2.2,
+      "lastINRDate": "<24 days ago>",
+      "goalRange": "2.0–3.0",
+      "last3Trend": [2.4, 2.3, 2.2],
+      "daysOverdue": 10,
+      "daysSinceClinicContact": 24,
+      "indication": "AFib",
+      "currentDose": "3mg daily"
+    },
+    "flags": ["overdue"],
+    "priorityScore": 64,
+    "lastReviewedAt": null
+  },
+  {
+    "patientId": "cohort_inr_011",
+    "patientName": "Larkfield",
+    "ageSex": "80M",
+    "keyData": {
+      "lastINR": 2.0,
+      "lastINRDate": "<18 days ago>",
+      "goalRange": "2.0–3.0",
+      "last3Trend": [2.5, 2.2, 2.0],
+      "daysOverdue": 4,
+      "daysSinceClinicContact": 18,
+      "indication": "AFib",
+      "currentDose": "4mg daily"
+    },
+    "flags": ["overdue"],
+    "priorityScore": 56,
+    "lastReviewedAt": null
+  },
+  {
+    "patientId": "cohort_inr_012",
+    "patientName": "Steensma",
+    "ageSex": "55M",
+    "keyData": {
+      "lastINR": 2.5,
+      "lastINRDate": "<127 days ago>",
+      "goalRange": "2.0–3.0",
+      "last3Trend": [2.7, 2.6, 2.5],
+      "daysOverdue": 113,
+      "daysSinceClinicContact": 127,
+      "indication": "VTE — long-term per hematology",
+      "currentDose": "6mg daily",
+      "note": "Patient relocated from out of state; transferred care 4 months ago, no clinic contact since intake"
+    },
+    "flags": ["unseen"],
+    "priorityScore": 73,
+    "lastReviewedAt": null
+  },
+  {
+    "patientId": "cohort_inr_013",
+    "patientName": "Bramley",
+    "ageSex": "68F",
+    "keyData": {
+      "lastINR": 2.6,
+      "lastINRDate": "<3 days ago>",
+      "goalRange": "2.0–3.0",
+      "last3Trend": [2.4, 2.5, 2.6],
+      "daysOverdue": 0,
+      "daysSinceClinicContact": 3,
+      "indication": "AFib",
+      "currentDose": "5mg M/W/F, 2.5mg other days"
+    },
+    "flags": ["stable"],
+    "priorityScore": 12,
+    "lastReviewedAt": "<2 days ago>"
+  },
+  {
+    "patientId": "cohort_inr_014",
+    "patientName": "Crenshaw",
+    "ageSex": "73M",
+    "keyData": {
+      "lastINR": 1.9,
+      "lastINRDate": "<7 days ago>",
+      "goalRange": "2.0–3.0",
+      "last3Trend": [2.6, 2.2, 1.9],
+      "daysOverdue": 0,
+      "daysSinceClinicContact": 7,
+      "indication": "AFib",
+      "currentDose": "5mg M/W/F, 2.5mg other days",
+      "note": "Just below range; trend down across last 3 reads — likely needs dose nudge"
+    },
+    "flags": ["drift"],
+    "priorityScore": 67,
+    "lastReviewedAt": null
+  },
+  {
+    "patientId": "cohort_inr_015",
+    "patientName": "Allardyce",
+    "ageSex": "61F",
+    "keyData": {
+      "lastINR": 2.5,
+      "lastINRDate": "<10 days ago>",
+      "goalRange": "2.0–3.0",
+      "last3Trend": [2.4, 2.5, 2.5],
+      "daysOverdue": 0,
+      "daysSinceClinicContact": 10,
+      "indication": "AFib",
+      "currentDose": "4mg daily"
+    },
+    "flags": ["stable"],
+    "priorityScore": 24,
+    "lastReviewedAt": "<5 days ago>"
+  }
+]

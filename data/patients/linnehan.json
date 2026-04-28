@@ -1,0 +1,324 @@
+{
+  "_comment": "SYNTHETIC TEST DATA. No real PHI. 71yo M with AFib + CHF on warfarin. Recent dose adjustment after right thigh hematoma 3 weeks ago. Day -3 INR came back at 1.6 (subtherapeutic, goal 2-3). Home health (Amanda Trahan, RN) doing weekly safety checks. Provider Dr. Ballinger.",
+  "resourceType": "Bundle",
+  "id": "linnehan-sample-bundle",
+  "type": "searchset",
+  "timestamp": "2026-04-27T17:00:00-05:00",
+  "total": 16,
+  "link": [
+    {
+      "relation": "self",
+      "url": "https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4/Patient/linnehan_sample_001/$everything"
+    }
+  ],
+  "entry": [
+    {
+      "fullUrl": "Patient/linnehan_sample_001",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "linnehan_sample_001",
+        "meta": { "lastUpdated": "2026-04-25T10:00:00-05:00", "source": "synthetic" },
+        "identifier": [
+          {
+            "use": "usual",
+            "type": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+                  "code": "MR",
+                  "display": "Medical Record Number"
+                }
+              ]
+            },
+            "system": "urn:oid:1.2.840.114350.1.13.0.1.7.5.737384.0",
+            "value": "SYN-MRN-000003"
+          }
+        ],
+        "active": true,
+        "name": [{ "use": "official", "family": "Patient_Linnehan_Sample", "given": ["Synthetic"] }],
+        "gender": "male",
+        "birthDate": "1955-02-17",
+        "address": [{ "use": "home", "city": "Anytown", "state": "XX", "postalCode": "00000", "country": "US" }]
+      }
+    },
+    {
+      "fullUrl": "Encounter/linnehan_encounter_001",
+      "resource": {
+        "resourceType": "Encounter",
+        "id": "linnehan_encounter_001",
+        "meta": { "source": "synthetic" },
+        "status": "finished",
+        "class": { "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode", "code": "AMB" },
+        "type": [
+          {
+            "coding": [
+              { "system": "http://snomed.info/sct", "code": "428191000124101", "display": "Documentation of clinical follow-up encounter" }
+            ],
+            "text": "Results follow-up — subtherapeutic INR"
+          }
+        ],
+        "subject": { "reference": "Patient/linnehan_sample_001" },
+        "period": { "start": "2026-04-22T08:02:00-05:00", "end": "2026-04-22T08:25:00-05:00" },
+        "reasonCode": [{ "text": "Subtherapeutic INR 1.6 — initial nurse triage" }]
+      }
+    },
+    {
+      "fullUrl": "Encounter/linnehan_encounter_002",
+      "resource": {
+        "resourceType": "Encounter",
+        "id": "linnehan_encounter_002",
+        "meta": { "source": "synthetic" },
+        "status": "finished",
+        "class": { "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode", "code": "AMB" },
+        "type": [
+          {
+            "coding": [
+              { "system": "http://snomed.info/sct", "code": "185317003", "display": "Telephone encounter" }
+            ],
+            "text": "Telephone — adherence follow-up"
+          }
+        ],
+        "subject": { "reference": "Patient/linnehan_sample_001" },
+        "period": { "start": "2026-04-24T10:18:00-05:00", "end": "2026-04-24T10:35:00-05:00" },
+        "reasonCode": [{ "text": "Confirm missed doses Tue–Wed, plan INR recheck" }]
+      }
+    },
+    {
+      "fullUrl": "Encounter/linnehan_encounter_003",
+      "resource": {
+        "resourceType": "Encounter",
+        "id": "linnehan_encounter_003",
+        "meta": { "source": "synthetic" },
+        "status": "in-progress",
+        "class": { "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode", "code": "AMB" },
+        "type": [
+          {
+            "coding": [
+              { "system": "http://snomed.info/sct", "code": "185317003", "display": "Telephone encounter" }
+            ],
+            "text": "Telephone — INR recheck plan"
+          }
+        ],
+        "subject": { "reference": "Patient/linnehan_sample_001" },
+        "period": { "start": "2026-04-27T19:30:00-05:00" },
+        "reasonCode": [{ "text": "Recheck INR plan — confirm dose adherence and lab draw" }]
+      }
+    },
+    {
+      "fullUrl": "Condition/linnehan_condition_afib",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "linnehan_condition_afib",
+        "meta": { "source": "synthetic" },
+        "clinicalStatus": { "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/condition-clinical", "code": "active" }] },
+        "verificationStatus": { "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status", "code": "confirmed" }] },
+        "category": [{ "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/condition-category", "code": "problem-list-item" }] }],
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "49436004", "display": "Atrial fibrillation" }],
+          "text": "Atrial fibrillation"
+        },
+        "subject": { "reference": "Patient/linnehan_sample_001" },
+        "onsetDateTime": "2020-09-14",
+        "recordedDate": "2020-09-14"
+      }
+    },
+    {
+      "fullUrl": "Condition/linnehan_condition_chf",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "linnehan_condition_chf",
+        "meta": { "source": "synthetic" },
+        "clinicalStatus": { "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/condition-clinical", "code": "active" }] },
+        "verificationStatus": { "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status", "code": "confirmed" }] },
+        "category": [{ "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/condition-category", "code": "problem-list-item" }] }],
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "42343007", "display": "Congestive heart failure" }],
+          "text": "Congestive heart failure"
+        },
+        "subject": { "reference": "Patient/linnehan_sample_001" },
+        "onsetDateTime": "2021-04-02",
+        "recordedDate": "2021-04-02"
+      }
+    },
+    {
+      "fullUrl": "Condition/linnehan_condition_htn",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "linnehan_condition_htn",
+        "meta": { "source": "synthetic" },
+        "clinicalStatus": { "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/condition-clinical", "code": "active" }] },
+        "verificationStatus": { "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status", "code": "confirmed" }] },
+        "category": [{ "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/condition-category", "code": "problem-list-item" }] }],
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "59621000", "display": "Essential hypertension" }],
+          "text": "Essential hypertension"
+        },
+        "subject": { "reference": "Patient/linnehan_sample_001" },
+        "onsetDateTime": "2014-08-15",
+        "recordedDate": "2014-08-15"
+      }
+    },
+    {
+      "fullUrl": "Condition/linnehan_condition_ckd",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "linnehan_condition_ckd",
+        "meta": { "source": "synthetic" },
+        "clinicalStatus": { "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/condition-clinical", "code": "active" }] },
+        "verificationStatus": { "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status", "code": "confirmed" }] },
+        "category": [{ "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/condition-category", "code": "problem-list-item" }] }],
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "433144002", "display": "Chronic kidney disease stage 3" }],
+          "text": "CKD stage 3"
+        },
+        "subject": { "reference": "Patient/linnehan_sample_001" },
+        "onsetDateTime": "2022-11-30",
+        "recordedDate": "2022-11-30"
+      }
+    },
+    {
+      "fullUrl": "Condition/linnehan_condition_hematoma",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "linnehan_condition_hematoma",
+        "meta": { "source": "synthetic" },
+        "clinicalStatus": { "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/condition-clinical", "code": "resolved" }] },
+        "verificationStatus": { "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status", "code": "confirmed" }] },
+        "category": [{ "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/condition-category", "code": "encounter-diagnosis" }] }],
+        "code": {
+          "coding": [{ "system": "http://hl7.org/fhir/sid/icd-10-cm", "code": "S70.91XA", "display": "Unspecified superficial injury of right thigh, initial encounter" }],
+          "text": "Right thigh hematoma — resolved (occurred 3 weeks prior to current investigation; warfarin dose reduced thereafter)"
+        },
+        "subject": { "reference": "Patient/linnehan_sample_001" },
+        "onsetDateTime": "2026-04-04",
+        "abatementDateTime": "2026-04-18",
+        "recordedDate": "2026-04-04"
+      }
+    },
+    {
+      "fullUrl": "MedicationRequest/linnehan_med_warfarin",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "linnehan_med_warfarin",
+        "meta": { "lastUpdated": "2026-04-06T11:00:00-05:00", "source": "synthetic" },
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [{ "system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "855332", "display": "Warfarin Sodium 5 MG Oral Tablet" }],
+          "text": "Warfarin 5 mg M/W/F, 2.5 mg T/Th/Sa/Su (split-dose regimen, reduced from prior 5 mg daily after 4/4 R thigh hematoma)"
+        },
+        "subject": { "reference": "Patient/linnehan_sample_001" },
+        "authoredOn": "2026-04-06",
+        "dosageInstruction": [
+          { "text": "5 mg PO Mon/Wed/Fri; 2.5 mg PO Tue/Thu/Sat/Sun. Goal INR 2.0–3.0." }
+        ]
+      }
+    },
+    {
+      "fullUrl": "MedicationRequest/linnehan_med_metoprolol",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "linnehan_med_metoprolol",
+        "meta": { "source": "synthetic" },
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [{ "system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "866427", "display": "Metoprolol Succinate 50 MG Extended Release Oral Tablet" }],
+          "text": "Metoprolol succinate 50 mg PO daily"
+        },
+        "subject": { "reference": "Patient/linnehan_sample_001" },
+        "authoredOn": "2020-10-02",
+        "dosageInstruction": [{ "text": "50 mg by mouth once daily" }]
+      }
+    },
+    {
+      "fullUrl": "MedicationRequest/linnehan_med_lisinopril",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "linnehan_med_lisinopril",
+        "meta": { "source": "synthetic" },
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [{ "system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "197884", "display": "Lisinopril 20 MG Oral Tablet" }],
+          "text": "Lisinopril 20 mg PO daily"
+        },
+        "subject": { "reference": "Patient/linnehan_sample_001" },
+        "authoredOn": "2014-08-20",
+        "dosageInstruction": [{ "text": "20 mg by mouth once daily" }]
+      }
+    },
+    {
+      "fullUrl": "MedicationRequest/linnehan_med_furosemide",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "linnehan_med_furosemide",
+        "meta": { "source": "synthetic" },
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [{ "system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "310429", "display": "Furosemide 40 MG Oral Tablet" }],
+          "text": "Furosemide 40 mg PO daily"
+        },
+        "subject": { "reference": "Patient/linnehan_sample_001" },
+        "authoredOn": "2021-04-10",
+        "dosageInstruction": [{ "text": "40 mg by mouth once daily" }]
+      }
+    },
+    {
+      "fullUrl": "Observation/linnehan_obs_inr_baseline",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "linnehan_obs_inr_baseline",
+        "meta": { "source": "synthetic" },
+        "status": "final",
+        "category": [{ "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/observation-category", "code": "laboratory" }] }],
+        "code": {
+          "coding": [{ "system": "http://loinc.org", "code": "6301-6", "display": "INR in Platelet poor plasma by Coagulation assay" }],
+          "text": "INR"
+        },
+        "subject": { "reference": "Patient/linnehan_sample_001" },
+        "effectiveDateTime": "2026-04-20T07:14:00-05:00",
+        "valueQuantity": { "value": 2.4, "unit": "", "system": "http://unitsofmeasure.org" },
+        "interpretation": [{ "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation", "code": "N", "display": "Normal" }] }],
+        "referenceRange": [{ "low": { "value": 2.0 }, "high": { "value": 3.0 }, "text": "Therapeutic 2.0–3.0 (AFib)" }]
+      }
+    },
+    {
+      "fullUrl": "Observation/linnehan_obs_inr_subther",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "linnehan_obs_inr_subther",
+        "meta": { "source": "synthetic" },
+        "status": "final",
+        "category": [{ "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/observation-category", "code": "laboratory" }] }],
+        "code": {
+          "coding": [{ "system": "http://loinc.org", "code": "6301-6", "display": "INR in Platelet poor plasma by Coagulation assay" }],
+          "text": "INR"
+        },
+        "subject": { "reference": "Patient/linnehan_sample_001" },
+        "effectiveDateTime": "2026-04-22T07:14:00-05:00",
+        "valueQuantity": { "value": 1.6, "unit": "", "system": "http://unitsofmeasure.org" },
+        "interpretation": [{ "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation", "code": "L", "display": "Low" }] }],
+        "referenceRange": [{ "low": { "value": 2.0 }, "high": { "value": 3.0 }, "text": "Therapeutic 2.0–3.0 (AFib)" }]
+      }
+    },
+    {
+      "fullUrl": "DocumentReference/linnehan_doc_cards_note",
+      "resource": {
+        "resourceType": "DocumentReference",
+        "id": "linnehan_doc_cards_note",
+        "meta": { "source": "synthetic" },
+        "status": "current",
+        "type": {
+          "coding": [{ "system": "http://loinc.org", "code": "11488-4", "display": "Consult note" }],
+          "text": "Cardiology consult note"
+        },
+        "subject": { "reference": "Patient/linnehan_sample_001" },
+        "date": "2026-04-06T11:00:00-05:00",
+        "author": [{ "display": "Dr. Ballinger" }],
+        "description": "Warfarin dose reduced (from 5 mg daily to split 5/2.5 regimen) following R thigh hematoma 4/4. Goal INR 2.0–3.0 for AFib stroke prevention. Home health (Amanda Trahan, RN) doing weekly safety checks during recovery. Recheck INR in 2 weeks."
+      }
+    }
+  ]
+}

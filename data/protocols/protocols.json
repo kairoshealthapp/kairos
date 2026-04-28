@@ -1,0 +1,58 @@
+[
+  {
+    "id": "pre_stress_test_med_management",
+    "name": "Pre-Stress Test Medication Management",
+    "procedureTypes": ["exercise_stress_test", "pharmacologic_stress_test"],
+    "summary": "Standard hold/continue rules for cardiac stress testing.",
+    "rules": [
+      {
+        "targetPattern": { "drugClass": "beta_blocker" },
+        "action": "hold",
+        "timing": "24 hours before procedure",
+        "resume": "after procedure complete",
+        "rationale": "Beta blockade blunts heart rate response — invalidates exercise stress test interpretation.",
+        "appliesTo": ["metoprolol", "atenolol", "carvedilol", "bisoprolol", "propranolol", "nadolol", "labetalol"]
+      },
+      {
+        "targetPattern": { "drugClass": "ccb_non_dhp" },
+        "action": "hold",
+        "timing": "24 hours before procedure",
+        "resume": "after procedure complete",
+        "rationale": "Rate-limiting CCBs blunt HR response similarly to beta blockers.",
+        "appliesTo": ["diltiazem", "verapamil"]
+      },
+      {
+        "targetPattern": { "drugClass": "central_alpha_agonist" },
+        "action": "hold",
+        "timing": "24 hours before procedure",
+        "resume": "after procedure complete",
+        "rationale": "Centrally-acting alpha agonists blunt sympathetic response and heart rate during exercise — frequently overlooked, can compromise stress test validity.",
+        "appliesTo": ["clonidine", "methyldopa", "guanfacine"]
+      },
+      {
+        "targetPattern": { "drugName": "levothyroxine" },
+        "action": "continue",
+        "timing": "morning of procedure",
+        "resume": "n/a",
+        "rationale": "No interaction with stress test. Continue normal dosing.",
+        "appliesTo": ["levothyroxine"]
+      },
+      {
+        "targetPattern": { "drugClass": "statin" },
+        "action": "continue",
+        "timing": "normal schedule",
+        "resume": "n/a",
+        "rationale": "No interaction with stress test.",
+        "appliesTo": ["atorvastatin", "rosuvastatin", "simvastatin", "pravastatin", "lovastatin"]
+      },
+      {
+        "targetPattern": { "drugClass": "antiplatelet" },
+        "action": "continue",
+        "timing": "normal schedule",
+        "resume": "n/a",
+        "rationale": "No interaction with stress test. Hold guidance applies only to invasive procedures.",
+        "appliesTo": ["aspirin", "clopidogrel", "ticagrelor", "prasugrel"]
+      }
+    ]
+  }
+]
