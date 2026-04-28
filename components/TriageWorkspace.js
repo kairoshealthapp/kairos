@@ -4,9 +4,15 @@ import { useEffect, useState } from "react";
 import TriageQuestions from "./TriageQuestions";
 import EvidenceCapture from "./EvidenceCapture";
 import SBARDraft from "./SBARDraft";
+import ResultNoteCard from "./ResultNoteCard";
+import DualOutputDraft from "./DualOutputDraft";
+import MyChartThread from "./MyChartThread";
+import ProcedureContextCard from "./ProcedureContextCard";
+import ProtocolApplier from "./ProtocolApplier";
 
 const WHITFIELD_ENCOUNTER_ID = "whitfield_encounter_001";
 const MARBURY_ENCOUNTER_ID = "marbury_encounter_001";
+const HARTWELL_ENCOUNTER_ID = "hartwell_encounter_001";
 
 function buildWhitfieldSeedEvidence() {
   const now = Date.now();
@@ -91,10 +97,18 @@ export default function TriageWorkspace({
   encounterId,
   chartContext,
   callerContext,
+  encounterType = null,
+  procedureContext = null,
+  resultNote = null,
+  resultNoteSourceDetail = "",
+  resultNoteOccurredAt = "",
+  mychartMessages = null,
 }) {
   const [questions, setQuestions] = useState([]);
   const [evidence, setEvidence] = useState([]);
   const [seeded, setSeeded] = useState(false);
+  const [dualDraft, setDualDraft] = useState(null);
+  const [protocolSchedule, setProtocolSchedule] = useState(null);
 
   useEffect(() => {
     if (seeded) return;
@@ -122,14 +136,51 @@ export default function TriageWorkspace({
     callerContext,
   };
 
+  const isResultsFollowupWithNote = !!resultNote;
+  const isPreProcedure = encounterType === "pre_procedure_inquiry";
+
   return (
     <div className="space-y-6">
-      <TriageQuestions
-        patientId={patientId}
-        encounterId={encounterId}
-        callerContext={callerContext}
-        onQuestionsGenerated={setQuestions}
-      />
+      {isPreProcedure && (
+        <>
+          <ProcedureContextCard procedureContext={procedureContext} />
+          <ProtocolApplier
+            patient={chartContext?.patient}
+            procedureContext={procedureContext}
+            scheduleResult={protocolSchedule}
+            onScheduleGenerated={setProtocolSchedule}
+          />
+        </>
+      )}
+
+      {isResultsFollowupWithNote && (
+        <>
+          <ResultNoteCard
+            resultNote={resultNote}
+            occurredAt={resultNoteOccurredAt}
+            sourceDetail={resultNoteSourceDetail}
+          />
+          <DualOutputDraft
+            chartContext={chartContext}
+            resultNote={resultNote}
+            evidence={evidence}
+            draft={dualDraft}
+            onDraftGenerated={setDualDraft}
+          />
+          {mychartMessages && mychartMessages.length > 0 && (
+            <MyChartThread messages={mychartMessages} />
+          )}
+        </>
+      )}
+
+      {!isResultsFollowupWithNote && !isPreProcedure && (
+        <TriageQuestions
+          patientId={patientId}
+          encounterId={encounterId}
+          callerContext={callerContext}
+          onQuestionsGenerated={setQuestions}
+        />
+      )}
       <EvidenceCapture
         questions={questions}
         evidence={evidence}
