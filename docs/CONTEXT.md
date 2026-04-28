@@ -301,15 +301,17 @@ Production Status:  Dormant — requires Epic customer site approval (political 
 
 **Credentials:**
 ```
-Non-Production Client ID:  285f1c56-244a-4550-9850-d5e7c840240a
+Non-Production Client ID:  a85de553-5013-47e8-9f3b-f3c797176f81   (Kairos Backend Services, App ID 54107 — active for v8)
 Production Client ID:      cc163b1d-e634-4def-a1bc-f525c10f6f7e   (won't activate until production approval)
 ```
+
+> **Two Epic apps now exist on this developer account.** The original *ClinAI* app (App ID 54037, ConsumerType=Employees, Non-Production Client ID `285f1c56-244a-4550-9850-d5e7c840240a`) is the SMART-launch prototype from Phase 0; kept registered for reference but **not used by Kairos v8**. The new *Kairos Backend Services* app (App ID 54107, ConsumerType=Backend, Non-Production Client ID `a85de553-5013-47e8-9f3b-f3c797176f81`) is the active app for the JWT-bearer client_credentials flow. Both apps point at the same JWKS endpoint (`https://auth.firekraker.net/.well-known/jwks.json`) and reuse the same `clinai-key-1` keypair — Epic supports JWKS sharing across multiple apps under one developer account.
 
 **Sandbox endpoints:**
 ```
 FHIR Base URL:    https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4
 OAuth Token URL:  https://fhir.epic.com/interconnect-fhir-oauth/oauth2/token
-JWKS Endpoint:    Brandon's hosted JWKS endpoint (live)
+JWKS Endpoint:    https://auth.firekraker.net/.well-known/jwks.json (kairos-auth Cloudflare Worker; kid=clinai-key-1, RS384)
 ```
 
 **27 scopes saved (R4, Patient Chart contexts):**
@@ -614,3 +616,17 @@ v7 hardcodes the current actor as the literal string `ma_demo` in `/api/attestat
 - Test the FHIR write-back layer (the eventual target for SBAR completion → encounter note)
 
 Auth (Epic SSO + nurse login) is the gating prerequisite for *public deploy* but not for *Riverbend pilot conversation* — for the pilot, "this hits a real Epic sandbox and reads/writes against real FHIR" is the more compelling demonstration than "this has a login screen." Auth can be v9.
+
+---
+
+## Recently Completed — v8 prerequisite (2026-04-27 evening)
+
+**JWKS hosting migrated to dedicated `kairos-auth` Cloudflare Worker.** The original ClinAI Phase 0 `clinai.firekraker.net` Vercel deploy that previously served the JWKS endpoint had been removed (Vercel project deleted), so the Epic developer-portal-registered URL stopped resolving and any v8 token exchange would have failed at the JWKS-fetch step. Pre-flight `curl https://clinai.firekraker.net/.well-known/jwks.json` returned `DEPLOYMENT_NOT_FOUND`. Vercel team enumeration confirmed the `clinai` project is gone (not just orphaned domain).
+
+**New hosting:** Cloudflare Worker `kairos-auth` (account `b750f1b961dc39c6367d02224bce1134` / Firekrakerproductions), single-file `src/index.js` at `C:\Users\kents\kairos-auth\`, only routes `/.well-known/jwks.json` (everything else returns 404), reads JWK from a `KAIROS_PUBLIC_JWK` plain-text binding, sets `Cache-Control: public, max-age=3600`. Custom domain `auth.firekraker.net` attached via the Workers Domains API (zone `8c286aec35b591aeb5a8f36b03ee9daa`, cert auto-provisioned). Verified live: `curl https://auth.firekraker.net/.well-known/jwks.json` → HTTP 200, returns `{"keys":[{kid:"clinai-key-1", alg:"RS384", use:"sig", kty:"RSA", ...}]}`.
+
+**Keypair reuse, not regeneration.** The keypair from ClinAI Phase 0 was preserved — private key still lives as `CLINAI_PRIVATE_KEY_PEM` in `firekraker-monorepo/.env.master` (and `firekraker-monorepo/clinai/.env.local`); public JWK is now served from the new Worker. Kid stays `clinai-key-1` (will be renamed to `kairos-key-1` in a future rotation, not this session — not worth the deploy churn). When v8 phase 1 wires up the JWT signer in the kairos repo, it points at the existing private key path/value via env var; nothing else needs to change.
+
+**Action required from Brandon before v8 phase 1:** paste `https://auth.firekraker.net/.well-known/jwks.json` into the Epic developer portal at `https://fhir.epic.com/Developer` for app `Kairos Nurse Dashboard` (App ID 54037), in the **Non-Production JWK Set URL** field. Without this paste, Epic returns `400 invalid_client` on every token exchange (verified empirically against the existing keypair + token URL on 2026-04-27). Production JWK Set URL stays empty — production scopes remain dormant pending Riverbend customer site approval.
+
+**Worker source not in the kairos repo.** `C:\Users\kents\kairos-auth\` is its own (eventually private) project, not part of the kairos build environment. Keeps the kairos repo localhost-only per the Riverbend review-window discipline. The Worker is the only deployed surface in the Kairos auth chain right now.

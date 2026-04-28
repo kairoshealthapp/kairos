@@ -663,3 +663,99 @@ Dev server tested on :3000 — all 10 verified routes 200. No git push.
 - `app/integrity-log/page.js`, `app/dashboard/page.js`, `app/investigation/[investigationId]/page.js`, `app/triage/[encounterId]/page.js` (async server components, await server helpers)
 
 No git push.
+
+---
+
+## 2026-04-27 — v8 prerequisite: JWKS hosting moved to `kairos-auth` Cloudflare Worker
+
+### Why
+v8 Phase 1 token exchange against Epic requires a public JWKS URL Epic can fetch to verify our RS384 client assertions. The original ClinAI Phase 0 Vercel deploy that hosted that URL (`https://clinai.firekraker.net/.well-known/jwks.json`) is gone — the Vercel project was deleted. Pre-flight curl returned `DEPLOYMENT_NOT_FOUND`. Local source for the route was intact in `firekraker-monorepo/clinai/`; it just no longer had a deployment behind it.
+
+### Empirical validation of pre-existing keypair
+1. Located `CLINAI_PRIVATE_KEY_PEM` and `CLINAI_PUBLIC_JWK` in `firekraker-monorepo/.env.master` (kid `clinai-key-1`, RS384, RSA-2048).
+2. Ran a one-shot probe (deleted after) that signed a JWT assertion with `iss/sub=285f1c56-244a-4550-9850-d5e7c840240a`, `aud=https://fhir.epic.com/interconnect-fhir-oauth/oauth2/token`, RS384/`clinai-key-1`, and POSTed to Epic. Result: `400 invalid_client` — signing chain works, Epic just has no JWKS URL on file for the app. Confirms keypair is still live and reusable.
+
+### What was built
+- `C:\Users\kents\kairos-auth\src\index.js` — single-file Worker. Routes `/.well-known/jwks.json` only; reads JWK from `env.KAIROS_PUBLIC_JWK`; wraps as `{"keys":[<jwk>]}`; `Cache-Control: public, max-age=3600`. Anything else → 404.
+- `C:\Users\kents\kairos-auth\wrangler.toml` — `name=kairos-auth`, `main=src/index.js`, `compatibility_date=2026-04-27`, JWK in `[vars]` (public key, safe to commit).
+- Deployed via Cloudflare API (`PUT /accounts/{accountId}/workers/scripts/kairos-auth`) — multipart form, ESM `main_module=index.mjs`, `plain_text` binding `KAIROS_PUBLIC_JWK` carrying the same compact JSON as `CLINAI_PUBLIC_JWK`.
+- Custom domain attached (`PUT /accounts/{accountId}/workers/domains`) with `hostname=auth.firekraker.net`, `service=kairos-auth`, `zone_id=8c286aec35b591aeb5a8f36b03ee9daa`. Cert auto-provisioned by Cloudflare.
+
+### Verification
+- `curl -I https://auth.firekraker.net/.well-known/jwks.json` → HTTP 200, `Content-Type: application/json`, `Cache-Control: public, max-age=3600`.
+- Body matches the original `CLINAI_PUBLIC_JWK` byte-for-byte (kid `clinai-key-1`, alg `RS384`, use `sig`, kty `RSA`, n+e present).
+- `curl https://auth.firekraker.net/random-path` → HTTP 404 as designed.
+
+### Not done in this session (gates v8 Phase 1)
+- Brandon must paste `https://auth.firekraker.net/.well-known/jwks.json` into Epic developer portal under Non-Production JWK Set URL for App ID 54037. After that, the same probe used here should return 200 + access token.
+- Re-running the Epic token probe was deliberately skipped this session — waiting on the portal paste.
+
+### Files touched in `kairos/`
+- `docs/CONTEXT.md` — sandbox endpoints block updated; new "Recently Completed — v8 prerequisite" section appended.
+- `docs/log.md` — this entry.
+
+No git push.
+
+---
+
+## 2026-04-27 evening (continued) — observability + Backend Services app + two failed probes
+
+Continuation of the same session. After the JWKS Worker landed and was verified curl-200, the focus shifted to figuring out why Epic was returning `invalid_client` on every token exchange.
+
+### Observability enabled on `kairos-auth`
+- Re-deployed the Worker with `metadata.observability = { enabled: true, head_sampling_rate: 1 }`. Idempotent — same JWK binding, same `clinai-key-1`/RS384/ESM source. New `scriptVersion.id = 717d63f2-e7bf-4cc0-a7a3-23d979194d7b`.
+- Local `wrangler.toml` updated to keep source in sync (`[observability]` block added).
+- Two seed `curl -sSI -A "kairos-observability-seed/1.0" https://auth.firekraker.net/.well-known/jwks.json` requests confirmed the pipeline: events landed in observability ~3s after request, with full URL, status, User-Agent, IP, geo, ASN, colo, CF-Ray.
+- Bonus signal captured: a Brazilian Go-http-client request at `04:07:01.093Z` to `https://auth.firekraker.net/` (status 404). Almost certainly a Certificate Transparency log scanner — Cloudflare auto-issued our TLS cert on custom-domain attach, the new hostname appeared in a public CT log, and bots probed it within minutes. Harmless. Useful confirmation that observability captures unsolicited traffic too.
+
+### First Epic probe with observability live
+- Probe at `04:09:25.383Z`, Client ID `285f1c56-244a-4550-9850-d5e7c840240a` (legacy ClinAI app 54037 — registered 24+ hours prior to the probe), kid `clinai-key-1`, RS384, exp +240s.
+- Response: HTTP 400 `{ "error": "invalid_client", "error_description": null }`. Round trip 357ms.
+- Observability window (`probe-start − 5s` → now): **zero events to `kairos-auth`**. Epic did not fetch the JWKS.
+- 357ms round trip + null `error_description` together strongly suggest Epic decided the answer locally without ever consulting the JWKS endpoint.
+
+### Created a fresh Backend Services Epic app
+- App ID `54107`, ConsumerType `Backend`, Non-Production Client ID `a85de553-5013-47e8-9f3b-f3c797176f81`, JWK Set URL `https://auth.firekraker.net/.well-known/jwks.json`, 27 scopes saved verbatim from the ClinAI app (all R4 Patient Chart contexts), summary text written. Same JWKS endpoint and `clinai-key-1` keypair shared between both apps (Epic permits this).
+- Note from Brandon during save: `IsConfidentialClient` defaulted to `false` on Backend apps and Epic dropped the field on save. Working hypothesis: the flag is meaningless for Backend Services since there's only one auth path (JWT-bearer client_credentials), so Epic ignores it. Existing ClinAI app keeps it because it's a SMART-launch (`Employees`) app where the distinction matters. To be confirmed empirically.
+- `kairos/.env.local` got `KAIROS_FHIR_CLIENT_ID=a85de553-5013-47e8-9f3b-f3c797176f81` appended (commented as the v8 Backend Services app, dated). Old ClinAI client ID kept untouched in `firekraker-monorepo/.env.master` since v8 doesn't use it.
+- `docs/CONTEXT.md` Build Status block updated: Non-Production Client ID line now shows the new value with `(Kairos Backend Services, App ID 54107 — active for v8)`. Added a one-paragraph block explaining that two Epic apps coexist now and why.
+
+### Second Epic probe — new app, same outcome
+- Probe at `04:37:17.726Z`, Client ID `a85de553-5013-47e8-9f3b-f3c797176f81` (Backend Services app 54107), same kid/alg/keypair, same JWKS URL.
+- Response: HTTP 400 `{ "error": "invalid_client", "error_description": null }`. Round trip 392ms.
+- Observability window: **zero events to `kairos-auth` again**. Brazilian CT scanner already filtered.
+
+### Unresolved diagnostic question
+**Why is Epic returning `invalid_client` without ever fetching our JWKS, on two independently-configured apps?**
+
+Both probes share three signals that taken together rule out the most common JWKS failures:
+1. The JWKS endpoint itself is verifiably reachable from the public internet (curl from this machine returns 200 with the correct key set; observability captures every request hit including bot traffic).
+2. The signature material (private key in `firekraker-monorepo/.env.master`, public JWK at the Worker, kid `clinai-key-1`, RS384) is consistent across both apps and matches what's published.
+3. Epic's response time on both probes (357ms and 392ms) is far too fast to include an outbound JWKS fetch + verification round trip — Epic is short-circuiting *before* doing any key lookup.
+
+That eliminates kid mismatch, alg mismatch, signature error, JWK serialization bug, and basic propagation lag (the legacy app has been registered 24+ hours; if Epic's portal-to-token-validator pipeline has a multi-hour propagation window, that's its own bug worth knowing).
+
+What's left is a structural Epic-config attribute that's missing on both apps. Candidates from tonight's analysis (in rough order of likelihood):
+
+- **Missing JWT signing algorithm dropdown.** Some Epic developer portal versions have a separate "JWT Signing Algorithm" field on Backend Services apps that defaults to empty; if not explicitly set to RS384, the token validator may refuse to attempt verification at all and return `invalid_client` without fetching.
+- **Missing Backend Services capability flag.** Even with `ConsumerType=Backend`, there may be a separate "Allow Backend Services" or "Enable JWT-bearer client_credentials" toggle that has to be flipped per app.
+- **Missing system-level scope grants.** The 27 scopes saved are all *user-context* (`patient/Patient.read`, `patient/Observation.read`, etc.). Backend Services flows require *system*-level scopes (`system/Patient.read`, `system/Observation.read`, etc.). Without any system scope, the token endpoint may refuse before reaching the signature step.
+- **Missing account-level enablement.** The Epic developer-account itself may need a "Backend Services" feature flag that's tied to a separate Epic agreement, distinct from per-app ConsumerType. Some Epic Vendor Services tiers gate Backend Services behind an additional approval.
+- **Account-level negative cache.** If Epic's first JWKS fetch on the original ClinAI app (when the URL was the now-deleted `clinai.firekraker.net`) failed, Epic may have cached "no key for this developer-account" rather than per-app, and the new Kairos Backend Services app is inheriting the negative cache.
+
+### Next session
+- Re-probe once more after waiting longer (per the playbook's outcome-C path). If still zero JWKS fetches, switch to structural diagnosis: pull the Epic Backend Services prerequisites checklist from the developer portal docs, walk through every required app-config field, look specifically for the algorithm dropdown and system-scope set, confirm the developer-account itself is provisioned for Backend Services.
+- v8 Phase 1 (the JWT signer code in the kairos repo) remains gated on a successful `200 + access_token` response from Epic.
+
+### Files touched in `kairos/` this evening (cumulative)
+- `docs/CONTEXT.md` — sandbox endpoints block updated to point at `auth.firekraker.net`; Build Status credentials updated to new Backend Services Client ID; explanatory paragraph about the two-app coexistence; "Recently Completed — v8 prerequisite" section appended (earlier in evening).
+- `docs/log.md` — earlier section on JWKS hosting + first invalid_client probe; this section.
+- `.env.local` — `KAIROS_FHIR_CLIENT_ID=a85de553-5013-47e8-9f3b-f3c797176f81` appended.
+
+### Files touched outside `kairos/`
+- `C:\Users\kents\kairos-auth\src\index.js` — single-file Worker source (created earlier this evening).
+- `C:\Users\kents\kairos-auth\wrangler.toml` — `[observability]` block added to keep local config in sync with the live Worker.
+- Cloudflare account `b750f1b961dc39c6367d02224bce1134` — Worker `kairos-auth` live with observability enabled, custom domain `auth.firekraker.net` attached, JWK in `KAIROS_PUBLIC_JWK` plain-text binding.
+- Epic developer account — new app `Kairos Backend Services` (App ID 54107) registered with JWK Set URL pointing at `auth.firekraker.net`. Existing ClinAI app (54037) untouched.
+
+No git push.
