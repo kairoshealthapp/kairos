@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ArrowLeft, ShieldCheck, ShieldAlert, CheckCircle2 } from "lucide-react";
-import { getAttestationLog } from "@/lib/state/preVisitTasks";
+import { getAttestationsForActorServer } from "@/lib/state/attestations";
+
+const CURRENT_ACTOR = "ma_demo";
 
 export const dynamic = "force-dynamic";
 
@@ -34,10 +36,10 @@ function formatExact(iso) {
   }).format(new Date(iso));
 }
 
-export default function IntegrityLogPage({ searchParams }) {
-  const sp = searchParams || {};
+export default async function IntegrityLogPage({ searchParams }) {
+  const sp = (await searchParams) || {};
   const filter = sp.filter || "all";
-  const all = getAttestationLog();
+  const all = await getAttestationsForActorServer(CURRENT_ACTOR);
   const sorted = [...all].sort(
     (a, b) => new Date(b.clickedAt).getTime() - new Date(a.clickedAt).getTime()
   );

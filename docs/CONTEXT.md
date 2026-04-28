@@ -567,3 +567,50 @@ Future Claude sessions read this file at session start before any code is writte
 9. **OCR / analog input ingestion (v6)** — Fax Inbox
 
 **Every remaining workflow on the 18-stream build roadmap (Devereaux orthostatic hypotension, Pemberton 5-question template, Caldwell rapid-cycle hypokalemia, Okafor Coumadin dosing, secure chat threading) is a composition of these 9 primitives, not a new architectural piece.** The pitch frame ("Kairos is one primitive applied to ten surfaces, not ten features") is structurally complete; the next phase of the build is wiring those compositions, then the FHIR write-back layer, then nurse shadow validation.
+
+## Recently Completed — v7 (2026-04-27)
+
+**Persistence migration to Supabase.** v2-v6 built architectural primitives but everything reset on page refresh. v7 makes the things that *should* persist actually persist.
+
+**What's persisted now (loses meaning if reset):**
+- Investigations + touchpoints (a 5-day investigation can't be 5 separate page-refresh-resetting demos)
+- Evidence captured per encounter
+- SBAR versions (history retained, not just latest)
+- Attestation log (institutional pitch falls apart without durable audit trail)
+- Pre-visit tasks + discrepancy resolutions
+
+**What's NOT persisted (by design):** patient/encounter base data (still mocked from JSON until v8 Epic FHIR), cohort snapshots (recomputed each session), today's referral inbox + fax queue (short-lived), protocol library (static config). Persistence migration v7 complete. Things that should be durable now are durable. Cohort snapshots, referral inbox, and fax inbox remain in-memory by design.
+
+**Schema** (in SupperMates Supabase project, all kairos_* prefixed): kairos_investigations, kairos_investigation_touchpoints, kairos_evidence, kairos_sbar_versions, kairos_pre_visit_tasks, kairos_attestation_log, kairos_discrepancy_resolutions. RLS enabled on every table; no policies defined → anon key has zero access. Service role key (server-side only, used in API routes) bypasses RLS. Trigger on touchpoint insert: `last_activity_at = GREATEST(current, NEW.occurred_at)` — historical seeds keep their seeded value, live additions advance the timestamp.
+
+**Architecture rules (binding for v8+):** all Supabase writes happen in API routes with the server client. Browser client uses anon key. Service role key NEVER goes to a client component (verified via grep in `components/` — 0 matches). Pages that need DB data are async server components calling server helpers directly; only TriageWorkspace (which already had to be a 'use client' component for evidence interactivity) does API-backed fetching with optimistic UI.
+
+**Schema gotchas to remember:** TEXT primary keys for `kairos_investigations.id`, `kairos_investigation_touchpoints.id`, `kairos_pre_visit_tasks.id` (not UUID — preserves stable demo URLs like `/investigation/investigation_linnehan_001` across reseeds). Attestation log has display columns (encounter_id, patient_id, patient_name) on top of the spec because the existing UI surfaces those. Discrepancy resolutions are append-only rows — the task's `discrepancyResolutions` map is reconstructed by selecting the latest row per discrepancy_id (full audit history preserved).
+
+**Seed scripts (idempotent, --force to refresh):**
+- `scripts/seed-investigations.js` — Linnehan + Hartwell investigations with time tokens resolved at insert time (re-run with --force when demo timestamps drift)
+- `scripts/seed-evidence.js` — Whitfield (3) + Marbury (3) evidence items with stable UUIDs
+- `scripts/seed-pre-visit-tasks.js` — Tysander 17-med pre-visit task
+
+**Verification:** `scripts/verify-phase7.mjs` exercises round-trips on all 7 tables — 14/14 checks pass. Build clean. RLS posture verified (anon → 0 rows). Name-scrub regression scan clean.
+
+## Known Migration Debt
+
+### Multi-tenant DB → dedicated Kairos Supabase project
+- **Current state**: Kairos uses the SupperMates Supabase project (inxtnmsjlvpdofxovbpb) as a multi-tenant DB. All Kairos tables are `kairos_*` prefixed; they coexist with SupperMates' own `dk_/lo_/sm_/convos_/etc` tables.
+- **Reason for debt**: Supabase free tier limits the firekraker org owner to 2 active projects. HVC and SupperMates already filled both slots when v7 landed. Creating a dedicated `kairos` project would require either pausing/deleting an existing project or upgrading the org to Pro ($25/mo).
+- **When to migrate**: trigger conditions are (a) real PHI lands (multi-tenant on a non-BAA shared DB is unacceptable), (b) BAA / data-ownership conversation with Riverbend or any clinical pilot starts, (c) project ownership/handoff to a third party, (d) Supabase Pro tier becomes worth the spend for other reasons.
+- **Estimated effort when triggered**: ~2-3 hours. `pg_dump --table='kairos_*'` from SupperMates project, `pg_restore` into the dedicated kairos project, swap the 5 env vars in `.env.local` (KAIROS_SUPABASE_URL, KAIROS_SUPABASE_ANON_KEY, KAIROS_SUPABASE_SERVICE_KEY, NEXT_PUBLIC_KAIROS_SUPABASE_URL, NEXT_PUBLIC_KAIROS_SUPABASE_ANON_KEY), re-run all three seed scripts on the new DB to verify, then drop kairos_* tables from SupperMates after smoke-testing the demo. The `kairos_` prefix on every table makes the dump/restore filter trivial.
+- **Future Kairos schema changes** (v8 schema additions, v9 kairos_profiles, etc.) MUST keep the kairos_ prefix until this migration happens. Do not introduce un-prefixed tables.
+
+### Auth (blocks public deploy)
+v7 hardcodes the current actor as the literal string `ma_demo` in `/api/attestations/me`, `/api/med-rec/attest`, `/api/med-rec/resolve`, and `/integrity-log`. Every persisted attestation/resolution row stamps `actor_id = 'ma_demo'`. Auth lands in v8.
+
+## Note for v8 — recommended target
+
+**v8 should target Epic FHIR sandbox integration, not generic auth.** The architectural primitives are ready, the persistence layer is in place, and the Riverbend review window ends 5/4. Epic FHIR sandbox lets us:
+- Pull real patient/encounter/medication data instead of JSON mocks
+- Validate the chart-context assembly against actual FHIR shapes (R4 vs DSTU2 quirks etc.)
+- Test the FHIR write-back layer (the eventual target for SBAR completion → encounter note)
+
+Auth (Epic SSO + nurse login) is the gating prerequisite for *public deploy* but not for *Riverbend pilot conversation* — for the pilot, "this hits a real Epic sandbox and reads/writes against real FHIR" is the more compelling demonstration than "this has a login screen." Auth can be v9.

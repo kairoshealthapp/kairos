@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Inbox, Link2, Users, ArrowUpRight, ShieldCheck, ShieldAlert, FileText, Mail, Printer, Search } from "lucide-react";
 import { listEncounters } from "@/lib/fhir/encounters";
-import { getInvestigations } from "@/lib/state/investigations";
+import { getInvestigationsServer } from "@/lib/state/investigations";
 import {
   findInvestigationForEncounter,
   summarizeInvestigation,
@@ -10,7 +10,7 @@ import {
   getCohortDefinitions,
   getCohortSnapshot,
 } from "@/lib/state/cohorts";
-import { getPreVisitTask } from "@/lib/state/preVisitTasks";
+import { getPreVisitTaskServer } from "@/lib/state/preVisitTasks";
 import { getPriorAuthRequest } from "@/lib/state/priorAuth";
 import { getReferralMessages } from "@/lib/state/referralMessages";
 import { ACTIONABLE_CATEGORIES } from "@/lib/types/referralMessage";
@@ -125,9 +125,9 @@ function relativeReviewedAt(snapshot) {
   return `${days} d ago`;
 }
 
-function buildMedRecBadge(encounter) {
+async function buildMedRecBadge(encounter) {
   if (encounter.type !== "pre_visit_med_rec" || !encounter.preVisitTaskId) return null;
-  const task = getPreVisitTask(encounter.preVisitTaskId);
+  const task = await getPreVisitTaskServer(encounter.preVisitTaskId);
   if (!task) return null;
   const bundle = getBundleForPatient(encounter.patientId);
   const raw = reconcileMedications(bundle, task.patientReportedMeds);
@@ -152,9 +152,9 @@ function buildPABadge(encounter) {
   };
 }
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
   const allEncounters = listEncounters();
-  const investigations = getInvestigations();
+  const investigations = await getInvestigationsServer();
   const cohortDefinitions = getCohortDefinitions();
   const cohortCards = cohortDefinitions
     .map((def) => ({ def, snapshot: getCohortSnapshot(def.id) }))
@@ -193,6 +193,13 @@ export default function DashboardPage() {
     if (sr !== 0) return sr;
     return new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime();
   });
+
+  // Pre-compute med-rec badges for every encounter so the synchronous .map
+  // below can just look them up. Each badge fetch is a pre-visit task lookup
+  // against Supabase.
+  const medRecBadges = new Map(
+    await Promise.all(sorted.map(async (e) => [e.id, await buildMedRecBadge(e)])),
+  );
 
   const counts = {
     total: encounters.length,
@@ -341,7 +348,7 @@ export default function DashboardPage() {
             const pill = encounterPill(e);
             const investigation = findInvestigationForEncounter(investigations, e.id);
             const summary = investigation ? summarizeInvestigation(investigation) : null;
-            const medRecBadge = buildMedRecBadge(e);
+            const medRecBadge = medRecBadges.get(e.id);
             const paBadge = buildPABadge(e);
             return (
               <li key={e.id} className="relative">

@@ -1,4 +1,5 @@
 import { regenerateSBAR } from "@/lib/prompts/sbarRegenerator";
+import { appendSBARVersionServer } from "@/lib/state/sbarVersions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,7 +12,7 @@ export async function POST(request) {
     return Response.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { chartContext, evidence, encounterContext } = body || {};
+  const { chartContext, evidence, encounterContext, encounterId } = body || {};
   if (!chartContext?.patient) {
     return Response.json(
       { error: "chartContext.patient is required" },
@@ -24,10 +25,17 @@ export async function POST(request) {
       { status: 400 }
     );
   }
+  if (!encounterId) {
+    return Response.json(
+      { error: "encounterId is required" },
+      { status: 400 }
+    );
+  }
 
   try {
-    const sbar = await regenerateSBAR({ chartContext, evidence, encounterContext });
-    return Response.json({ sbar });
+    const generated = await regenerateSBAR({ chartContext, evidence, encounterContext });
+    const persisted = await appendSBARVersionServer(encounterId, generated);
+    return Response.json({ sbar: persisted });
   } catch (err) {
     return Response.json(
       {

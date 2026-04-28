@@ -75,15 +75,21 @@ function Section({ label, children }) {
 }
 
 export default function SBARDraft({
+  encounterId,
   encounterContext,
   chartContext,
   evidence,
+  initialVersions = [],
   onSBARGenerated,
 }) {
-  const [versions, setVersions] = useState([]);
+  const [versions, setVersions] = useState(initialVersions);
   const [status, setStatus] = useState("idle"); // idle | loading | error
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    setVersions(initialVersions);
+  }, [initialVersions]);
 
   const current = versions[versions.length - 1] || null;
   const evidenceCount = evidence?.length || 0;
@@ -107,7 +113,7 @@ export default function SBARDraft({
       const res = await fetch("/api/regenerate-sbar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chartContext, evidence, encounterContext }),
+        body: JSON.stringify({ chartContext, evidence, encounterContext, encounterId }),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -115,7 +121,7 @@ export default function SBARDraft({
         setError(json.error ? `${json.error}: ${json.message || ""}` : `HTTP ${res.status}`);
         return;
       }
-      const next = { ...json.sbar, version: versions.length + 1 };
+      const next = json.sbar;
       setVersions((v) => [...v, next]);
       setStatus("idle");
       if (onSBARGenerated) onSBARGenerated(next);
