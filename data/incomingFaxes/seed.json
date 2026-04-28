@@ -1,0 +1,401 @@
+[
+  {
+    "id": "fax_linnehan_inr_001",
+    "receivedAt": "<2 hours ago>",
+    "faxType": "home_inr",
+    "senderHeader": "mdINR Home Monitoring · Patient Self-Test Report",
+    "pageCount": 1,
+    "previewUrl": "/mock/fax-thumbnail-clean",
+    "extractedFields": [
+      {
+        "fieldName": "patient_name",
+        "extractedValue": "Linnehan, Synthetic",
+        "confidence": 0.98,
+        "bbox": "page=1,x=120,y=160,w=240,h=24"
+      },
+      {
+        "fieldName": "patient_dob",
+        "extractedValue": "1955-02-17",
+        "confidence": 0.97,
+        "bbox": "page=1,x=120,y=190,w=140,h=22"
+      },
+      {
+        "fieldName": "inr_value",
+        "extractedValue": "1.6",
+        "confidence": 0.99,
+        "bbox": "page=1,x=320,y=320,w=80,h=30"
+      },
+      {
+        "fieldName": "inr_draw_date",
+        "extractedValue": "2026-04-26",
+        "confidence": 0.95,
+        "bbox": "page=1,x=120,y=320,w=140,h=22"
+      },
+      {
+        "fieldName": "ordering_provider",
+        "extractedValue": "Dr. Ballinger",
+        "confidence": 0.94,
+        "bbox": "page=1,x=120,y=420,w=180,h=20"
+      },
+      {
+        "fieldName": "lab_facility",
+        "extractedValue": "mdINR Home Monitoring",
+        "confidence": 0.96,
+        "bbox": "page=1,x=120,y=80,w=260,h=24"
+      }
+    ],
+    "matchCandidates": [
+      {
+        "patientId": "linnehan_sample_001",
+        "patientName": "Linnehan, Synthetic",
+        "dob": "1955-02-17",
+        "mrn": "RIV-LIN-0001",
+        "matchScore": 0.97,
+        "matchSignals": ["exact_name", "dob_match"],
+        "mismatchSignals": [],
+        "requiresHumanConfirmation": false
+      }
+    ],
+    "resolvedPatientId": "linnehan_sample_001",
+    "status": "auto_matched",
+    "processedEncounterId": null
+  },
+  {
+    "id": "fax_hawthorne_inr_001",
+    "receivedAt": "<3 hours ago>",
+    "faxType": "home_inr",
+    "senderHeader": "HomeINR LLC · Anticoagulation Test Result",
+    "pageCount": 1,
+    "previewUrl": "/mock/fax-thumbnail-clean",
+    "extractedFields": [
+      {
+        "fieldName": "patient_name",
+        "extractedValue": "Hawthorne, Beatrice",
+        "confidence": 0.96,
+        "bbox": "page=1,x=120,y=160,w=240,h=24"
+      },
+      {
+        "fieldName": "patient_dob",
+        "extractedValue": "1944-08-12",
+        "confidence": 0.95,
+        "bbox": "page=1,x=120,y=190,w=140,h=22"
+      },
+      {
+        "fieldName": "inr_value",
+        "extractedValue": "3.8",
+        "confidence": 0.98,
+        "bbox": "page=1,x=320,y=320,w=80,h=30"
+      },
+      {
+        "fieldName": "inr_draw_date",
+        "extractedValue": "2026-04-26",
+        "confidence": 0.94,
+        "bbox": "page=1,x=120,y=320,w=140,h=22"
+      },
+      {
+        "fieldName": "ordering_provider",
+        "extractedValue": "Dr. Yates",
+        "confidence": 0.92,
+        "bbox": "page=1,x=120,y=420,w=180,h=20"
+      },
+      {
+        "fieldName": "lab_facility",
+        "extractedValue": "HomeINR LLC",
+        "confidence": 0.95,
+        "bbox": "page=1,x=120,y=80,w=260,h=24"
+      }
+    ],
+    "matchCandidates": [],
+    "resolvedPatientId": null,
+    "status": "awaiting_review",
+    "processedEncounterId": null
+  },
+  {
+    "id": "fax_marbury_inr_001",
+    "receivedAt": "<45 minutes ago>",
+    "faxType": "home_inr",
+    "senderHeader": "mdINR Home Monitoring · Patient Self-Test Report (poor scan quality)",
+    "pageCount": 1,
+    "previewUrl": "/mock/fax-thumbnail-messy",
+    "extractedFields": [
+      {
+        "fieldName": "patient_name",
+        "extractedValue": "Marb_ry, Synthetic",
+        "confidence": 0.62,
+        "bbox": "page=1,x=120,y=160,w=240,h=24"
+      },
+      {
+        "fieldName": "patient_dob",
+        "extractedValue": "1958-02-19",
+        "confidence": 0.93,
+        "bbox": "page=1,x=120,y=190,w=140,h=22"
+      },
+      {
+        "fieldName": "inr_value",
+        "extractedValue": "2.4",
+        "confidence": 0.97,
+        "bbox": "page=1,x=320,y=320,w=80,h=30"
+      },
+      {
+        "fieldName": "inr_draw_date",
+        "extractedValue": "2026-04-27",
+        "confidence": 0.92,
+        "bbox": "page=1,x=120,y=320,w=140,h=22"
+      },
+      {
+        "fieldName": "ordering_provider",
+        "extractedValue": "Dr. Ballinger",
+        "confidence": 0.88,
+        "bbox": "page=1,x=120,y=420,w=180,h=20"
+      },
+      {
+        "fieldName": "lab_facility",
+        "extractedValue": "mdINR Home Monitoring",
+        "confidence": 0.95,
+        "bbox": "page=1,x=120,y=80,w=260,h=24"
+      }
+    ],
+    "matchCandidates": [
+      {
+        "patientId": "marbury_sample_001",
+        "patientName": "Marbury, Synthetic",
+        "dob": "1958-02-19",
+        "mrn": "RIV-MAR-0001",
+        "matchScore": 0.72,
+        "matchSignals": ["dob_match", "name_partial"],
+        "mismatchSignals": ["name_variant"],
+        "requiresHumanConfirmation": true
+      },
+      {
+        "patientId": "marbery_sample_999",
+        "patientName": "Marbery, Synthetic",
+        "dob": "1957-08-04",
+        "mrn": "RIV-MBR-9999",
+        "matchScore": 0.58,
+        "matchSignals": ["name_phonetic", "name_partial"],
+        "mismatchSignals": ["dob_mismatch"],
+        "requiresHumanConfirmation": true
+      }
+    ],
+    "resolvedPatientId": null,
+    "status": "awaiting_review",
+    "processedEncounterId": null
+  },
+  {
+    "id": "fax_linnehan_inr_dob_conflict_001",
+    "receivedAt": "<5 hours ago>",
+    "faxType": "home_inr",
+    "senderHeader": "mdINR Home Monitoring · Patient Self-Test Report",
+    "pageCount": 1,
+    "previewUrl": "/mock/fax-thumbnail-clean",
+    "extractedFields": [
+      {
+        "fieldName": "patient_name",
+        "extractedValue": "Linnehan, Synthetic",
+        "confidence": 0.97,
+        "bbox": "page=1,x=120,y=160,w=240,h=24"
+      },
+      {
+        "fieldName": "patient_dob",
+        "extractedValue": "1960-02-17",
+        "confidence": 0.91,
+        "bbox": "page=1,x=120,y=190,w=140,h=22"
+      },
+      {
+        "fieldName": "inr_value",
+        "extractedValue": "2.1",
+        "confidence": 0.98,
+        "bbox": "page=1,x=320,y=320,w=80,h=30"
+      },
+      {
+        "fieldName": "inr_draw_date",
+        "extractedValue": "2026-04-25",
+        "confidence": 0.93,
+        "bbox": "page=1,x=120,y=320,w=140,h=22"
+      },
+      {
+        "fieldName": "ordering_provider",
+        "extractedValue": "Dr. Ballinger",
+        "confidence": 0.94,
+        "bbox": "page=1,x=120,y=420,w=180,h=20"
+      },
+      {
+        "fieldName": "lab_facility",
+        "extractedValue": "mdINR Home Monitoring",
+        "confidence": 0.96,
+        "bbox": "page=1,x=120,y=80,w=260,h=24"
+      }
+    ],
+    "matchCandidates": [
+      {
+        "patientId": "linnehan_sample_001",
+        "patientName": "Linnehan, Synthetic",
+        "dob": "1955-02-17",
+        "mrn": "RIV-LIN-0001",
+        "matchScore": 0.55,
+        "matchSignals": ["exact_name"],
+        "mismatchSignals": ["dob_mismatch"],
+        "requiresHumanConfirmation": true
+      }
+    ],
+    "resolvedPatientId": null,
+    "status": "awaiting_review",
+    "processedEncounterId": null
+  },
+  {
+    "id": "fax_outside_records_001",
+    "receivedAt": "<6 hours ago>",
+    "faxType": "outside_records",
+    "senderHeader": "Cedar Ridge Cardiology · Records Release",
+    "pageCount": 8,
+    "previewUrl": "/mock/fax-thumbnail-records",
+    "extractedFields": [
+      {
+        "fieldName": "patient_name",
+        "extractedValue": "Pemberton, Synthetic",
+        "confidence": 0.94,
+        "bbox": "page=1,x=120,y=160,w=240,h=24"
+      },
+      {
+        "fieldName": "patient_dob",
+        "extractedValue": "1951-09-22",
+        "confidence": 0.93,
+        "bbox": "page=1,x=120,y=190,w=140,h=22"
+      },
+      {
+        "fieldName": "ordering_provider",
+        "extractedValue": "Dr. Hollister",
+        "confidence": 0.92,
+        "bbox": "page=1,x=120,y=420,w=180,h=20"
+      },
+      {
+        "fieldName": "note",
+        "extractedValue": "Office visit notes 2026-03 to 2026-04, prior echocardiogram report, current med list",
+        "confidence": 0.85,
+        "bbox": "page=1,x=120,y=520,w=400,h=80"
+      }
+    ],
+    "matchCandidates": [],
+    "resolvedPatientId": null,
+    "status": "awaiting_review",
+    "processedEncounterId": null
+  },
+  {
+    "id": "fax_lab_result_001",
+    "receivedAt": "<7 hours ago>",
+    "faxType": "lab_result",
+    "senderHeader": "Riverside Diagnostic Lab · Outside Lab Result",
+    "pageCount": 2,
+    "previewUrl": "/mock/fax-thumbnail-lab",
+    "extractedFields": [
+      {
+        "fieldName": "patient_name",
+        "extractedValue": "Tarpley, Synthetic",
+        "confidence": 0.96,
+        "bbox": "page=1,x=120,y=160,w=240,h=24"
+      },
+      {
+        "fieldName": "patient_dob",
+        "extractedValue": "1972-12-04",
+        "confidence": 0.95,
+        "bbox": "page=1,x=120,y=190,w=140,h=22"
+      },
+      {
+        "fieldName": "ordering_provider",
+        "extractedValue": "Dr. Penrose",
+        "confidence": 0.91,
+        "bbox": "page=1,x=120,y=420,w=180,h=20"
+      },
+      {
+        "fieldName": "lab_facility",
+        "extractedValue": "Riverside Diagnostic Lab",
+        "confidence": 0.97,
+        "bbox": "page=1,x=120,y=80,w=260,h=24"
+      },
+      {
+        "fieldName": "note",
+        "extractedValue": "BMP, lipid panel, HbA1c — values within reference ranges except fasting glucose 118",
+        "confidence": 0.86,
+        "bbox": "page=1,x=120,y=520,w=400,h=80"
+      }
+    ],
+    "matchCandidates": [],
+    "resolvedPatientId": null,
+    "status": "awaiting_review",
+    "processedEncounterId": null
+  },
+  {
+    "id": "fax_whitfield_inr_processed_001",
+    "receivedAt": "<28 hours ago>",
+    "faxType": "home_inr",
+    "senderHeader": "mdINR Home Monitoring · Patient Self-Test Report",
+    "pageCount": 1,
+    "previewUrl": "/mock/fax-thumbnail-clean",
+    "extractedFields": [
+      {
+        "fieldName": "patient_name",
+        "extractedValue": "Whitfield, Synthetic",
+        "confidence": 0.98,
+        "bbox": "page=1,x=120,y=160,w=240,h=24"
+      },
+      {
+        "fieldName": "patient_dob",
+        "extractedValue": "1949-11-03",
+        "confidence": 0.97,
+        "bbox": "page=1,x=120,y=190,w=140,h=22"
+      },
+      {
+        "fieldName": "inr_value",
+        "extractedValue": "2.6",
+        "confidence": 0.99,
+        "bbox": "page=1,x=320,y=320,w=80,h=30"
+      },
+      {
+        "fieldName": "inr_draw_date",
+        "extractedValue": "2026-04-26",
+        "confidence": 0.96,
+        "bbox": "page=1,x=120,y=320,w=140,h=22"
+      },
+      {
+        "fieldName": "ordering_provider",
+        "extractedValue": "Dr. Ballinger",
+        "confidence": 0.94,
+        "bbox": "page=1,x=120,y=420,w=180,h=20"
+      }
+    ],
+    "matchCandidates": [
+      {
+        "patientId": "whitfield_sample_001",
+        "patientName": "Whitfield, Synthetic",
+        "dob": "1949-11-03",
+        "mrn": "RIV-WHF-0001",
+        "matchScore": 0.97,
+        "matchSignals": ["exact_name", "dob_match"],
+        "mismatchSignals": [],
+        "requiresHumanConfirmation": false
+      }
+    ],
+    "resolvedPatientId": "whitfield_sample_001",
+    "status": "processed",
+    "processedEncounterId": "anticoag_visit_whitfield_001"
+  },
+  {
+    "id": "fax_unknown_junk_001",
+    "receivedAt": "<8 hours ago>",
+    "faxType": "unknown",
+    "senderHeader": "(unrecognized header — heavy artifacting)",
+    "pageCount": 1,
+    "previewUrl": "/mock/fax-thumbnail-junk",
+    "extractedFields": [
+      {
+        "fieldName": "note",
+        "extractedValue": "Could not extract patient identifiers; appears to be a misdirected pharmacy promotion.",
+        "confidence": 0.31,
+        "bbox": "page=1,x=0,y=0,w=600,h=200"
+      }
+    ],
+    "matchCandidates": [],
+    "resolvedPatientId": null,
+    "status": "rejected"
+  }
+]
