@@ -1,0 +1,67 @@
+{
+  "id": "pa_castellanos_repatha_001",
+  "patientId": "castellanos_sample_001",
+  "medicationName": "Evolocumab (Repatha) 140mg q2w",
+  "indication": "Statin-intolerant CAD, LDL 132 post-MI, secondary prevention per ACC guidelines",
+  "prescribingProvider": "Dr. Eftheriou",
+  "insurancePlan": "BlueCross PPO",
+  "pharmacy": "Walgreens (Springfield)",
+  "currentStage": "info_requested",
+  "createdAt": "<14 days ago>",
+  "lastUpdatedAt": "<2 days ago>",
+  "stageHistory": [
+    {
+      "id": "pa_evt_001",
+      "stage": "submitted",
+      "enteredAt": "<14 days ago>",
+      "actor": "nurse",
+      "note": "PA submitted with diagnosis codes I21.4 (recent MI), Z91.13 (statin intolerance), and lipid panel showing LDL 132 on max-tolerated atorvastatin.",
+      "artifacts": [
+        { "type": "pa_form", "summary": "Initial PA submission" }
+      ]
+    },
+    {
+      "id": "pa_evt_002",
+      "stage": "insurance_review",
+      "enteredAt": "<11 days ago>",
+      "actor": "insurance",
+      "note": "Auto-acknowledgment received. Estimated review: 7 business days.",
+      "artifacts": []
+    },
+    {
+      "id": "pa_evt_003",
+      "stage": "denied",
+      "enteredAt": "<7 days ago>",
+      "actor": "insurance",
+      "note": "Initial denial — documentation insufficient. Insurance requires documented trial of two statins at maximum tolerated dose with persistent LDL >70.",
+      "artifacts": [
+        { "type": "denial_letter", "summary": "Denial letter cites insufficient statin trial documentation" }
+      ]
+    },
+    {
+      "id": "pa_evt_004",
+      "stage": "appealing",
+      "enteredAt": "<5 days ago>",
+      "actor": "nurse",
+      "note": "Appeal submitted with full statin trial history (atorvastatin 80→40→10 due to myalgia, prior rosuvastatin trial also d/c for myalgia 2y ago) and updated LDL.",
+      "artifacts": [
+        { "type": "appeal_letter", "summary": "Appeal with full statin intolerance documentation" }
+      ]
+    },
+    {
+      "id": "pa_evt_005",
+      "stage": "info_requested",
+      "enteredAt": "<2 days ago>",
+      "actor": "insurance",
+      "note": "Appeal received. Insurance requesting CK levels at time of myalgia and proof of provider counseling on lifestyle modification.",
+      "artifacts": [
+        { "type": "insurance_response", "summary": "Info request — CK + lifestyle counseling documentation" }
+      ]
+    }
+  ],
+  "latestPatientCommunication": {
+    "direction": "inbound",
+    "receivedAt": "<6 hours ago>",
+    "body": "I still haven't gotten my Repatha shot. The pharmacy keeps saying it's not approved yet. It's been almost 2 weeks. I sent the Walgreens Springfield address again. Can someone please tell me what is going on with my insurance? I am worried about my heart."
+  }
+}

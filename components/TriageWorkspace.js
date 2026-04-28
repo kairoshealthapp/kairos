@@ -9,6 +9,8 @@ import DualOutputDraft from "./DualOutputDraft";
 import MyChartThread from "./MyChartThread";
 import ProcedureContextCard from "./ProcedureContextCard";
 import ProtocolApplier from "./ProtocolApplier";
+import MedRecPanel from "./MedRecPanel";
+import PriorAuthTracker from "./PriorAuthTracker";
 
 const WHITFIELD_ENCOUNTER_ID = "whitfield_encounter_001";
 const MARBURY_ENCOUNTER_ID = "marbury_encounter_001";
@@ -103,6 +105,8 @@ export default function TriageWorkspace({
   resultNoteSourceDetail = "",
   resultNoteOccurredAt = "",
   mychartMessages = null,
+  medRecBundle = null,
+  priorAuth = null,
 }) {
   const [questions, setQuestions] = useState([]);
   const [evidence, setEvidence] = useState([]);
@@ -138,9 +142,43 @@ export default function TriageWorkspace({
 
   const isResultsFollowupWithNote = !!resultNote;
   const isPreProcedure = encounterType === "pre_procedure_inquiry";
+  const isPreVisitMedRec = encounterType === "pre_visit_med_rec";
+  const isPriorAuthInquiry = encounterType === "prior_auth_inquiry" && !!priorAuth;
 
   return (
     <div className="space-y-6">
+      {isPriorAuthInquiry && (
+        <>
+          <PriorAuthTracker priorAuth={priorAuth} chartContext={chartContext} />
+          {priorAuth.latestPatientCommunication && (
+            <MyChartThread
+              messages={[
+                {
+                  id: "pa_latest",
+                  direction: priorAuth.latestPatientCommunication.direction,
+                  body: priorAuth.latestPatientCommunication.body,
+                  sentAt: priorAuth.latestPatientCommunication.receivedAt,
+                  from: chartContext?.patient?.name || "Patient",
+                  subject: "Repatha — status update",
+                },
+              ]}
+            />
+          )}
+        </>
+      )}
+
+      {isPreVisitMedRec && medRecBundle && (
+        <MedRecPanel
+          task={medRecBundle.task}
+          encounterId={encounterId}
+          patientId={patientId}
+          patientName={chartContext?.patient?.name || ""}
+          epicMeds={medRecBundle.epicMeds}
+          initialDiscrepancies={medRecBundle.discrepancies}
+          initialResolutions={medRecBundle.task?.discrepancyResolutions || {}}
+        />
+      )}
+
       {isPreProcedure && (
         <>
           <ProcedureContextCard procedureContext={procedureContext} />
@@ -173,7 +211,7 @@ export default function TriageWorkspace({
         </>
       )}
 
-      {!isResultsFollowupWithNote && !isPreProcedure && (
+      {!isResultsFollowupWithNote && !isPreProcedure && !isPreVisitMedRec && !isPriorAuthInquiry && (
         <TriageQuestions
           patientId={patientId}
           encounterId={encounterId}
@@ -182,7 +220,7 @@ export default function TriageWorkspace({
         />
       )}
       <EvidenceCapture
-        questions={questions}
+        questions={isPreVisitMedRec || isPriorAuthInquiry ? [] : questions}
         evidence={evidence}
         defaultSource={defaultSourceFor(callerContext)}
         onAddEvidence={addEvidence}

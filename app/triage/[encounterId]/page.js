@@ -11,6 +11,10 @@ import {
 import ChartContext from "@/components/ChartContext";
 import BPLogTable from "@/components/BPLogTable";
 import TriageWorkspace from "@/components/TriageWorkspace";
+import { getPreVisitTask } from "@/lib/state/preVisitTasks";
+import { getPriorAuthRequest } from "@/lib/state/priorAuth";
+import { reconcileMedications, attachResolutions } from "@/lib/clinical/medRecEngine";
+import { getBundleForPatient } from "@/lib/fhir/mockData";
 
 export const dynamic = "force-dynamic";
 
@@ -96,6 +100,30 @@ export default async function TriagePage({ params }) {
     );
   }
 
+  // Pre-visit med rec primitive — for encounters tied to a pre-visit task,
+  // compute discrepancies on the server and pass them to the workspace.
+  let medRecBundle = null;
+  if (meta?.type === "pre_visit_med_rec" && meta.preVisitTaskId) {
+    const task = getPreVisitTask(meta.preVisitTaskId);
+    if (task) {
+      const bundle = getBundleForPatient(patientId);
+      const epicMeds = (bundle?.entry || [])
+        .map((e) => e.resource)
+        .filter(
+          (r) => r?.resourceType === "MedicationRequest" && r.status === "active"
+        );
+      const raw = reconcileMedications(bundle, task.patientReportedMeds);
+      const discrepancies = attachResolutions(raw, task.discrepancyResolutions);
+      medRecBundle = { task, epicMeds, discrepancies };
+    }
+  }
+
+  // Prior-auth inquiry — load the PA state machine record for the workspace.
+  let priorAuth = null;
+  if (meta?.type === "prior_auth_inquiry" && meta.priorAuthId) {
+    priorAuth = getPriorAuthRequest(meta.priorAuthId);
+  }
+
   return (
     <div className="space-y-8">
       <header className="flex items-start justify-between gap-4">
@@ -159,6 +187,8 @@ export default async function TriagePage({ params }) {
           resultNoteSourceDetail={resultNoteSourceDetail}
           resultNoteOccurredAt={resultNoteOccurredAt}
           mychartMessages={mychartMessages}
+          medRecBundle={medRecBundle}
+          priorAuth={priorAuth}
         />
       </div>
     </div>

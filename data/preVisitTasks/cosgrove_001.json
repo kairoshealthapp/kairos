@@ -1,0 +1,29 @@
+{
+  "id": "pre_visit_cosgrove_001",
+  "patientId": "cosgrove_sample_001",
+  "appointmentDate": "<in 3 days>",
+  "captureMethod": "mychart_form",
+  "capturedAt": "<2 days ago>",
+  "status": "submitted",
+  "patientReportedMeds": [
+    { "id": "rep_lisinopril", "reportedName": "Lisinopril 20mg", "reportedDose": "20mg", "reportedFrequency": "daily", "stillTaking": true, "reportedReason": "blood pressure" },
+    { "id": "rep_metoprolol", "reportedName": "Metoprolol 50mg", "reportedDose": "50mg", "reportedFrequency": "twice daily", "stillTaking": true, "reportedReason": "heart" },
+    { "id": "rep_furosemide", "reportedName": "Furosemide 40mg", "reportedDose": "40mg", "reportedFrequency": "daily", "stillTaking": true, "reportedReason": "fluid" },
+    { "id": "rep_spironolactone", "reportedName": "Spironolactone 25mg", "reportedDose": "25mg", "reportedFrequency": "daily", "stillTaking": true, "reportedReason": "fluid" },
+    { "id": "rep_eliquis", "reportedName": "Eliquis", "reportedDose": "5mg", "reportedFrequency": "twice daily", "stillTaking": true, "reportedReason": "blood thinner for AFib" },
+    { "id": "rep_atorvastatin", "reportedName": "Atorvastatin 40mg", "reportedDose": "40mg", "reportedFrequency": "daily", "stillTaking": true, "reportedReason": "cholesterol" },
+    { "id": "rep_metformin", "reportedName": "Metformin 500mg", "reportedDose": "500mg", "reportedFrequency": "twice daily", "stillTaking": true, "reportedReason": "diabetes" },
+    { "id": "rep_jardiance", "reportedName": "Jardiance", "reportedDose": "10mg", "reportedFrequency": "daily", "stillTaking": true, "reportedReason": "diabetes" },
+    { "id": "rep_gabapentin", "reportedName": "Gabapentin", "reportedDose": "not sure, maybe 300mg", "reportedFrequency": "three times a day", "stillTaking": true, "reportedReason": "nerve pain" },
+    { "id": "rep_tylenol", "reportedName": "Tylenol", "reportedDose": "650mg", "reportedFrequency": "as needed for pain", "stillTaking": true, "reportedReason": "arthritis" },
+    { "id": "rep_tramadol", "reportedName": "Tramadol 50mg", "reportedDose": "50mg", "reportedFrequency": "four times a day", "stillTaking": true, "reportedReason": "hip pain" },
+    { "id": "rep_sertraline", "reportedName": "Sertraline 50mg", "reportedDose": "50mg", "reportedFrequency": "daily", "stillTaking": true, "reportedReason": "anxiety" },
+    { "id": "rep_pantoprazole", "reportedName": "Pantoprazole 40mg", "reportedDose": "40mg", "reportedFrequency": "daily", "stillTaking": true, "reportedReason": "reflux" },
+    { "id": "rep_famotidine", "reportedName": "Famotidine", "reportedDose": "20mg", "reportedFrequency": "as needed", "stillTaking": true, "reportedReason": "reflux flares" },
+    { "id": "rep_trazodone", "reportedName": "Trazodone 50mg", "reportedDose": "50mg", "reportedFrequency": "at bedtime when needed", "stillTaking": true, "reportedReason": "sleep" },
+    { "id": "rep_vitd", "reportedName": "Vitamin D 2000", "reportedDose": "2000 IU", "reportedFrequency": "daily", "stillTaking": true, "reportedReason": "bone health" },
+    { "id": "rep_turmeric", "reportedName": "Turmeric capsule", "reportedDose": "not sure", "reportedFrequency": "daily", "stillTaking": true, "reportedReason": "joints" }
+  ],
+  "patientNotes": "My daughter helped me fill this out. We tried to be accurate but I am not always sure of the exact doses. I have a list at home if you need it.",
+  "discrepancyResolutions": {}
+}
