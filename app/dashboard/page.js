@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Inbox, Link2, Users, ArrowUpRight } from "lucide-react";
+import { Inbox, Link2, Users, ArrowUpRight, ShieldCheck, ShieldAlert, FileText } from "lucide-react";
 import { listEncounters } from "@/lib/fhir/encounters";
 import { getInvestigations } from "@/lib/state/investigations";
 import {
@@ -10,6 +10,18 @@ import {
   getCohortDefinitions,
   getCohortSnapshot,
 } from "@/lib/state/cohorts";
+import { getPreVisitTask } from "@/lib/state/preVisitTasks";
+import { getPriorAuthRequest } from "@/lib/state/priorAuth";
+import { getBundleForPatient } from "@/lib/fhir/mockData";
+import { reconcileMedications, attachResolutions } from "@/lib/clinical/medRecEngine";
+import {
+  countUnresolved,
+} from "@/lib/types/preVisitTask";
+import {
+  stageLabel,
+  stageTone,
+  summarizeStageHistory,
+} from "@/lib/types/priorAuth";
 import DashboardClock from "@/components/DashboardClock";
 
 export const dynamic = "force-dynamic";
@@ -46,8 +58,26 @@ function encounterPill(e) {
   if (e.type === "pre_procedure_inquiry") {
     return { label: "Pre-Procedure", tone: "neutral" };
   }
+  if (e.type === "pre_visit_med_rec") {
+    return { label: "Pre-Visit Med Rec", tone: "neutral" };
+  }
+  if (e.type === "prior_auth_inquiry") {
+    return { label: "Prior Auth", tone: "patient" };
+  }
   return { label: e.type, tone: "neutral" };
 }
+
+const STAGE_TONE_CLASS = {
+  amber:
+    "bg-[color:var(--color-flag-low-soft)] text-[color:var(--color-flag-low)]",
+  green:
+    "bg-[color:var(--color-flag-success-soft)] text-[color:var(--color-flag-success)]",
+  red:
+    "bg-[color:var(--color-flag-high-soft)] text-[color:var(--color-flag-high)]",
+  purple:
+    "bg-[color:var(--color-source-clinician-soft)] text-[color:var(--color-source-clinician)]",
+  neutral: "bg-muted text-fg-muted",
+};
 
 const PILL_TONES = {
   patient:
@@ -87,6 +117,33 @@ function relativeReviewedAt(snapshot) {
   if (hr < 24) return `${hr} hr ago`;
   const days = Math.round(hr / 24);
   return `${days} d ago`;
+}
+
+function buildMedRecBadge(encounter) {
+  if (encounter.type !== "pre_visit_med_rec" || !encounter.preVisitTaskId) return null;
+  const task = getPreVisitTask(encounter.preVisitTaskId);
+  if (!task) return null;
+  const bundle = getBundleForPatient(encounter.patientId);
+  const raw = reconcileMedications(bundle, task.patientReportedMeds);
+  const discrepancies = attachResolutions(raw, task.discrepancyResolutions);
+  const total = discrepancies.length;
+  const unresolved = countUnresolved(discrepancies);
+  const highCount = discrepancies.filter((d) => !d.resolution && d.severity === "high").length;
+  return { total, unresolved, highCount };
+}
+
+function buildPABadge(encounter) {
+  if (encounter.type !== "prior_auth_inquiry" || !encounter.priorAuthId) return null;
+  const pa = getPriorAuthRequest(encounter.priorAuthId);
+  if (!pa) return null;
+  const summary = summarizeStageHistory(pa);
+  return {
+    stage: pa.currentStage,
+    stageLabel: stageLabel(pa.currentStage),
+    tone: stageTone(pa.currentStage),
+    daysActive: summary.daysActive,
+    transitions: summary.totalStages,
+  };
 }
 
 export default function DashboardPage() {
@@ -133,7 +190,16 @@ export default function DashboardPage() {
           </h1>
           <p className="text-[15px] text-fg-muted">Active encounters</p>
         </div>
-        <DashboardClock />
+        <div className="flex items-center gap-3">
+          <Link
+            href="/integrity-log"
+            className="inline-flex items-center gap-1.5 rounded-button px-3 py-1.5 text-[13px] text-fg-muted transition-colors hover:bg-muted hover:text-fg"
+          >
+            <ShieldCheck size={14} strokeWidth={1.75} />
+            Your integrity log
+          </Link>
+          <DashboardClock />
+        </div>
       </header>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -216,6 +282,8 @@ export default function DashboardPage() {
             const pill = encounterPill(e);
             const investigation = findInvestigationForEncounter(investigations, e.id);
             const summary = investigation ? summarizeInvestigation(investigation) : null;
+            const medRecBadge = buildMedRecBadge(e);
+            const paBadge = buildPABadge(e);
             return (
               <li key={e.id} className="relative">
                 <Link
@@ -244,6 +312,37 @@ export default function DashboardPage() {
                     <p className="line-clamp-2 text-[14px] text-fg-muted">
                       {e.reason}
                     </p>
+                    {medRecBadge && (
+                      <div className="flex flex-wrap items-center gap-2 text-[12px]">
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-pill px-2 py-0.5 font-medium ${medRecBadge.unresolvedCount > 0 ? "bg-[color:var(--color-flag-high-soft)] text-[color:var(--color-flag-high)]" : "bg-[color:var(--color-flag-success-soft)] text-[color:var(--color-flag-success)]"}`}
+                        >
+                          <ShieldAlert size={11} strokeWidth={1.75} />
+                          {medRecBadge.total} discrepanc
+                          {medRecBadge.total === 1 ? "y" : "ies"} detected
+                        </span>
+                        {medRecBadge.highCount > 0 && (
+                          <span className="text-[color:var(--color-flag-high)]">
+                            {medRecBadge.highCount} high-severity
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {paBadge && (
+                      <div className="flex flex-wrap items-center gap-2 text-[12px]">
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-pill px-2 py-0.5 font-medium ${STAGE_TONE_CLASS[paBadge.tone] || STAGE_TONE_CLASS.neutral}`}
+                        >
+                          <FileText size={11} strokeWidth={1.75} />
+                          {paBadge.stageLabel}
+                        </span>
+                        <span className="text-fg-muted">
+                          PA active {paBadge.daysActive} day{paBadge.daysActive === 1 ? "" : "s"}
+                          <span className="text-fg-faint/60"> · </span>
+                          {paBadge.transitions} stage transitions
+                        </span>
+                      </div>
+                    )}
                     <div className="text-[12px] text-fg-faint">
                       <span className="font-mono">{e.id}</span>
                       {e.callerName && (

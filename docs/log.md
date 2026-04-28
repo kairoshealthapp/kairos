@@ -456,3 +456,61 @@ The 9-phase v4 build executed end-to-end on top of v3. v4 introduces the two arc
 - `app/dashboard/page.js` (Cohort Surveillance section above Inbox; Pre-Procedure pill for the new encounter type)
 
 Dev server left on `:3000`. No `git push`.
+
+
+## 2026-04-27 — v5: Pre-visit phase + documentation integrity + state-machine workflow
+
+Stacked on v4 (encounters + investigations + cohorts + protocols). v5 adds the **last two architectural primitives** that complete the institutional pitch surface:
+
+- **Pre-visit task primitive** — the temporal phase BEFORE the encounter, where MyChart pre-visit forms / kiosk tablets / OCR'd paper intakes have already arrived but the patient hasn't been roomed yet. The data model (`PreVisitTask`, `PatientReportedMed`, `Discrepancy`, `AttestationLog`) lives in `lib/types/preVisitTask.js`; in-memory store in `lib/state/preVisitTasks.js`. Same swap-pattern as cohorts/investigations — only the storage file changes when Supabase lands.
+- **Documentation integrity primitive** — every "Mark Medications as Reviewed" click is logged as either `earned: true` (all discrepancies resolved) or `earned: false` (clicked through with unresolved items). Kairos NEVER blocks the click (Epic doesn't, and Kairos doesn't replace Epic). Kairos *records* the integrity. The log is each nurse's personal cognitive aid, never an aggregated management surface — non-negotiable per the post-mortem failure mode #3.
+- **State-machine workflow primitive** — multi-stage persistent objects with required transitions and per-stage artifacts. Castellanos's Repatha PA traversed 5 stages (`submitted → insurance_review → denied → appealing → info_requested`) with 4 artifacts; the `PriorAuthRequest` lives independently of any encounter. When the patient sends a frustrated MyChart message, an encounter spawns that *touches* the PA, but the PA itself is durable across encounters. `lib/types/priorAuth.js` enforces allowed transitions with `advanceStage()` throwing on illegal jumps.
+
+The Tysander med-rec engine produces exactly 11 discrepancies as designed:
+- 2 duplicate-class (high) — Metoprolol+Carvedilol, Sertraline+Citalopram
+- 3 patient_dropped — Carvedilol (medium), Glipizide (high, hypoglycemia risk), Citalopram (medium)
+- 1 dose_mismatch — Metformin 1000→500 (medium)
+- 1 frequency_mismatch (high) — Tramadol q6h PRN order, patient using QID
+- 1 frequency_mismatch (low) — Famotidine BID order, patient using PRN
+- 2 patient_added (low) — Vitamin D, Turmeric
+- 1 drug_interaction (medium) — Apixaban + Turmeric (compound bleeding risk)
+
+Engine in `lib/clinical/medRecEngine.js`; shared drug name/class lookup extracted to `lib/clinical/drugLookup.js` (shared with v4 protocol applier). Severity scaling rules: narrow-therapeutic and hypoglycemic agents escalate to high; opioid/benzo overuse goes high; under-use of routine meds is low. Interaction map covers ~9 common pairs.
+
+The Castellanos PA tracker renders the 5-stage history with the canonical progress bar, action bar context-sensitive to `info_requested` (so "Request additional info" is offered), and a Send patient update button that drafts a dual output (warm MyChart message + clinical nurse note) via `lib/prompts/paStatusUpdate.js` against Opus 4.7. The patient-facing message acknowledges the frustration and explains the PA stage in plain language; the nurse note carries clinical density and `[verify: ...]` flags.
+
+Dashboard updates: Tysander encounter card shows the discrepancy badge ("11 discrepancies detected" with high-count call-out); Castellanos card shows the PA stage pill + days-active + transitions count. New header link "Your integrity log →" surfaces the personal attestation history at `/integrity-log`. Inbox count rises to 7 active encounters.
+
+**Phases (8 total):**
+1. Pre-visit task data model + state module (`lib/types/preVisitTask.js`, `lib/state/preVisitTasks.js`).
+2. Tysander synthetic FHIR R4 Bundle (78yo F, 18 active meds with deliberate duplicates), pre-visit task seed (17 patient-reported entries), encounter registration as `pre_visit_med_rec`.
+3. Med-rec engine (`reconcileMedications` + interaction map + drug-class duplicates), shared `drugLookup.js`. Verified against Tysander: produces exactly the spec's ~11 discrepancies.
+4. `MedRecPanel` component (3-column Epic / Patient / Discrepancy layout, severity-sorted resolution actions, attestation footer with the inline "are you sure?" confirmation when unresolved discrepancies remain). API routes `/api/med-rec/resolve` + `/api/med-rec/attest`. `/integrity-log` page reads the in-memory log; never aggregated.
+5. Castellanos synthetic FHIR Bundle (61yo F, statin-intolerant CAD, recent MI, LDL 132 on max-tolerated atorvastatin, Repatha draft order). PA state-machine type (`lib/types/priorAuth.js` with allowed-transition guard) + storage (`lib/state/priorAuth.js`) + 5-stage seed.
+6. `PriorAuthTracker` component (progress bar, vertical timeline, context-sensitive next-step buttons, dual-output draft generator). Prompt + route at `lib/prompts/paStatusUpdate.js` and `app/api/pa-status-update/route.js` (Opus 4.7).
+7. Dashboard updates: discrepancy badge for Tysander, PA stage badge for Castellanos, "Your integrity log →" header link, new pill labels for `pre_visit_med_rec` and `prior_auth_inquiry` encounter types.
+8. End-to-end verify — full route smoke: `/dashboard`, `/triage/tysander_encounter_001`, `/triage/castellanos_encounter_001`, `/integrity-log`, plus all v2-v4 routes — every one returns HTTP 200. Build clean. Zero real-name leakage. No `<form>` tags.
+
+**Architectural note.** v5 closes out the integrity-and-state primitives layer. Pre-visit task is the temporal phase ahead of the encounter; the AttestationLog distinguishes earned from unearned clicks at the documentation surface; the PA state machine carries multi-stage workflows that outlive any single encounter. The pitch frame ("Kairos is one primitive applied to ten surfaces, not ten features") is now structurally complete: Phase-1 chart-aware inquiry → Investigation links across time → Cohort surfaces populations → Protocol applies guidelines as data → Pre-visit task captures the before-the-room phase → Documentation integrity records what was actually reviewed → State-machine workflow tracks the durable cross-encounter PA. Every new clinical workflow on the roadmap is a composition.
+
+**Files added (uncommitted):**
+- `lib/types/preVisitTask.js`, `lib/state/preVisitTasks.js`
+- `lib/clinical/medRecEngine.js`, `lib/clinical/drugLookup.js`
+- `data/patients/tysander.json`, `data/preVisitTasks/cosgrove_001.json`
+- `app/api/med-rec/resolve/route.js`, `app/api/med-rec/attest/route.js`
+- `components/MedRecPanel.js`
+- `app/integrity-log/page.js`
+- `lib/types/priorAuth.js`, `lib/state/priorAuth.js`
+- `data/patients/castellanos.json`, `data/priorAuth/castellanos_repatha.json`
+- `lib/prompts/paStatusUpdate.js`
+- `app/api/pa-status-update/route.js`
+- `components/PriorAuthTracker.js`
+
+**Files modified (uncommitted):**
+- `lib/fhir/mockData.js` (registered Tysander + Castellanos bundles)
+- `lib/fhir/encounters.js` (added `tysander_encounter_001` with `preVisitTaskId`, `castellanos_encounter_001` with `priorAuthId`)
+- `app/triage/[encounterId]/page.js` (server-side med-rec computation + PA load, passed into TriageWorkspace)
+- `components/TriageWorkspace.js` (renders `MedRecPanel` for `pre_visit_med_rec`, renders `PriorAuthTracker` + `MyChartThread` for `prior_auth_inquiry`)
+- `app/dashboard/page.js` (encounter pills for the two new types, discrepancy + PA badges, "Your integrity log →" header link)
+
+Dev server tested on `:3000` — all 11 verified routes 200. No `git push`.

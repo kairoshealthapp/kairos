@@ -1,0 +1,79 @@
+{
+  "_comment": "SYNTHETIC TEST DATA. No real PHI. 61yo F with hyperlipidemia / CAD / prior MI / HTN / statin intolerance. On reduced atorvastatin + lisinopril + metoprolol + ASA. Repatha PA pending. Provider Dr. Skarsdale.",
+  "resourceType": "Bundle",
+  "id": "castellanos-sample-bundle",
+  "type": "searchset",
+  "timestamp": "2026-04-27T17:00:00-05:00",
+  "total": 14,
+  "link": [
+    {
+      "relation": "self",
+      "url": "https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4/Patient/castellanos_sample_001/$everything"
+    }
+  ],
+  "entry": [
+    {
+      "fullUrl": "Patient/castellanos_sample_001",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "castellanos_sample_001",
+        "meta": { "source": "synthetic" },
+        "identifier": [
+          {
+            "use": "usual",
+            "type": {
+              "coding": [
+                { "system": "http://terminology.hl7.org/CodeSystem/v2-0203", "code": "MR", "display": "Medical Record Number" }
+              ]
+            },
+            "system": "urn:oid:1.2.840.114350.1.13.0.1.7.5.737384.0",
+            "value": "SYN-MRN-000007"
+          }
+        ],
+        "active": true,
+        "name": [{ "use": "official", "family": "Patient_Castellanos_Sample", "given": ["Synthetic"] }],
+        "gender": "female",
+        "birthDate": "1965-06-09",
+        "address": [{ "use": "home", "city": "Anytown", "state": "XX", "postalCode": "00000", "country": "US" }]
+      }
+    },
+    {
+      "fullUrl": "Encounter/castellanos_encounter_001",
+      "resource": {
+        "resourceType": "Encounter",
+        "id": "castellanos_encounter_001",
+        "meta": { "source": "synthetic" },
+        "status": "in-progress",
+        "class": { "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode", "code": "VR" },
+        "type": [
+          {
+            "coding": [
+              { "system": "http://snomed.info/sct", "code": "390906007", "display": "Follow-up encounter" }
+            ],
+            "text": "Prior auth status inquiry"
+          }
+        ],
+        "subject": { "reference": "Patient/castellanos_sample_001" },
+        "period": { "start": "2026-04-27T13:00:00-05:00" },
+        "reasonCode": [{ "text": "Pt MyChart message — frustrated, Repatha PA delayed; asking for status update." }]
+      }
+    },
+    { "fullUrl": "Condition/castellanos_condition_hld", "resource": { "resourceType":"Condition","id":"castellanos_condition_hld","meta":{"source":"synthetic"},"clinicalStatus":{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/condition-clinical","code":"active"}]},"verificationStatus":{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/condition-ver-status","code":"confirmed"}]},"category":[{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/condition-category","code":"problem-list-item"}]}],"code":{"coding":[{"system":"http://hl7.org/fhir/sid/icd-10-cm","code":"E78.5","display":"Hyperlipidemia, unspecified"}],"text":"Hyperlipidemia"},"subject":{"reference":"Patient/castellanos_sample_001"},"onsetDateTime":"2010-04-12","recordedDate":"2010-04-12" } },
+    { "fullUrl": "Condition/castellanos_condition_cad", "resource": { "resourceType":"Condition","id":"castellanos_condition_cad","meta":{"source":"synthetic"},"clinicalStatus":{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/condition-clinical","code":"active"}]},"verificationStatus":{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/condition-ver-status","code":"confirmed"}]},"category":[{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/condition-category","code":"problem-list-item"}]}],"code":{"coding":[{"system":"http://hl7.org/fhir/sid/icd-10-cm","code":"I25.10","display":"ASCVD without angina pectoris"}],"text":"Coronary artery disease"},"subject":{"reference":"Patient/castellanos_sample_001"},"onsetDateTime":"2023-11-02","recordedDate":"2023-11-02" } },
+    { "fullUrl": "Condition/castellanos_condition_priormi", "resource": { "resourceType":"Condition","id":"castellanos_condition_priormi","meta":{"source":"synthetic"},"clinicalStatus":{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/condition-clinical","code":"active"}]},"verificationStatus":{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/condition-ver-status","code":"confirmed"}]},"category":[{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/condition-category","code":"problem-list-item"}]}],"code":{"coding":[{"system":"http://hl7.org/fhir/sid/icd-10-cm","code":"I25.2","display":"Old myocardial infarction"}],"text":"History of myocardial infarction"},"subject":{"reference":"Patient/castellanos_sample_001"},"onsetDateTime":"2023-11-02","recordedDate":"2023-11-02" } },
+    { "fullUrl": "Condition/castellanos_condition_htn", "resource": { "resourceType":"Condition","id":"castellanos_condition_htn","meta":{"source":"synthetic"},"clinicalStatus":{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/condition-clinical","code":"active"}]},"verificationStatus":{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/condition-ver-status","code":"confirmed"}]},"category":[{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/condition-category","code":"problem-list-item"}]}],"code":{"coding":[{"system":"http://hl7.org/fhir/sid/icd-10-cm","code":"I10","display":"Essential (primary) hypertension"}],"text":"Essential hypertension"},"subject":{"reference":"Patient/castellanos_sample_001"},"onsetDateTime":"2014-07-30","recordedDate":"2014-07-30" } },
+    { "fullUrl": "Condition/castellanos_condition_statinintol", "resource": { "resourceType":"Condition","id":"castellanos_condition_statinintol","meta":{"source":"synthetic"},"clinicalStatus":{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/condition-clinical","code":"active"}]},"verificationStatus":{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/condition-ver-status","code":"confirmed"}]},"category":[{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/condition-category","code":"problem-list-item"}]}],"code":{"coding":[{"system":"http://hl7.org/fhir/sid/icd-10-cm","code":"Z91.13","display":"Patient's intentional underdosing of medication regimen due to financial hardship"}],"text":"Statin intolerance (myalgia)"},"subject":{"reference":"Patient/castellanos_sample_001"},"onsetDateTime":"2024-02-14","recordedDate":"2024-02-14" } },
+
+    { "fullUrl": "MedicationRequest/castellanos_med_atorva", "resource": { "resourceType":"MedicationRequest","id":"castellanos_med_atorva","meta":{"source":"synthetic"},"status":"active","intent":"order","medicationCodeableConcept":{"coding":[{"system":"http://www.nlm.nih.gov/research/umls/rxnorm","code":"617310","display":"Atorvastatin Calcium 10 MG Oral Tablet"}],"text":"Atorvastatin 10 mg PO daily (reduced from 40 mg due to myalgia)"},"subject":{"reference":"Patient/castellanos_sample_001"},"authoredOn":"2025-09-12","dosageInstruction":[{"text":"10 mg by mouth once daily"}] } },
+    { "fullUrl": "MedicationRequest/castellanos_med_lisinopril", "resource": { "resourceType":"MedicationRequest","id":"castellanos_med_lisinopril","meta":{"source":"synthetic"},"status":"active","intent":"order","medicationCodeableConcept":{"coding":[{"system":"http://www.nlm.nih.gov/research/umls/rxnorm","code":"314076","display":"Lisinopril 20 MG Oral Tablet"}],"text":"Lisinopril 20 mg PO daily"},"subject":{"reference":"Patient/castellanos_sample_001"},"authoredOn":"2014-08-04","dosageInstruction":[{"text":"20 mg by mouth once daily"}] } },
+    { "fullUrl": "MedicationRequest/castellanos_med_metop", "resource": { "resourceType":"MedicationRequest","id":"castellanos_med_metop","meta":{"source":"synthetic"},"status":"active","intent":"order","medicationCodeableConcept":{"coding":[{"system":"http://www.nlm.nih.gov/research/umls/rxnorm","code":"866427","display":"Metoprolol Succinate 50 MG Extended Release Oral Tablet"}],"text":"Metoprolol succinate 50 mg PO daily"},"subject":{"reference":"Patient/castellanos_sample_001"},"authoredOn":"2023-11-04","dosageInstruction":[{"text":"50 mg by mouth once daily"}] } },
+    { "fullUrl": "MedicationRequest/castellanos_med_asa", "resource": { "resourceType":"MedicationRequest","id":"castellanos_med_asa","meta":{"source":"synthetic"},"status":"active","intent":"order","medicationCodeableConcept":{"coding":[{"system":"http://www.nlm.nih.gov/research/umls/rxnorm","code":"243670","display":"Aspirin 81 MG Oral Tablet"}],"text":"ASA 81 mg PO daily"},"subject":{"reference":"Patient/castellanos_sample_001"},"authoredOn":"2023-11-04","dosageInstruction":[{"text":"81 mg by mouth once daily"}] } },
+    { "fullUrl": "MedicationRequest/castellanos_med_repatha", "resource": { "resourceType":"MedicationRequest","id":"castellanos_med_repatha","meta":{"source":"synthetic"},"status":"draft","intent":"order","medicationCodeableConcept":{"coding":[{"system":"http://www.nlm.nih.gov/research/umls/rxnorm","code":"1659149","display":"Evolocumab 140 MG/ML Subcutaneous Solution"}],"text":"Evolocumab (Repatha) 140 mg subcutaneous q2 weeks — PA pending"},"subject":{"reference":"Patient/castellanos_sample_001"},"authoredOn":"2026-04-13","dosageInstruction":[{"text":"140 mg subcutaneous every 2 weeks"}] } },
+
+    { "fullUrl": "Observation/castellanos_obs_ldl", "resource": { "resourceType":"Observation","id":"castellanos_obs_ldl","meta":{"source":"synthetic"},"status":"final","category":[{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/observation-category","code":"laboratory"}]}],"code":{"coding":[{"system":"http://loinc.org","code":"13457-7","display":"LDL Cholesterol calc"}],"text":"LDL Cholesterol"},"subject":{"reference":"Patient/castellanos_sample_001"},"effectiveDateTime":"2026-04-08T08:35:00-05:00","valueQuantity":{"value":132,"unit":"mg/dL","system":"http://unitsofmeasure.org","code":"mg/dL"},"interpretation":[{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation","code":"H","display":"High"}]}],"referenceRange":[{"low":{"value":0,"unit":"mg/dL"},"high":{"value":70,"unit":"mg/dL"},"text":"Goal <70 mg/dL post-MI"}] } },
+    { "fullUrl": "Observation/castellanos_obs_ast", "resource": { "resourceType":"Observation","id":"castellanos_obs_ast","meta":{"source":"synthetic"},"status":"final","category":[{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/observation-category","code":"laboratory"}]}],"code":{"coding":[{"system":"http://loinc.org","code":"1920-8","display":"Aspartate aminotransferase [Enzymatic activity/volume] in Serum or Plasma"}],"text":"AST"},"subject":{"reference":"Patient/castellanos_sample_001"},"effectiveDateTime":"2026-04-08T08:35:00-05:00","valueQuantity":{"value":24,"unit":"U/L"},"referenceRange":[{"low":{"value":10,"unit":"U/L"},"high":{"value":40,"unit":"U/L"}}] } },
+    { "fullUrl": "Observation/castellanos_obs_alt", "resource": { "resourceType":"Observation","id":"castellanos_obs_alt","meta":{"source":"synthetic"},"status":"final","category":[{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/observation-category","code":"laboratory"}]}],"code":{"coding":[{"system":"http://loinc.org","code":"1742-6","display":"Alanine aminotransferase [Enzymatic activity/volume] in Serum or Plasma"}],"text":"ALT"},"subject":{"reference":"Patient/castellanos_sample_001"},"effectiveDateTime":"2026-04-08T08:35:00-05:00","valueQuantity":{"value":22,"unit":"U/L"},"referenceRange":[{"low":{"value":7,"unit":"U/L"},"high":{"value":56,"unit":"U/L"}}] } },
+
+    { "fullUrl": "DocumentReference/castellanos_provider_note", "resource": { "resourceType":"DocumentReference","id":"castellanos_provider_note","meta":{"source":"synthetic"},"status":"current","type":{"coding":[{"system":"http://loinc.org","code":"11506-3","display":"Progress note"}],"text":"Progress note"},"subject":{"reference":"Patient/castellanos_sample_001"},"date":"2026-04-13T11:42:00-05:00","author":[{"display":"Dr. Skarsdale"}],"description":"LDL remains above goal (132) despite max-tolerated atorvastatin (10 mg — reduced from 40 mg due to recurrent myalgia; prior rosuvastatin trial 2y ago also d/c for myalgia). Per ACC guidelines initiating PCSK9 inhibitor (Repatha) for secondary prevention in statin-intolerant CAD pt." } }
+  ]
+}
