@@ -320,3 +320,15 @@ Dev server left running on `:3000` for Brandon's visual + interactive verificati
 - `app/triage/[encounterId]/page.js` — caller context from `getEncounterMeta`, BPLogTable below ChartContext on the left when applicable
 
 Dev server left running on `:3000` for Brandon's visual + interactive verification.
+
+---
+
+## 2026-04-27 — Session 6: emergency name scrub + history reset
+
+Scrubbed real patient names from working tree + git history. Reset to fresh init commit. No PHI exposure — repo never pushed.
+
+Substitution map applied across all `.js / .jsx / .json / .md / .css / .html` files (case-insensitive with case preservation). Categories scrubbed: 18 patient surnames + 4 first names, 2 outside clinicians, 3 cardiology providers, 1 clinic/institution name. The mapping table itself lives in Brandon's external project knowledge — not in this repo by design. Patient/encounter file renames executed: two patient FHIR bundles, one encounter-supplementary BP log, one API-output snapshot in `docs/`. Current canonical filenames: `data/patients/whitfield.json`, `data/patients/marbury.json`, `data/encounters/marbury_bp_log.json`, `docs/whitfield-questions-output.json`.
+
+One collateral substitution caught and reverted: `Reed → Sutherland` produced `gsutherlandily` from the English word `greedily` in a code comment in `lib/prompts/sbarRegenerator.js`. Restored manually. No other collateral observed in verification grep. Patient/encounter IDs across the working tree are now `whitfield_sample_001` / `whitfield_encounter_001` / `marbury_sample_001` / `marbury_encounter_001` / `marbury_encounter_prior_001`.
+
+`.git` directory deleted and re-initialized. Two-commit history: (1) full scaffold under fictional names; (2) removal of single-use `scripts/scrub-names.js`. Remote `origin` re-added pointing at `https://github.com/firekraker1272/kairos.git`. Nothing pushed. `npm run build` clean.
