@@ -1,0 +1,33 @@
+{
+  "_comment": "Synthetic 14-day home BP log captured from a paper log brought to clinic by the patient. Demonstrates SBP predominantly 130s-150s, intermittent >=150 (~35%), occasional >=160 (~8%), correlated with reported missed evening doses or symptoms. This is the structured representation produced by the (future) OCR + nurse-confirmed-and-edit step.",
+  "encounterId": "marbury_encounter_001",
+  "patientId": "marbury_sample_001",
+  "capturedFrom": "paper_log",
+  "capturedAt": "2026-04-27T16:35:00-05:00",
+  "readings": [
+    { "date": "2026-04-13", "time": "07:30", "sbp": 152, "dbp": 88, "note": "" },
+    { "date": "2026-04-13", "time": "20:15", "sbp": 144, "dbp": 82, "note": "" },
+    { "date": "2026-04-14", "time": "07:45", "sbp": 152, "dbp": 88, "note": "" },
+    { "date": "2026-04-14", "time": "19:30", "sbp": 144, "dbp": 84, "note": "" },
+    { "date": "2026-04-15", "time": "07:30", "sbp": 138, "dbp": 82, "note": "" },
+    { "date": "2026-04-15", "time": "19:50", "sbp": 142, "dbp": 80, "note": "" },
+    { "date": "2026-04-16", "time": "07:30", "sbp": 148, "dbp": 86, "note": "" },
+    { "date": "2026-04-16", "time": "20:30", "sbp": 156, "dbp": 90, "note": "" },
+    { "date": "2026-04-17", "time": "07:15", "sbp": 162, "dbp": 96, "note": "felt dizzy on standing" },
+    { "date": "2026-04-18", "time": "08:00", "sbp": 142, "dbp": 82, "note": "" },
+    { "date": "2026-04-18", "time": "19:45", "sbp": 138, "dbp": 80, "note": "" },
+    { "date": "2026-04-19", "time": "07:30", "sbp": 161, "dbp": 95, "note": "missed evening dose 4/18" },
+    { "date": "2026-04-20", "time": "07:30", "sbp": 152, "dbp": 88, "note": "" },
+    { "date": "2026-04-20", "time": "20:00", "sbp": 146, "dbp": 84, "note": "" },
+    { "date": "2026-04-21", "time": "07:45", "sbp": 144, "dbp": 82, "note": "" },
+    { "date": "2026-04-22", "time": "07:30", "sbp": 158, "dbp": 92, "note": "missed evening dose 4/21" },
+    { "date": "2026-04-22", "time": "19:30", "sbp": 138, "dbp": 78, "note": "" },
+    { "date": "2026-04-23", "time": "07:30", "sbp": 154, "dbp": 90, "note": "" },
+    { "date": "2026-04-23", "time": "20:00", "sbp": 142, "dbp": 80, "note": "" },
+    { "date": "2026-04-24", "time": "07:30", "sbp": 148, "dbp": 86, "note": "" },
+    { "date": "2026-04-24", "time": "19:45", "sbp": 140, "dbp": 80, "note": "" },
+    { "date": "2026-04-25", "time": "08:00", "sbp": 156, "dbp": 92, "note": "felt headache" },
+    { "date": "2026-04-26", "time": "07:30", "sbp": 142, "dbp": 84, "note": "" },
+    { "date": "2026-04-26", "time": "19:45", "sbp": 146, "dbp": 86, "note": "" }
+  ]
+}

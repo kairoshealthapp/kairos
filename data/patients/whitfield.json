@@ -1,0 +1,885 @@
+{
+  "_comment": "SYNTHETIC TEST DATA. No real PHI. Based on aggregate clinical patterns from the canonical Whitfield sample described in docs/CONTEXT.md. Names, MRNs, DOB, addresses, encounter IDs are all fictional. LOINC, SNOMED, RxNorm codes are real codes used realistically. This file matches Epic FHIR R4 Bundle response shape and is the swap point for the live Epic FHIR client.",
+  "resourceType": "Bundle",
+  "id": "whitfield-sample-bundle",
+  "type": "searchset",
+  "timestamp": "2026-04-27T16:01:00-05:00",
+  "total": 18,
+  "link": [
+    {
+      "relation": "self",
+      "url": "https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4/Patient/whitfield_sample_001/$everything"
+    }
+  ],
+  "entry": [
+    {
+      "fullUrl": "Patient/whitfield_sample_001",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "whitfield_sample_001",
+        "meta": {
+          "lastUpdated": "2026-04-15T14:22:00-05:00",
+          "source": "synthetic",
+          "profile": ["http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"]
+        },
+        "identifier": [
+          {
+            "use": "usual",
+            "type": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+                  "code": "MR",
+                  "display": "Medical Record Number"
+                }
+              ]
+            },
+            "system": "urn:oid:1.2.840.114350.1.13.0.1.7.5.737384.0",
+            "value": "SYN-MRN-000001"
+          }
+        ],
+        "active": true,
+        "name": [
+          {
+            "use": "official",
+            "family": "Patient_Whitfield_Sample",
+            "given": ["Synthetic"]
+          }
+        ],
+        "gender": "male",
+        "birthDate": "1949-11-03",
+        "address": [
+          {
+            "use": "home",
+            "city": "Anytown",
+            "state": "XX",
+            "postalCode": "00000",
+            "country": "US"
+          }
+        ],
+        "communication": [
+          {
+            "language": {
+              "coding": [
+                {
+                  "system": "urn:ietf:bcp:47",
+                  "code": "en",
+                  "display": "English"
+                }
+              ]
+            },
+            "preferred": true
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "Encounter/whitfield_encounter_001",
+      "resource": {
+        "resourceType": "Encounter",
+        "id": "whitfield_encounter_001",
+        "meta": {
+          "lastUpdated": "2026-04-27T11:01:00-05:00",
+          "source": "synthetic"
+        },
+        "status": "in-progress",
+        "class": {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "AMB",
+          "display": "ambulatory"
+        },
+        "type": [
+          {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "185317003",
+                "display": "Telephone encounter"
+              }
+            ],
+            "text": "Telephone triage"
+          }
+        ],
+        "subject": {
+          "reference": "Patient/whitfield_sample_001",
+          "display": "Patient_Whitfield_Sample, Synthetic"
+        },
+        "period": {
+          "start": "2026-04-27T11:01:00-05:00"
+        },
+        "reasonCode": [
+          {
+            "text": "Outside-clinician triage call: increasing dyspnea, weight gain, recently d/c Lasix"
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "Condition/whitfield_condition_chf",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "whitfield_condition_chf",
+        "meta": {
+          "lastUpdated": "2025-10-12T09:00:00-05:00",
+          "source": "synthetic"
+        },
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+              "code": "confirmed"
+            }
+          ]
+        },
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+                "code": "problem-list-item",
+                "display": "Problem List Item"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "42343007",
+              "display": "Congestive heart failure"
+            }
+          ],
+          "text": "Congestive heart failure"
+        },
+        "subject": {
+          "reference": "Patient/whitfield_sample_001"
+        },
+        "onsetDateTime": "2022-03-10",
+        "recordedDate": "2022-03-10"
+      }
+    },
+    {
+      "fullUrl": "Condition/whitfield_condition_effusion",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "whitfield_condition_effusion",
+        "meta": {
+          "lastUpdated": "2026-02-04T10:15:00-05:00",
+          "source": "synthetic"
+        },
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+              "code": "confirmed"
+            }
+          ]
+        },
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+                "code": "problem-list-item"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "60046008",
+              "display": "Pleural effusion"
+            }
+          ],
+          "text": "Recurrent pleural effusion (h/o thoracenteses, patient describes prior procedures as painful)"
+        },
+        "subject": {
+          "reference": "Patient/whitfield_sample_001"
+        },
+        "onsetDateTime": "2024-08-22",
+        "recordedDate": "2024-08-22"
+      }
+    },
+    {
+      "fullUrl": "Condition/whitfield_condition_copd",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "whitfield_condition_copd",
+        "meta": {
+          "lastUpdated": "2024-05-03T11:30:00-05:00",
+          "source": "synthetic"
+        },
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+              "code": "confirmed"
+            }
+          ]
+        },
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+                "code": "problem-list-item"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "13645005",
+              "display": "Chronic obstructive lung disease"
+            }
+          ],
+          "text": "COPD"
+        },
+        "subject": {
+          "reference": "Patient/whitfield_sample_001"
+        },
+        "onsetDateTime": "2019-11-14",
+        "recordedDate": "2019-11-14"
+      }
+    },
+    {
+      "fullUrl": "Condition/whitfield_condition_as",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "whitfield_condition_as",
+        "meta": {
+          "lastUpdated": "2025-10-12T09:00:00-05:00",
+          "source": "synthetic"
+        },
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+              "code": "confirmed"
+            }
+          ]
+        },
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+                "code": "problem-list-item"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "60573004",
+              "display": "Aortic valve stenosis"
+            }
+          ],
+          "text": "Aortic stenosis"
+        },
+        "subject": {
+          "reference": "Patient/whitfield_sample_001"
+        },
+        "onsetDateTime": "2023-06-08",
+        "recordedDate": "2023-06-08"
+      }
+    },
+    {
+      "fullUrl": "MedicationRequest/whitfield_med_lasix",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "whitfield_med_lasix",
+        "meta": {
+          "lastUpdated": "2026-03-01T14:00:00-05:00",
+          "source": "synthetic"
+        },
+        "status": "stopped",
+        "statusReason": {
+          "text": "Discontinued by cardiology 3/1/26 — see cardiology note"
+        },
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "310429",
+              "display": "Furosemide 40 MG Oral Tablet"
+            }
+          ],
+          "text": "Furosemide (Lasix) 40 mg PO daily"
+        },
+        "subject": {
+          "reference": "Patient/whitfield_sample_001"
+        },
+        "authoredOn": "2024-08-25",
+        "dosageInstruction": [
+          {
+            "text": "40 mg by mouth once daily",
+            "timing": {
+              "repeat": {
+                "frequency": 1,
+                "period": 1,
+                "periodUnit": "d"
+              }
+            }
+          }
+        ],
+        "_discontinuedDate": "2026-03-01"
+      }
+    },
+    {
+      "fullUrl": "MedicationRequest/whitfield_med_lisinopril",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "whitfield_med_lisinopril",
+        "meta": {
+          "lastUpdated": "2025-09-18T10:00:00-05:00",
+          "source": "synthetic"
+        },
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "314076",
+              "display": "Lisinopril 10 MG Oral Tablet"
+            }
+          ],
+          "text": "Lisinopril 10 mg PO daily"
+        },
+        "subject": {
+          "reference": "Patient/whitfield_sample_001"
+        },
+        "authoredOn": "2022-03-12",
+        "dosageInstruction": [
+          {
+            "text": "10 mg by mouth once daily",
+            "timing": {
+              "repeat": {
+                "frequency": 1,
+                "period": 1,
+                "periodUnit": "d"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "MedicationRequest/whitfield_med_metoprolol",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "whitfield_med_metoprolol",
+        "meta": {
+          "lastUpdated": "2025-09-18T10:00:00-05:00",
+          "source": "synthetic"
+        },
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "866427",
+              "display": "Metoprolol Succinate 25 MG Extended Release Oral Tablet"
+            }
+          ],
+          "text": "Metoprolol succinate ER 25 mg PO daily"
+        },
+        "subject": {
+          "reference": "Patient/whitfield_sample_001"
+        },
+        "authoredOn": "2022-03-12",
+        "dosageInstruction": [
+          {
+            "text": "25 mg by mouth once daily",
+            "timing": {
+              "repeat": {
+                "frequency": 1,
+                "period": 1,
+                "periodUnit": "d"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "MedicationRequest/whitfield_med_atorvastatin",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "whitfield_med_atorvastatin",
+        "meta": {
+          "lastUpdated": "2025-09-18T10:00:00-05:00",
+          "source": "synthetic"
+        },
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "617312",
+              "display": "Atorvastatin 40 MG Oral Tablet"
+            }
+          ],
+          "text": "Atorvastatin 40 mg PO QHS"
+        },
+        "subject": {
+          "reference": "Patient/whitfield_sample_001"
+        },
+        "authoredOn": "2022-03-12",
+        "dosageInstruction": [
+          {
+            "text": "40 mg by mouth at bedtime",
+            "timing": {
+              "repeat": {
+                "frequency": 1,
+                "period": 1,
+                "periodUnit": "d"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "MedicationRequest/whitfield_med_aspirin",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "whitfield_med_aspirin",
+        "meta": {
+          "lastUpdated": "2025-09-18T10:00:00-05:00",
+          "source": "synthetic"
+        },
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "243670",
+              "display": "Aspirin 81 MG Oral Tablet"
+            }
+          ],
+          "text": "Aspirin 81 mg PO daily"
+        },
+        "subject": {
+          "reference": "Patient/whitfield_sample_001"
+        },
+        "authoredOn": "2022-03-12",
+        "dosageInstruction": [
+          {
+            "text": "81 mg by mouth once daily",
+            "timing": {
+              "repeat": {
+                "frequency": 1,
+                "period": 1,
+                "periodUnit": "d"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "Observation/whitfield_obs_bnp",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "whitfield_obs_bnp",
+        "meta": {
+          "lastUpdated": "2026-02-15T08:14:00-05:00",
+          "source": "synthetic"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "laboratory",
+                "display": "Laboratory"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "30934-4",
+              "display": "Natriuretic peptide.B prohormone N-Terminal [Mass/volume] in Serum or Plasma"
+            }
+          ],
+          "text": "NT-proBNP"
+        },
+        "subject": {
+          "reference": "Patient/whitfield_sample_001"
+        },
+        "effectiveDateTime": "2026-02-15T08:14:00-05:00",
+        "valueQuantity": {
+          "value": 3420,
+          "unit": "pg/mL",
+          "system": "http://unitsofmeasure.org",
+          "code": "pg/mL"
+        },
+        "interpretation": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+                "code": "H",
+                "display": "High"
+              }
+            ]
+          }
+        ],
+        "referenceRange": [
+          {
+            "high": {
+              "value": 450,
+              "unit": "pg/mL"
+            },
+            "text": "Normal <450 pg/mL (age-adjusted)"
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "Observation/whitfield_obs_sodium",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "whitfield_obs_sodium",
+        "meta": {
+          "lastUpdated": "2026-02-15T08:14:00-05:00",
+          "source": "synthetic"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "laboratory"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "2951-2",
+              "display": "Sodium [Moles/volume] in Serum or Plasma"
+            }
+          ],
+          "text": "Sodium, serum"
+        },
+        "subject": {
+          "reference": "Patient/whitfield_sample_001"
+        },
+        "effectiveDateTime": "2026-02-15T08:14:00-05:00",
+        "valueQuantity": {
+          "value": 131,
+          "unit": "mmol/L",
+          "system": "http://unitsofmeasure.org",
+          "code": "mmol/L"
+        },
+        "interpretation": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+                "code": "L",
+                "display": "Low"
+              }
+            ]
+          }
+        ],
+        "referenceRange": [
+          {
+            "low": {
+              "value": 136,
+              "unit": "mmol/L"
+            },
+            "high": {
+              "value": 145,
+              "unit": "mmol/L"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "Observation/whitfield_obs_weight_1",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "whitfield_obs_weight_1",
+        "meta": {
+          "lastUpdated": "2026-04-13T08:00:00-05:00",
+          "source": "synthetic"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "29463-7",
+              "display": "Body weight"
+            }
+          ],
+          "text": "Weight"
+        },
+        "subject": {
+          "reference": "Patient/whitfield_sample_001"
+        },
+        "effectiveDateTime": "2026-04-13T08:00:00-05:00",
+        "valueQuantity": {
+          "value": 188.0,
+          "unit": "lb",
+          "system": "http://unitsofmeasure.org",
+          "code": "[lb_av]"
+        }
+      }
+    },
+    {
+      "fullUrl": "Observation/whitfield_obs_weight_2",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "whitfield_obs_weight_2",
+        "meta": {
+          "lastUpdated": "2026-04-20T08:00:00-05:00",
+          "source": "synthetic"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "29463-7",
+              "display": "Body weight"
+            }
+          ],
+          "text": "Weight"
+        },
+        "subject": {
+          "reference": "Patient/whitfield_sample_001"
+        },
+        "effectiveDateTime": "2026-04-20T08:00:00-05:00",
+        "valueQuantity": {
+          "value": 188.7,
+          "unit": "lb",
+          "system": "http://unitsofmeasure.org",
+          "code": "[lb_av]"
+        }
+      }
+    },
+    {
+      "fullUrl": "Observation/whitfield_obs_weight_3",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "whitfield_obs_weight_3",
+        "meta": {
+          "lastUpdated": "2026-04-27T08:00:00-05:00",
+          "source": "synthetic"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "29463-7",
+              "display": "Body weight"
+            }
+          ],
+          "text": "Weight"
+        },
+        "subject": {
+          "reference": "Patient/whitfield_sample_001"
+        },
+        "effectiveDateTime": "2026-04-27T08:00:00-05:00",
+        "valueQuantity": {
+          "value": 189.5,
+          "unit": "lb",
+          "system": "http://unitsofmeasure.org",
+          "code": "[lb_av]"
+        }
+      }
+    },
+    {
+      "fullUrl": "DocumentReference/whitfield_doc_cards_note",
+      "resource": {
+        "resourceType": "DocumentReference",
+        "id": "whitfield_doc_cards_note",
+        "meta": {
+          "lastUpdated": "2026-03-01T15:30:00-05:00",
+          "source": "synthetic"
+        },
+        "status": "current",
+        "docStatus": "final",
+        "type": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "11488-4",
+              "display": "Consult note"
+            }
+          ],
+          "text": "Cardiology consult note"
+        },
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://loinc.org",
+                "code": "LP173421-1",
+                "display": "Clinical Note"
+              }
+            ]
+          }
+        ],
+        "subject": {
+          "reference": "Patient/whitfield_sample_001"
+        },
+        "date": "2026-03-01T15:30:00-05:00",
+        "author": [
+          {
+            "display": "Cardiology, Synthetic MD"
+          }
+        ],
+        "description": "Cardiology follow-up: reviewed volume status, BP trending low, decision to discontinue Lasix and trial off diuretic. Patient counseled to monitor daily weights and report >2 lb gain over 48h. Recheck in 4 weeks. Prior thoracenteses tolerated poorly per patient ('disaster and painful'); avoid unless clearly indicated.",
+        "content": [
+          {
+            "attachment": {
+              "contentType": "text/plain",
+              "language": "en-US"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "DocumentReference/whitfield_doc_thora_note",
+      "resource": {
+        "resourceType": "DocumentReference",
+        "id": "whitfield_doc_thora_note",
+        "meta": {
+          "lastUpdated": "2024-09-04T13:00:00-05:00",
+          "source": "synthetic"
+        },
+        "status": "current",
+        "docStatus": "final",
+        "type": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "28570-0",
+              "display": "Procedure note"
+            }
+          ],
+          "text": "Thoracentesis procedure note"
+        },
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://loinc.org",
+                "code": "LP173421-1",
+                "display": "Clinical Note"
+              }
+            ]
+          }
+        ],
+        "subject": {
+          "reference": "Patient/whitfield_sample_001"
+        },
+        "date": "2024-09-04T13:00:00-05:00",
+        "author": [
+          {
+            "display": "Pulmonology, Synthetic MD"
+          }
+        ],
+        "description": "Therapeutic right-sided thoracentesis. 1100 mL serous fluid drained. Procedure prolonged due to patient discomfort despite local anesthesia and PRN IV analgesia; patient repeatedly requested termination. Tolerated procedure poorly. Plan: avoid repeat unless symptom-driven and after explicit reconsent.",
+        "content": [
+          {
+            "attachment": {
+              "contentType": "text/plain",
+              "language": "en-US"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

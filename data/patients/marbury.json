@@ -1,0 +1,1170 @@
+{
+  "_comment": "SYNTHETIC TEST DATA. No real PHI. 68yo female with uncontrolled HTN despite five-agent regimen, T2DM, hyperlipidemia, CKD3a, obesity. Canonical Marbury proof point per docs/CONTEXT.md — paper BP log brought to clinic, ~2 weeks since labetalol added (last antihypertensive, fifth agent). All identifiers fictional. LOINC, SNOMED, RxNorm codes are real. Matches Epic FHIR R4 Bundle response shape.",
+  "resourceType": "Bundle",
+  "id": "marbury-sample-bundle",
+  "type": "searchset",
+  "timestamp": "2026-04-27T16:35:00-05:00",
+  "total": 24,
+  "link": [
+    {
+      "relation": "self",
+      "url": "https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4/Patient/marbury_sample_001/$everything"
+    }
+  ],
+  "entry": [
+    {
+      "fullUrl": "Patient/marbury_sample_001",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "marbury_sample_001",
+        "meta": {
+          "lastUpdated": "2026-04-13T09:30:00-05:00",
+          "source": "synthetic",
+          "profile": ["http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"]
+        },
+        "identifier": [
+          {
+            "use": "usual",
+            "type": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+                  "code": "MR",
+                  "display": "Medical Record Number"
+                }
+              ]
+            },
+            "system": "urn:oid:1.2.840.114350.1.13.0.1.7.5.737384.0",
+            "value": "SYN-MRN-000002"
+          }
+        ],
+        "active": true,
+        "name": [
+          {
+            "use": "official",
+            "family": "Patient_Marbury_Sample",
+            "given": ["Synthetic"]
+          }
+        ],
+        "gender": "female",
+        "birthDate": "1958-02-19",
+        "address": [
+          {
+            "use": "home",
+            "city": "Anytown",
+            "state": "XX",
+            "postalCode": "00000",
+            "country": "US"
+          }
+        ],
+        "communication": [
+          {
+            "language": {
+              "coding": [
+                {
+                  "system": "urn:ietf:bcp:47",
+                  "code": "en",
+                  "display": "English"
+                }
+              ]
+            },
+            "preferred": true
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "Encounter/marbury_encounter_001",
+      "resource": {
+        "resourceType": "Encounter",
+        "id": "marbury_encounter_001",
+        "meta": {
+          "lastUpdated": "2026-04-27T16:35:00-05:00",
+          "source": "synthetic"
+        },
+        "status": "in-progress",
+        "class": {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "AMB",
+          "display": "ambulatory"
+        },
+        "type": [
+          {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "11429006",
+                "display": "Consultation"
+              }
+            ],
+            "text": "Patient call (in-person drop-in)"
+          }
+        ],
+        "subject": {
+          "reference": "Patient/marbury_sample_001",
+          "display": "Patient_Marbury_Sample, Synthetic"
+        },
+        "period": {
+          "start": "2026-04-27T16:35:00-05:00"
+        },
+        "reasonCode": [
+          {
+            "text": "Brought paper home BP log to clinic. Concerned BP still elevated despite new med (labetalol) started 2 weeks ago."
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "Encounter/marbury_encounter_prior_001",
+      "resource": {
+        "resourceType": "Encounter",
+        "id": "marbury_encounter_prior_001",
+        "meta": {
+          "lastUpdated": "2026-04-13T09:45:00-05:00",
+          "source": "synthetic"
+        },
+        "status": "finished",
+        "class": {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "AMB",
+          "display": "ambulatory"
+        },
+        "type": [
+          {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "270427003",
+                "display": "Patient-initiated encounter"
+              }
+            ],
+            "text": "Cardiology follow-up"
+          }
+        ],
+        "subject": {
+          "reference": "Patient/marbury_sample_001"
+        },
+        "participant": [
+          {
+            "individual": {
+              "display": "Ballinger, Synthetic MD (cardiology)"
+            }
+          }
+        ],
+        "period": {
+          "start": "2026-04-13T09:00:00-05:00",
+          "end": "2026-04-13T09:45:00-05:00"
+        },
+        "reasonCode": [
+          {
+            "text": "Hypertension follow-up. Five-agent regimen review."
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "Condition/marbury_condition_htn",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "marbury_condition_htn",
+        "meta": {
+          "lastUpdated": "2026-04-13T09:45:00-05:00",
+          "source": "synthetic"
+        },
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+              "code": "confirmed"
+            }
+          ]
+        },
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+                "code": "problem-list-item",
+                "display": "Problem List Item"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "I10",
+              "display": "Essential (primary) hypertension"
+            },
+            {
+              "system": "http://snomed.info/sct",
+              "code": "59621000",
+              "display": "Essential hypertension"
+            }
+          ],
+          "text": "Essential hypertension, uncontrolled"
+        },
+        "subject": {
+          "reference": "Patient/marbury_sample_001"
+        },
+        "onsetDateTime": "2018-06-04",
+        "recordedDate": "2018-06-04"
+      }
+    },
+    {
+      "fullUrl": "Condition/marbury_condition_dm2",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "marbury_condition_dm2",
+        "meta": {
+          "lastUpdated": "2025-09-08T10:00:00-05:00",
+          "source": "synthetic"
+        },
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+              "code": "confirmed"
+            }
+          ]
+        },
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+                "code": "problem-list-item"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "E11.9",
+              "display": "Type 2 diabetes mellitus without complications"
+            },
+            {
+              "system": "http://snomed.info/sct",
+              "code": "44054006",
+              "display": "Type 2 diabetes mellitus"
+            }
+          ],
+          "text": "Type 2 diabetes mellitus"
+        },
+        "subject": {
+          "reference": "Patient/marbury_sample_001"
+        },
+        "onsetDateTime": "2019-03-22",
+        "recordedDate": "2019-03-22"
+      }
+    },
+    {
+      "fullUrl": "Condition/marbury_condition_lipids",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "marbury_condition_lipids",
+        "meta": {
+          "lastUpdated": "2025-04-10T08:30:00-05:00",
+          "source": "synthetic"
+        },
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+              "code": "confirmed"
+            }
+          ]
+        },
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+                "code": "problem-list-item"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "E78.5",
+              "display": "Hyperlipidemia, unspecified"
+            },
+            {
+              "system": "http://snomed.info/sct",
+              "code": "55822004",
+              "display": "Hyperlipidemia"
+            }
+          ],
+          "text": "Hyperlipidemia"
+        },
+        "subject": {
+          "reference": "Patient/marbury_sample_001"
+        },
+        "onsetDateTime": "2019-03-22",
+        "recordedDate": "2019-03-22"
+      }
+    },
+    {
+      "fullUrl": "Condition/marbury_condition_ckd",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "marbury_condition_ckd",
+        "meta": {
+          "lastUpdated": "2026-04-13T09:45:00-05:00",
+          "source": "synthetic"
+        },
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+              "code": "confirmed"
+            }
+          ]
+        },
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+                "code": "problem-list-item"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "N18.31",
+              "display": "Chronic kidney disease, stage 3a"
+            },
+            {
+              "system": "http://snomed.info/sct",
+              "code": "700378005",
+              "display": "Chronic kidney disease stage 3A"
+            }
+          ],
+          "text": "CKD stage 3a (eGFR 48)"
+        },
+        "subject": {
+          "reference": "Patient/marbury_sample_001"
+        },
+        "onsetDateTime": "2024-08-15",
+        "recordedDate": "2024-08-15"
+      }
+    },
+    {
+      "fullUrl": "Condition/marbury_condition_obesity",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "marbury_condition_obesity",
+        "meta": {
+          "lastUpdated": "2024-02-11T09:00:00-05:00",
+          "source": "synthetic"
+        },
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+              "code": "confirmed"
+            }
+          ]
+        },
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+                "code": "problem-list-item"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "E66.9",
+              "display": "Obesity, unspecified"
+            },
+            {
+              "system": "http://snomed.info/sct",
+              "code": "414916001",
+              "display": "Obesity"
+            }
+          ],
+          "text": "Obesity (BMI 33)"
+        },
+        "subject": {
+          "reference": "Patient/marbury_sample_001"
+        },
+        "onsetDateTime": "2020-08-01",
+        "recordedDate": "2020-08-01"
+      }
+    },
+    {
+      "fullUrl": "MedicationRequest/marbury_med_lisinopril",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "marbury_med_lisinopril",
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "314076",
+              "display": "Lisinopril 10 MG Oral Tablet"
+            }
+          ],
+          "text": "Lisinopril 40 mg PO daily"
+        },
+        "subject": {
+          "reference": "Patient/marbury_sample_001"
+        },
+        "authoredOn": "2024-04-08",
+        "dosageInstruction": [
+          {
+            "text": "40 mg by mouth once daily",
+            "doseAndRate": [
+              {
+                "doseQuantity": {
+                  "value": 40,
+                  "unit": "mg",
+                  "system": "http://unitsofmeasure.org",
+                  "code": "mg"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "MedicationRequest/marbury_med_amlodipine",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "marbury_med_amlodipine",
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "197361",
+              "display": "Amlodipine 10 MG Oral Tablet"
+            }
+          ],
+          "text": "Amlodipine 10 mg PO daily"
+        },
+        "subject": {
+          "reference": "Patient/marbury_sample_001"
+        },
+        "authoredOn": "2024-10-22",
+        "dosageInstruction": [
+          {
+            "text": "10 mg by mouth once daily",
+            "doseAndRate": [
+              {
+                "doseQuantity": {
+                  "value": 10,
+                  "unit": "mg"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "MedicationRequest/marbury_med_hctz",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "marbury_med_hctz",
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "310798",
+              "display": "Hydrochlorothiazide 25 MG Oral Tablet"
+            }
+          ],
+          "text": "Hydrochlorothiazide 25 mg PO daily"
+        },
+        "subject": {
+          "reference": "Patient/marbury_sample_001"
+        },
+        "authoredOn": "2025-02-14",
+        "dosageInstruction": [
+          {
+            "text": "25 mg by mouth once daily",
+            "doseAndRate": [
+              {
+                "doseQuantity": {
+                  "value": 25,
+                  "unit": "mg"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "MedicationRequest/marbury_med_spironolactone",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "marbury_med_spironolactone",
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "313096",
+              "display": "Spironolactone 25 MG Oral Tablet"
+            }
+          ],
+          "text": "Spironolactone 25 mg PO daily"
+        },
+        "subject": {
+          "reference": "Patient/marbury_sample_001"
+        },
+        "authoredOn": "2025-10-29",
+        "dosageInstruction": [
+          {
+            "text": "25 mg by mouth once daily",
+            "doseAndRate": [
+              {
+                "doseQuantity": {
+                  "value": 25,
+                  "unit": "mg"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "MedicationRequest/marbury_med_labetalol",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "marbury_med_labetalol",
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "857984",
+              "display": "Labetalol 200 MG Oral Tablet"
+            }
+          ],
+          "text": "Labetalol 200 mg PO BID"
+        },
+        "subject": {
+          "reference": "Patient/marbury_sample_001"
+        },
+        "authoredOn": "2026-04-13",
+        "note": [
+          {
+            "text": "Most recent addition. Started 4/13/26 by Ballinger cardiology — fifth antihypertensive agent. Goal SBP <140."
+          }
+        ],
+        "dosageInstruction": [
+          {
+            "text": "200 mg by mouth twice daily",
+            "doseAndRate": [
+              {
+                "doseQuantity": {
+                  "value": 200,
+                  "unit": "mg"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "AllergyIntolerance/marbury_allergy_nkda",
+      "resource": {
+        "resourceType": "AllergyIntolerance",
+        "id": "marbury_allergy_nkda",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-verification",
+              "code": "confirmed"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "409137002",
+              "display": "No known drug allergy"
+            }
+          ],
+          "text": "NKDA"
+        },
+        "patient": {
+          "reference": "Patient/marbury_sample_001"
+        }
+      }
+    },
+    {
+      "fullUrl": "Observation/marbury_vital_bp_clinic",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "marbury_vital_bp_clinic",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "85354-9",
+              "display": "Blood pressure panel"
+            }
+          ],
+          "text": "Blood pressure (clinic)"
+        },
+        "subject": {
+          "reference": "Patient/marbury_sample_001"
+        },
+        "effectiveDateTime": "2026-04-13T09:05:00-05:00",
+        "component": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8480-6",
+                  "display": "Systolic blood pressure"
+                }
+              ]
+            },
+            "valueQuantity": {
+              "value": 158,
+              "unit": "mm[Hg]",
+              "system": "http://unitsofmeasure.org"
+            }
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8462-4",
+                  "display": "Diastolic blood pressure"
+                }
+              ]
+            },
+            "valueQuantity": {
+              "value": 94,
+              "unit": "mm[Hg]"
+            }
+          }
+        ],
+        "valueString": "158/94 mmHg"
+      }
+    },
+    {
+      "fullUrl": "Observation/marbury_vital_hr_clinic",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "marbury_vital_hr_clinic",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8867-4",
+              "display": "Heart rate"
+            }
+          ],
+          "text": "Heart rate"
+        },
+        "subject": {
+          "reference": "Patient/marbury_sample_001"
+        },
+        "effectiveDateTime": "2026-04-13T09:05:00-05:00",
+        "valueQuantity": {
+          "value": 78,
+          "unit": "bpm",
+          "system": "http://unitsofmeasure.org"
+        }
+      }
+    },
+    {
+      "fullUrl": "Observation/marbury_vital_weight",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "marbury_vital_weight",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "29463-7",
+              "display": "Body weight"
+            }
+          ],
+          "text": "Weight"
+        },
+        "subject": {
+          "reference": "Patient/marbury_sample_001"
+        },
+        "effectiveDateTime": "2026-04-13T09:05:00-05:00",
+        "valueQuantity": {
+          "value": 198,
+          "unit": "lb"
+        }
+      }
+    },
+    {
+      "fullUrl": "Observation/marbury_lab_creatinine",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "marbury_lab_creatinine",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "laboratory"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "2160-0",
+              "display": "Creatinine [Mass/volume] in Serum or Plasma"
+            }
+          ],
+          "text": "Creatinine, serum"
+        },
+        "subject": {
+          "reference": "Patient/marbury_sample_001"
+        },
+        "effectiveDateTime": "2026-04-08T07:30:00-05:00",
+        "valueQuantity": {
+          "value": 1.4,
+          "unit": "mg/dL"
+        },
+        "interpretation": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+                "code": "H"
+              }
+            ]
+          }
+        ],
+        "referenceRange": [
+          {
+            "high": { "value": 1.0, "unit": "mg/dL" },
+            "low": { "value": 0.6, "unit": "mg/dL" }
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "Observation/marbury_lab_egfr",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "marbury_lab_egfr",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "laboratory"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "98979-8",
+              "display": "Glomerular filtration rate/1.73 sq M.predicted [Volume Rate/Area] in Serum, Plasma or Blood by Creatinine-based formula (CKD-EPI 2021)"
+            }
+          ],
+          "text": "eGFR (CKD-EPI 2021)"
+        },
+        "subject": {
+          "reference": "Patient/marbury_sample_001"
+        },
+        "effectiveDateTime": "2026-04-08T07:30:00-05:00",
+        "valueQuantity": {
+          "value": 48,
+          "unit": "mL/min/1.73m2"
+        },
+        "interpretation": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+                "code": "L"
+              }
+            ]
+          }
+        ],
+        "referenceRange": [
+          {
+            "low": { "value": 60, "unit": "mL/min/1.73m2" },
+            "text": "Normal >=60 mL/min/1.73m2"
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "Observation/marbury_lab_potassium",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "marbury_lab_potassium",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "laboratory"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "2823-3",
+              "display": "Potassium [Moles/volume] in Serum or Plasma"
+            }
+          ],
+          "text": "Potassium, serum"
+        },
+        "subject": {
+          "reference": "Patient/marbury_sample_001"
+        },
+        "effectiveDateTime": "2026-04-08T07:30:00-05:00",
+        "valueQuantity": {
+          "value": 4.2,
+          "unit": "mmol/L"
+        },
+        "referenceRange": [
+          {
+            "low": { "value": 3.5, "unit": "mmol/L" },
+            "high": { "value": 5.0, "unit": "mmol/L" }
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "Observation/marbury_lab_a1c",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "marbury_lab_a1c",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "laboratory"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "4548-4",
+              "display": "Hemoglobin A1c/Hemoglobin.total in Blood"
+            }
+          ],
+          "text": "Hemoglobin A1c"
+        },
+        "subject": {
+          "reference": "Patient/marbury_sample_001"
+        },
+        "effectiveDateTime": "2026-04-08T07:30:00-05:00",
+        "valueQuantity": {
+          "value": 7.4,
+          "unit": "%"
+        },
+        "interpretation": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+                "code": "H"
+              }
+            ]
+          }
+        ],
+        "referenceRange": [
+          {
+            "high": { "value": 7.0, "unit": "%" },
+            "text": "Goal <7.0% for diabetics"
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "Observation/marbury_lab_ldl",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "marbury_lab_ldl",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "laboratory"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "13457-7",
+              "display": "Cholesterol in LDL [Mass/volume] in Serum or Plasma by calculation"
+            }
+          ],
+          "text": "LDL cholesterol (calculated)"
+        },
+        "subject": {
+          "reference": "Patient/marbury_sample_001"
+        },
+        "effectiveDateTime": "2026-04-08T07:30:00-05:00",
+        "valueQuantity": {
+          "value": 92,
+          "unit": "mg/dL"
+        }
+      }
+    },
+    {
+      "fullUrl": "Observation/marbury_lab_hdl",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "marbury_lab_hdl",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "laboratory"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "2085-9",
+              "display": "Cholesterol in HDL [Mass/volume] in Serum or Plasma"
+            }
+          ],
+          "text": "HDL cholesterol"
+        },
+        "subject": {
+          "reference": "Patient/marbury_sample_001"
+        },
+        "effectiveDateTime": "2026-04-08T07:30:00-05:00",
+        "valueQuantity": {
+          "value": 38,
+          "unit": "mg/dL"
+        },
+        "interpretation": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+                "code": "L"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "DocumentReference/marbury_note_cards_0413",
+      "resource": {
+        "resourceType": "DocumentReference",
+        "id": "marbury_note_cards_0413",
+        "status": "current",
+        "type": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "11488-4",
+              "display": "Consultation note"
+            }
+          ],
+          "text": "Cardiology consult note"
+        },
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/us/core/CodeSystem/us-core-documentreference-category",
+                "code": "clinical-note"
+              }
+            ]
+          }
+        ],
+        "subject": {
+          "reference": "Patient/marbury_sample_001"
+        },
+        "date": "2026-04-13T09:30:00-05:00",
+        "author": [
+          {
+            "display": "Ballinger, Synthetic MD (cardiology)"
+          }
+        ],
+        "description": "Cardiology follow-up: BP remains uncontrolled despite four-agent regimen (lisinopril 40, amlodipine 10, HCTZ 25, spironolactone 25). Today in clinic 158/94. Adding labetalol 200 mg BID as fifth agent. Goal SBP <140. Patient instructed on home BP monitoring with paper log; bring log to next visit. RTC 4 weeks. Continue current statin and metformin (managed by PCP). eGFR 48 — monitor renal function."
+      }
+    },
+    {
+      "fullUrl": "DocumentReference/marbury_note_cards_prior",
+      "resource": {
+        "resourceType": "DocumentReference",
+        "id": "marbury_note_cards_prior",
+        "status": "current",
+        "type": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "11488-4",
+              "display": "Consultation note"
+            }
+          ],
+          "text": "Cardiology consult note"
+        },
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/us/core/CodeSystem/us-core-documentreference-category",
+                "code": "clinical-note"
+              }
+            ]
+          }
+        ],
+        "subject": {
+          "reference": "Patient/marbury_sample_001"
+        },
+        "date": "2025-11-04T10:15:00-05:00",
+        "author": [
+          {
+            "display": "Ballinger, Synthetic MD (cardiology)"
+          }
+        ],
+        "description": "Cardiology follow-up: BP 152/90 in clinic. Added spironolactone 25 mg daily as fourth agent. Continuing lisinopril 40, amlodipine 10, HCTZ 25. Patient reports adherence good. Counseling on dietary sodium reduction. RTC 12 weeks with home BP log."
+      }
+    }
+  ]
+}
