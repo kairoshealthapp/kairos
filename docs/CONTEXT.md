@@ -1,6 +1,6 @@
 # Kairos — Project Context & Persistent Memory
 
-**Last updated:** 2026-04-27 (evening session — full ClinAI chat history integrated)
+**Last updated:** 2026-04-27 (evening session — full ClinAI chat history integrated; name scrub applied)
 **Maintained by:** Brandon (and future Claude sessions)
 **Purpose:** Single source of truth for Kairos. Read this at the start of every Kairos chat and every Claude Code session in the kairos repo. If anything in this file conflicts with assumptions a Claude session is making, this file wins.
 
@@ -8,7 +8,7 @@
 
 ## Identity & Naming
 
-- **Kairos** is the product name. Public-facing on `[kairoshealth.app](http://kairoshealth.app)`. This is what's in the Riverbend application.
+- **Kairos** is the product name. Public-facing on `kairoshealth.app`. This is what's in the Riverbend application.
 - **"ClinAI"** was the internal working name during planning sessions (ClinAI #1, #2, #3, #4 Planning). Same product, same architecture, same vision. Kairos and ClinAI refer to the same thing.
 - All future chats and code use **Kairos**. The "ClinAI" name is retired.
 
@@ -104,7 +104,7 @@ The **proactive vs reactive distinction is architecturally significant.** Phase 
 
 ## Canonical Patient Examples (the worked dataset)
 
-These are the real encounters Brandon documented across ClinAI #1-4 Planning. Anonymized synthetic versions of these become the Kairos mock dataset. Each one proves a different aspect of the architecture.
+These are encounters Brandon documented across ClinAI #1-4 Planning, with all patient and clinician names replaced with fictional substitutes. Synthetic versions of these become the Kairos mock dataset. Each one proves a different aspect of the architecture.
 
 ### Phone triage — Whitfield (canonical proof point, currently built)
 - 76yo male, CHF + recurrent pleural effusion + COPD + aortic stenosis
@@ -154,9 +154,9 @@ These are the real encounters Brandon documented across ClinAI #1-4 Planning. An
 - 10:07 AM: Patient reads. 10:15 AM: Patient replies via MyChart → lands in Pt Advice Request bucket (bucket transition!)
 - **Proves:** dual-output pattern (clinical synthesis + patient-friendly reply from same source) + bucket-crossing investigations + verify-flag pattern for nurse cognitive offload
 
-### MA rooming — Cosgrove Evaline (the attestation theater proof point)
+### MA rooming — Evaline Cosgrove (the attestation theater proof point)
 - 50+ medications visible on med list
-- 6 "Mark as Reviewed" buttons in 9 minutes (Leah RN's timestamps: 6:41, 6:48, 6:50)
+- 6 "Mark as Reviewed" buttons in 9 minutes (Mira RN's timestamps: 6:41, 6:48, 6:50)
 - Five sections (allergies, medications, history, social/family, violence) are pure attestation buttons; only vital signs has actual data entry
 - **Proves:** the institution-side ROI story (see MA Attestation Theater section)
 
@@ -200,7 +200,7 @@ Real numbers from Brandon's 4/27 inbox snapshot at 11:25 AM:
 The single most important institutional pitch finding from Brandon's 90 days at Riverbend:
 
 - **25-35% of patients have duplicate or questionable medications on their active med list** (HVC catches them as a byproduct of clinical reasoning)
-- MAs click "Medications Reviewed" in seconds despite 50+ medication lists — Cosgrove Evaline review showed 6 attestation buttons in 9 minutes for a patient with 50+ meds
+- MAs click "Medications Reviewed" in seconds despite 50+ medication lists — Evaline Cosgrove review showed 6 attestation buttons in 9 minutes for a patient with 50+ meds
 - Epic logs the click but **cannot distinguish the click from the action**
 - The MA workflow is structurally **attestation theater, not clinical work**
 
@@ -288,7 +288,7 @@ These are HIGH-CONFIDENCE risks identified by ChatGPT and Gemini independently. 
 
 ---
 
-## Build Status (as of 2026-04-27 evening)
+## Build Status (as of 2026-04-27 evening, post name-scrub)
 
 ### Epic FHIR sandbox: UNBLOCKED ✓
 
@@ -345,6 +345,7 @@ Local: `C:\Users\kents\kairos`
 - Env var renamed `KAIROS_ANTHROPIC_KEY` (avoids Windows-level shadowing of empty `ANTHROPIC_API_KEY`)
 - maxTokens bumped to 16000 (4000 truncated mid-JSON for 31-question generation)
 - temperature parameter removed (claude-opus-4-7 rejects it)
+- **Name scrub applied** — all real patient/clinician names replaced with fictional substitutes throughout working tree, file paths, and git history. Repo reset to fresh init commit. Never pushed.
 
 **Verified end-to-end:**
 - 32 clinically defensible questions generated for Whitfield encounter
@@ -371,18 +372,18 @@ Reasoning:
 **Riverbend review window constraint:**
 
 Two Vercel projects exist on firekraker-monorepo:
-- `clinai` project ([clinai.firekraker.net](http://clinai.firekraker.net)) — internal tooling, harmless
-- `kairos` project — **serves `[kairoshealth.app](http://kairoshealth.app)` and `[www.kairoshealth.app](http://www.kairoshealth.app)`** — Riverbend review surface
+- `clinai` project (clinai.firekraker.net) — internal tooling, harmless
+- `kairos` project — **serves `kairoshealth.app` and `www.kairoshealth.app`** — Riverbend review surface
 
 **Zero commits to `firekraker-monorepo/kairos/` until at least 2026-05-04.** Vercel auto-deploys on push to main; any deploy creates risk of changing what the reviewer sees.
 
-The new `firekraker1272/kairos` repo is the build environment. **[Localhost](http://Localhost)-only.** No Vercel project. No public URL. No deploys.
+The new `firekraker1272/kairos` repo is the build environment. **Localhost-only.** No Vercel project. No public URL. No deploys.
 
 **Deferred infrastructure (do not create until needed):**
 - Vercel project for kairos repo: re-evaluate ~5/4
 - Supabase project: mock data in JSON for first build slice; add Supabase when schema stabilizes
 - Dedicated Anthropic API key: using HVC Monorepo key (`KAIROS_ANTHROPIC_KEY` in `.env.local`); create dedicated key when spend tracking matters
-- Custom domain on new repo: `[kairoshealth.app](http://kairoshealth.app)` stays pointed at firekraker-monorepo/kairos/ until after Riverbend review
+- Custom domain on new repo: `kairoshealth.app` stays pointed at firekraker-monorepo/kairos/ until after Riverbend review
 
 ---
 
@@ -396,8 +397,9 @@ The new `firekraker1272/kairos` repo is the build environment. **[Localhost](htt
 6. **Versioned regeneratable artifacts.** Clinical outputs regenerate against accumulated evidence; prior reasoning chain is preserved, not overwritten.
 7. **Answer source tagging.** Patient / family / outside_clinician / chart — every captured data point.
 8. **Bidirectional integration is the architecture, not a stretch goal.** Even mocked, the data flow is two-way from day one.
-9. **Every Claude Code prompt ends with: "Update docs/[log.md](http://log.md) and any affected docs/ files. Do NOT run git push."**
+9. **Every Claude Code prompt ends with: "Update docs/log.md and any affected docs/ files. Do NOT run git push."**
 10. **Every prompt explicitly forbids importing HVC patterns.** Re-read the "Kairos is NOT HVC" section if tempted.
+11. **No real names ever.** Patient names, clinician names, and clinic names in this document and the repo are all fictional substitutes. Brandon knows the mapping; Claude does not need to. If a real name slips into a prompt, chat, or file, halt and scrub before continuing.
 
 ---
 
@@ -433,7 +435,7 @@ The architectural primitive is the same for every workflow stream. Each session 
 ## Riverbend Application Status
 
 - **Submitted:** 4/27 morning
-- **Portfolio piece referenced:** [kairoshealth.app](http://kairoshealth.app) (existing prototype in firekraker-monorepo/kairos/)
+- **Portfolio piece referenced:** kairoshealth.app (existing prototype in firekraker-monorepo/kairos/)
 - **HVC not mentioned.** Kairos not mentioned by name in resume. ClinAI not mentioned. Preserves all options on legal structure.
 - **Awaiting response.** Estimated review window: 1-2 weeks minimum from 4/27.
 - **Build proceeds regardless of Riverbend outcome.** Kairos is not contingent on the job.
@@ -445,31 +447,21 @@ The architectural primitive is the same for every workflow stream. Each session 
 ### Recently Completed (2026-04-27 evening)
 - ✅ Created new private repo `firekraker1272/kairos`
 - ✅ Local clone to `C:\Users\kents\kairos`
-- ✅ docs/[CONTEXT.md](http://CONTEXT.md) v1 created and uploaded to Claude project knowledge
+- ✅ docs/CONTEXT.md v1 created and uploaded to Claude project knowledge
 - ✅ First Claude Code prompt: scaffold + Whitfield sample + chart-aware question generator
 - ✅ Env var renamed to `KAIROS_ANTHROPIC_KEY`
 - ✅ `claude-opus-4-7` integration verified (32 clinically defensible questions for Whitfield)
-- ✅ Vercel infrastructure audited (clinai project + kairos project on monorepo, [kairoshealth.app](http://kairoshealth.app) confirmed on kairos project — frozen until 5/4)
-- ✅ Full ClinAI #1-4 chat history integrated into [CONTEXT.md](http://CONTEXT.md) v2 (this update)
-
-### Recently Completed (continued, 2026-04-27 evening)
-- ✅ Dark/light/system theme toggle, FOUC-free (anti-flash inline script in `<head>` runs before hydration; `localStorage["kairos-theme"]` persistence)
-- ✅ Linear-inspired design system — full rebuild. Inter via `next/font/google`. Tailwind v4 `@theme` token palette (canvas/surface/muted/line/fg/fg-muted/fg-faint/accent + flag-high/low/success solid+soft). Dark-mode swap via `.dark { --color-* }` redefinition (no `dark:` utility prefixes in JSX). Lucide-react icons (only new dep). Sticky 56px top bar with Kairos wordmark + theme toggle. Every existing surface (dashboard, triage, ChartContext, TriageQuestions, EvidenceCapture) rebuilt against the system. `npm run build` clean.
-- ✅ **Evidence + SBAR primitive end-to-end (the heart of the demo).** New `lib/types/evidence.js` (typedefs, `hashEvidence`, `SOURCE_META`). New `lib/prompts/sbarRegenerator.js` (system prompt enforcing inline `[chart]`/`[pt]`/`[family]`/`[outside RN: name]`/`[nurse obs]` markers, calibrated confidence, explicit "unable to assess"). New `/api/regenerate-sbar` route on Opus 4.7. New `<EvidenceCapture>` (working: source-tagged answers, question picker + freeform mode, multi-source per question, optimistic UI). New `<SBARDraft>` (versioned regeneration, evidence-hash drift detection, inline source-marker pills, `Approve & Copy` clipboard write). New `<TriageWorkspace>` lifts evidence/questions state. Whitfield encounter seeds 3 evidence items on first load (gated by encounterId). Live API test against Opus 4.7 returned a clinically defensible SBAR: every claim source-tagged, missing data named explicitly, recommendation framed for the prescribing clinician. Source palette extended with `--color-source-family` (purple) and `--color-source-clinician` (teal) tokens.
-
-### Recently Completed (continued, 2026-04-27 evening — session 5)
-- ✅ **Marbury proof point built end-to-end** — second canonical patient working in the same primitive. Synthetic FHIR Bundle (`data/patients/marbury.json`, 24 entries: 5 conditions, 5-agent antihypertensive regimen w/ labetalol started 4/13/26, recent labs incl Cr 1.4 / eGFR 48 / A1c 7.4, two cardiology consult notes). 24-day home BP log (`data/encounters/marbury_bp_log.json`) with avg 148/86, 38% ≥150, 8% ≥160, two missed-evening-dose notes, one dizzy episode, one headache. New encounter-supplementary loader (`getEncounterSupplementary`) so per-encounter inputs (BP log today, OCR'd faxes / kiosk responses tomorrow) plug in via a registered map.
-- ✅ **BP trend analysis + UI** — `lib/clinical/bpTrend.js` produces `{count, dateRange, avgSBP/DBP, pctAbove140/150/160, max/minSBP, trend ('rising'|'falling'|'stable' from linear regression on SBP), significantReadings}`. New `<BPLogTable>` component renders three-stat header (color-coded by % ≥150 amber/red bands), reading list with SBP color-coded by severity, "Show all" toggle past 8 readings, captured-from-paper-log footer (the surface that becomes the OCR ingestion path). BPLogTable lives under ChartContext in the left column of the triage page when `chartContext.bpLog` is present.
-- ✅ **SBAR + question generator pick up BP log automatically.** Chart-aware question generator already serializes the entire chart context as JSON — no prompt change needed. SBAR regenerator's `summarizeChart` extended to render the BP log into the user prompt (count, range, trend, avg, outliers).
-- ✅ **Dashboard inbox view.** `app/dashboard/page.js` rewritten: Dashboard h1 + live `<DashboardClock />` (60s tick, aligned to minute boundary). Three-stat row (Active / Awaiting nurse review / In progress). Encounter cards sorted by status (`new` first, then `in_progress`, then `complete`), within each by `receivedAt` desc. Status dot, encounter-type pill (teal "Phone · Outside RN" for Whitfield, blue "Patient Call" for Marbury — channel/origin/type-driven), relative-time timestamp. Empty state with lucide `Inbox` icon. New `lib/fhir/encounters.js` registry for the dashboard list (production swap = work-queue layer).
-- ✅ **Live verification of both encounters via Opus 4.7.** Whitfield: 32 questions + clinically defensible SBAR (already verified session 4). Marbury: 32 questions in 13 categories, rationales tied to chart specifics (missed evening doses on 4/18 + 4/21 → elevated next-morning SBP; labetalol starting 4/13; orthostatic dizziness on 4/17). SBAR identifies the **adherence gap as the proximate driver** and recommends addressing evening dose adherence *before* escalating therapy — the call a competent nurse would make, and the call you can't get from a content prompt alone.
-- ✅ **Single-primitive transferability proven.** Same architecture ran end-to-end on two opposite clinical scenarios (outside-clinician phone triage vs patient-origin in-person paper-mediated drop-in). Deltas were a new synthetic bundle, a registered supplementary data file, one new presentational component (BPLogTable), and seed-evidence text. The chart-aware question generator, evidence capture, source-tagging palette, SBAR regenerator, and approve-and-copy flow were unchanged.
+- ✅ Vercel infrastructure audited (clinai project + kairos project on monorepo, kairoshealth.app confirmed on kairos project — frozen until 5/4)
+- ✅ Full ClinAI #1-4 chat history integrated into CONTEXT.md v2
+- ✅ Name scrub: all real patient and clinician names replaced with fictional substitutes throughout repo + git history; CONTEXT.md updated to match
 
 ### Open (next session)
-- [ ] Persist evidence + SBAR versions across reload (currently in-memory `useState`). Likely a small Supabase or local-IndexedDB layer when schema stabilizes.
-- [ ] Caller-context picker at top of triage page (currently driven by encounter metadata from `getEncounterMeta`; nurse override would be useful for "patient on the line, family on speaker, outside RN added later" mid-call shifts).
-- [ ] Pemberton Results Follow-Up workflow (5-question structured template, dual-output: patient-friendly MyChart message + clinical addendum). Stretches the primitive into a different output shape.
-- [ ] OCR pipeline for paper BP log — replace the JSON-fixture path in `data/encounters/marbury_bp_log.json` with a real upload + OCR + nurse-confirm-and-edit flow.
+- [ ] Dark mode toggle (light/dark/system, persisted, no FOUC)
+- [ ] EvidenceCapture wired (structured input with source tagging: patient/family/outside_clinician/chart)
+- [ ] SBAR regenerator on accumulated evidence (versioned, prior reasoning preserved)
+- [ ] Marbury workflow (Phase 4-6 of mega-prompt) — restart after scrub
+- [ ] Dashboard polish with two encounter cards
+- [ ] Commit and push tonight's scaffold work to origin/main once visually verified
 
 ### Open (future sessions, roadmapped)
 - [ ] Workflows #4-18 per the build roadmap
@@ -491,6 +483,7 @@ Every Kairos chat session ends with an updated version of this file. Specificall
 3. **Build Roadmap** updated — completed sessions checked off, current work clearly marked
 4. **New principles or decisions** added under appropriate section
 5. **CRITICAL: Kairos is NOT HVC section** never gets removed or shortened, only added to if new HVC patterns are caught creeping in
+6. **No real names section** — if any real name appears in a chat or file, halt, scrub, and update both this file and the repo before continuing
 
 Future Claude sessions read this file at session start before any code is written.
 
