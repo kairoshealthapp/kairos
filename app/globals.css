@@ -1,92 +1,226 @@
+/* Phase 3.2-fix5 — kairoshealth.app design ported verbatim.                    */
+/* Source: firekraker-monorepo/kairos/app/globals.css + tailwind.config.js.     */
+/* This repo stays on Tailwind v4 (per fix5 #1) — the v3 tailwind.config.js     */
+/* contents move into the @theme {} block below so utilities like bg-platinum,  */
+/* text-bone, tracking-tightest, ease-kairos, animate-fade-up resolve.          */
+
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ------------------------------------------------------------------ */
+/* :root — kairoshealth color tokens (verbatim from source globals.css)  */
+/* ------------------------------------------------------------------ */
+:root {
+  --kairos-graphite:    #0B0E13;
+  --kairos-platinum:    #1C2128;
+  --kairos-mist:        #24293A;
+  --kairos-bone:        #F1EDE4;
+  --kairos-bone-muted:  #B8B4AA;
+  --kairos-amber:       #F59E0B;
+  --kairos-oxblood:     #B91C1C;
+  --kairos-sage:        #6EBC87;
+  --kairos-teal:        #0F766E;
+  --kairos-teal-hover:  #115E59;
+  --font-geist:         var(--font-geist-sans);
+}
+
+/* ------------------------------------------------------------------ */
+/* Tailwind v4 @theme — replaces the v3 tailwind.config.js theme.extend */
+/* block. Register every token source code references as a utility.     */
+/* ------------------------------------------------------------------ */
 @theme {
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+  /* Colors — match v3 config */
+  --color-graphite:    #0B0E13;
+  --color-platinum:    #1C2128;
+  --color-mist:        #24293A;
+  --color-bone:        #F1EDE4;
+  --color-bone-muted:  #B8B4AA;
+  --color-amber:       #F59E0B;
+  --color-amber-glow:  rgba(245, 158, 11, 0.25);
+  --color-oxblood:     #B91C1C;
+  --color-sage:        #6EBC87;
+  --color-teal:        #0F766E;
+  --color-teal-hover:  #115E59;
 
-  --color-canvas: oklch(0.99 0.003 80);
-  --color-surface: oklch(1 0 0);
-  --color-muted: oklch(0.97 0.005 80);
-  --color-line: oklch(0.92 0.005 80);
-  --color-line-faint: oklch(0.95 0.005 80);
+  /* Aliases used by HVC route + retained components (bg-canvas etc.) */
+  --color-canvas:      #0B0E13;
+  --color-surface:     #1C2128;
+  --color-muted:       #24293A;
+  --color-line:        #24293A;
+  --color-line-faint:  #1C2128;
+  --color-fg:          #F1EDE4;
+  --color-fg-muted:    #B8B4AA;
+  --color-fg-faint:    #B8B4AA;
+  --color-accent:        #F59E0B;
+  --color-accent-hover:  #F59E0B;
+  --color-accent-soft:   rgba(245, 158, 11, 0.14);
 
-  --color-fg: oklch(0.20 0.01 80);
-  --color-fg-muted: oklch(0.45 0.01 80);
-  --color-fg-faint: oklch(0.60 0.01 80);
+  /* Fonts */
+  --font-display: var(--font-fraunces),  Georgia, "Times New Roman", serif;
+  --font-sans:    var(--font-geist),     ui-sans-serif, system-ui, sans-serif;
+  --font-mono:    var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  --color-accent: oklch(0.55 0.13 235);
-  --color-accent-hover: oklch(0.50 0.13 235);
-  --color-accent-soft: oklch(0.96 0.02 235);
+  /* Letter-spacing — source registered tightest/-kicker as named values */
+  --tracking-tightest: -0.02em;
+  --tracking-kicker:    0.08em;
 
-  --color-flag-high: oklch(0.55 0.18 27);
-  --color-flag-high-soft: oklch(0.55 0.18 27 / 0.12);
-  --color-flag-low: oklch(0.65 0.14 80);
-  --color-flag-low-soft: oklch(0.65 0.14 80 / 0.14);
-  --color-flag-success: oklch(0.60 0.13 145);
-  --color-flag-success-soft: oklch(0.60 0.13 145 / 0.13);
+  /* Custom timing function (ease-kairos) */
+  --ease-kairos: cubic-bezier(0.16, 1, 0.3, 1);
 
-  --color-source-family: oklch(0.55 0.18 295);
-  --color-source-family-soft: oklch(0.55 0.18 295 / 0.13);
-  --color-source-clinician: oklch(0.55 0.13 195);
-  --color-source-clinician-soft: oklch(0.55 0.13 195 / 0.14);
+  /* Animations — source registered fade-up + count-up */
+  --animate-fade-up:  fade-up  400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-count-up: count-up 1200ms cubic-bezier(0.16, 1, 0.3, 1) both;
 
-  --radius-card: 8px;
-  --radius-button: 6px;
-  --radius-pill: 4px;
+  /* Radii (used by HVC) */
+  --radius-card:   4px;
+  --radius-button: 4px;
+  --radius-pill:   999px;
 }
 
-.dark {
-  --color-canvas: oklch(0.16 0.005 270);
-  --color-surface: oklch(0.20 0.005 270);
-  --color-muted: oklch(0.18 0.005 270);
-  --color-line: oklch(0.28 0.005 270);
-  --color-line-faint: oklch(0.24 0.005 270);
-
-  --color-fg: oklch(0.95 0.005 80);
-  --color-fg-muted: oklch(0.70 0.005 80);
-  --color-fg-faint: oklch(0.55 0.005 80);
-
-  --color-accent: oklch(0.65 0.13 235);
-  --color-accent-hover: oklch(0.70 0.13 235);
-  --color-accent-soft: oklch(0.25 0.05 235);
-
-  --color-flag-high: oklch(0.70 0.16 27);
-  --color-flag-high-soft: oklch(0.70 0.16 27 / 0.16);
-  --color-flag-low: oklch(0.75 0.13 80);
-  --color-flag-low-soft: oklch(0.75 0.13 80 / 0.16);
-  --color-flag-success: oklch(0.70 0.12 145);
-  --color-flag-success-soft: oklch(0.70 0.12 145 / 0.16);
-
-  --color-source-family: oklch(0.70 0.16 295);
-  --color-source-family-soft: oklch(0.70 0.16 295 / 0.16);
-  --color-source-clinician: oklch(0.70 0.12 195);
-  --color-source-clinician-soft: oklch(0.70 0.12 195 / 0.16);
+/* Keyframes referenced by the @theme animation tokens above. */
+@keyframes fade-up {
+  0%   { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes count-up {
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
 }
 
-html {
-  background-color: var(--color-canvas);
-  color: var(--color-fg);
-  font-family: var(--font-sans);
-  font-size: 14px;
-  line-height: 1.5;
+/* ------------------------------------------------------------------ */
+/* Base — verbatim from source globals.css                              */
+/* ------------------------------------------------------------------ */
+html, body {
+  background-color: var(--kairos-graphite);
+  color: var(--kairos-bone);
+  font-family: var(--font-geist), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-feature-settings: "cv11", "ss01", "ss03";
+  font-feature-settings: 'ss01', 'cv11';
 }
 
 body {
-  font-family: var(--font-sans);
+  min-height: 100vh;
+  background-image:
+    url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 0.95 0 0 0 0 0.85 0 0 0 0.04 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  background-attachment: fixed;
+  background-size: 200px 200px;
 }
 
-*:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
+::selection {
+  background-color: rgba(245, 158, 11, 0.3);
+  color: var(--kairos-bone);
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--kairos-graphite); }
+::-webkit-scrollbar-thumb { background: var(--kairos-mist); border-radius: 0; }
+::-webkit-scrollbar-thumb:hover { background: #2f3447; }
+
+*:focus-visible { outline: 2px solid var(--kairos-amber); outline-offset: 2px; border-radius: 4px; }
+*:focus:not(:focus-visible) { outline: none; }
+
+/* ------------------------------------------------------------------ */
+/* kairoshealth — card chrome (verbatim from source)                    */
+/* ------------------------------------------------------------------ */
+.kairos-card {
+  background-color: var(--kairos-platinum);
+  border: 1px solid var(--kairos-mist);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
   border-radius: 4px;
+  transition: box-shadow 150ms cubic-bezier(0.16, 1, 0.3, 1),
+              transform 150ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 150ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Disable focus ring on programmatic focus (mouse clicks) */
-*:focus:not(:focus-visible) {
-  outline: none;
+.kairos-card-hover:hover {
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.4),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  transform: translateY(-1px);
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+/* Persistent click-to-select state — same chrome as :hover, doesn't drop  */
+/* on mouse-leave. Phase 3.2-fix5 addition.                                */
+.kairos-card-selected {
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.4),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  transform: translateY(-1px);
+  border-color: rgba(245, 158, 11, 0.4);
+}
+.kairos-card-selected:hover {
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.4),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.kairos-stagger > * {
+  opacity: 0;
+  animation: kairos-fade-up 400ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.kairos-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.kairos-stagger > *:nth-child(2) { animation-delay: 60ms; }
+.kairos-stagger > *:nth-child(3) { animation-delay: 120ms; }
+.kairos-stagger > *:nth-child(4) { animation-delay: 180ms; }
+.kairos-stagger > *:nth-child(5) { animation-delay: 240ms; }
+.kairos-stagger > *:nth-child(6) { animation-delay: 300ms; }
+.kairos-stagger > *:nth-child(7) { animation-delay: 360ms; }
+.kairos-stagger > *:nth-child(8) { animation-delay: 420ms; }
+
+@keyframes kairos-fade-up {
+  0%   { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.kairos-kicker {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--kairos-bone-muted);
+}
+
+.kairos-data {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.kairos-display {
+  font-family: var(--font-fraunces), serif;
+  letter-spacing: -0.02em;
+}
+
+.severity-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+.severity-red   { background: var(--kairos-oxblood); box-shadow: 0 0 10px rgba(185, 28, 28, 0.45); }
+.severity-amber { background: var(--kairos-amber);   box-shadow: 0 0 10px rgba(245, 158, 11, 0.45); }
+.severity-green { background: var(--kairos-sage); }
+
+details > summary { list-style: none; cursor: pointer; }
+details > summary::-webkit-details-marker { display: none; }
+details[open] > summary .drawer-chev { transform: rotate(90deg); }
+.drawer-chev { transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1); }
+
+@keyframes kairos-word-fade {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.kairos-word {
+  display: inline-block;
+  opacity: 0;
+  animation: kairos-word-fade 600ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes kairos-cta-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+  50%      { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0.18); }
+}
+.kairos-cta-pulse {
+  animation: kairos-cta-pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
