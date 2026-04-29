@@ -5,7 +5,14 @@
 // each regeneration creates a new SBARVersion with a hash of the evidence
 // that produced it.
 
-import { createHash } from "node:crypto";
+// Hash uses an isomorphic djb2 implementation (see hashEvidence below). The
+// previous version imported `node:crypto`'s createHash and fell back to djb2
+// on the client; Next 14's Webpack 5 doesn't handle the `node:` URI scheme in
+// client bundles, and EvidenceCapture (a client component) reaches this file
+// transitively. Dropping the conditional in favor of always-djb2 keeps the
+// hash stable, isomorphic, and dependency-free. Per the comment on
+// hashEvidence, this is not a security primitive — it's a "did evidence
+// change since SBAR generation" marker.
 
 /**
  * @typedef {Object} EvidenceItem
@@ -58,10 +65,7 @@ export function hashEvidence(evidenceArray) {
       sourceDetail: e.sourceDetail || "",
     }))
   );
-  if (typeof createHash === "function") {
-    return createHash("sha256").update(payload).digest("hex").slice(0, 8);
-  }
-  // djb2 fallback for client-side. Stable, not cryptographic.
+  // djb2, isomorphic. Stable, not cryptographic.
   let h = 5381;
   for (let i = 0; i < payload.length; i++) {
     h = ((h << 5) + h + payload.charCodeAt(i)) & 0xffffffff;

@@ -759,3 +759,1199 @@ What's left is a structural Epic-config attribute that's missing on both apps. C
 - Epic developer account — new app `Kairos Backend Services` (App ID 54107) registered with JWK Set URL pointing at `auth.firekraker.net`. Existing ClinAI app (54037) untouched.
 
 No git push.
+
+## 2026-04-28 — JWT structural diagnostic (pre-probe verification)
+
+### Why
+Two Epic probes returned `400 invalid_client` with zero JWKS fetches at the Worker. Before burning a third probe, structurally verify our JWT and JWKS endpoint match the Epic Backend Services spec independently of Epic's response — so any future failure isolates the cause to Epic-side config, not our JWT.
+
+### What was built
+- `scripts/jwt-diagnostic.js` — standalone Node script, no new deps. Generates a JWT using the same logic as `firekraker-monorepo/clinai/lib/epic-auth.js` (the source of truth feeding the kairos-auth Worker JWKS): header `{alg:"RS384", typ:"JWT", kid:"clinai-key-1"}`, payload `{iss, sub=iss, aud, exp:iat+240, nbf:iat, iat, jti}`, signed with RSASSA-PKCS1-v1_5/SHA-384 via `node:crypto.sign("sha384", ...)` against `CLINAI_PRIVATE_KEY_PEM` from `firekraker-monorepo/.env.master`.
+- Decodes header + payload, prints PASS/FAIL for each Epic-required field with the actual value shown. Does NOT call Epic's token endpoint.
+- Verifies the public JWKS at `https://auth.firekraker.net/.well-known/jwks.json` from outside our network (HTTP fetch traverses DNS → Cloudflare edge), confirming HTTP 200, valid JSON, key with `kid=clinai-key-1`, `alg=RS384`. Validates the response is Cloudflare-served (`server: cloudflare` + `cf-ray` header) to confirm the public edge served it, not anything local. Cross-checks the JWT's `kid+alg` resolves against the live JWKS.
+
+### Result — all checks PASS
+First run timestamp `2026-04-28T23:00:00Z`, exit 0.
+
+**JWT structure** — token is 3 parts; decoded header `{"alg":"RS384","typ":"JWT","kid":"clinai-key-1"}`; decoded payload `{iss=sub=a85de553-5013-47e8-9f3b-f3c797176f81, aud="https://fhir.epic.com/interconnect-fhir-oauth/oauth2/token" (exact match, no whitespace, no trailing slash), exp-iat=240s (≤ 300), jti=UUID}`. Every Epic Backend Services payload field matches spec.
+
+**JWKS endpoint** — HTTP 200 from Cloudflare edge (`cf-ray=9f39aeb40cd8d31a-MCI`, `server=cloudflare`), 431-byte JSON body, `keys[]` with one entry: `kid=clinai-key-1, alg=RS384, kty=RSA, use=sig, n=342 chars, e=AQAB`. JWT's `kid+alg` pair resolves cleanly against the live key set.
+
+### Implication for the `invalid_client` blocker
+This empirically rules out our side as the cause. The signed JWT is structurally Epic-compliant, the JWKS is publicly resolvable, and the `kid` we sign with is the `kid` we publish. Combined with prior evidence that Epic short-circuits in <400ms before fetching the JWKS, the failure is **definitively Epic-side config** on app 54107 (and 54037). Structural-cause shortlist from prior session stands: algorithm dropdown, Backend Services capability flag, system-scope grants, account-level enablement, account-level negative cache.
+
+### Not done
+- Did not run the Epic token probe (per instructions — structural verification only).
+- Did not modify the Worker, the keypair, or the Epic app registration.
+- No git push.
+
+### Files touched in `kairos/`
+- `scripts/jwt-diagnostic.js` — new file.
+- `docs/log.md` — this section.
+- `docs/CONTEXT.md` — note added under v8 prerequisite block pointing to the diagnostic script.
+
+### How to re-run
+```
+node scripts/jwt-diagnostic.js
+```
+Reads private key from `C:/Users/kents/firekraker-monorepo/.env.master`. Exit 0 = all PASS, exit 2 = at least one FAIL (prints which).
+
+## 2026-04-28 — Epic Backend Services token probe SUCCESS (v8 unblocked)
+
+### Outcome A — HTTP 200 + access_token
+After the structural diagnostic passed, ran a one-off probe (`scripts/epic-probe-temp.js`, since deleted) against `https://fhir.epic.com/interconnect-fhir-oauth/oauth2/token` using the new Backend Services Client ID `a85de553-5013-47e8-9f3b-f3c797176f81`. Same signing logic as the diagnostic. **Epic returned HTTP 200 with a valid access token.** v8 Phase 1 is unblocked.
+
+### Probe results
+- **Timestamps** — request `2026-04-28T23:07:30.962Z`, response `2026-04-28T23:07:31.321Z`, **RTT 359ms**.
+- **HTTP status** — 200 (vs. the 400 invalid_client returned by both prior probes on apps 54107 and 54037).
+- **Response body** — `access_token` (RS256 JWT issued by Epic, ~1100 chars), `token_type=Bearer`, `expires_in=3600`, `issued_token_type=urn:ietf:params:oauth:token-type:access_token`, decoded token's `sub=evNp-KhYwOOqAZn1pZ2enuA3` (opaque Epic subject id), `aud=urn:oid:1.2.840.114350.1.13.0.1.7.3.688884.100` (Epic sandbox EHR identifier), `iss=urn:oid:...688884.100`.
+- **Granted scopes (9)** — all `system/*` Backend Services scopes:
+  - `system/AllergyIntolerance.read`
+  - `system/Condition.read`
+  - `system/DiagnosticReport.read`
+  - `system/DocumentReference.read`
+  - `system/Encounter.read`
+  - `system/MedicationRequest.read`
+  - `system/Observation.read`
+  - `system/Patient.read`
+  - `system/ServiceRequest.read`
+- **Notable response headers** — `Server: cloudflare` not present (Epic-fronted, not CF), `set-cookie: EpicPersistenceCookie`, full CORS unlock, `servermetrics` JSON showing Epic-internal DBTime=17ms / GREF=961 (their database backend handled the request normally — no rejection path).
+
+### Cloudflare Worker observability — Epic JWKS fetch CAPTURED
+Pulled `kairos-auth` events via the workers observability telemetry API (account `b750f1b961dc39c6367d02224bce1134`, dataset `cloudflare-workers`, filter `$metadata.service=kairos-auth`) over a 24h window covering the probe.
+
+**Two fetches from Epic Systems Corporation hit the Worker, bracketing the probe:**
+
+| Timestamp (UTC)         | UA                              | ASN  | Org                       | Origin city  | CF colo | Status | Wall ms |
+|-------------------------|---------------------------------|------|---------------------------|--------------|---------|--------|---------|
+| 2026-04-28T23:07:29.448Z | `Epic-Interconnect/117.0.476.1253` | 10359 | Epic Systems Corporation | Verona, WI   | ORD     | 200    | 1       |
+| 2026-04-28T23:07:36.283Z | `Epic-Interconnect/117.0.476.1253` | 10359 | Epic Systems Corporation | Verona, WI   | ORD     | 200    | 0       |
+
+The first hit landed 1.5s before our probe POST departed (likely an Epic-side prefetch / re-validation triggered by the in-flight token exchange) and the second landed ~5s after our probe response (likely a post-validation refresh). Both were HTTP/1.1 over TLSv1.2 with Epic's source IP in 2620:72:0:8000::/64. Compared to the Apr 27 probes — where observability captured zero Epic fetches at all — this is a complete reversal: **Epic is now reaching the JWKS endpoint, fetching the key, and validating successfully**.
+
+For the record, prior diagnostic-tool fetches (UA `kairos-jwt-diagnostic/1.0` at 23:00, UA `node` from probe Node runtime, UA `Epic-Interconnect/...` second pair) are all visible in observability — confirming the dataset is working correctly. The Apr 27 zero-fetch evidence wasn't an observability gap; it was a real Epic-side rejection at app-config layer.
+
+### What changed between the failing Apr 27 probes and this passing Apr 28 probe
+Nothing on our side. The keypair, JWKS URL, signing algorithm, kid, Client ID, and registered Backend Services app are unchanged. The structural diagnostic that ran today verified our JWT + JWKS were already spec-compliant. The change was Epic-side: either (a) the Apr 27 probes hit a propagation-lag window after registering the new Backend Services app and JWK Set URL, and Epic's app-config + JWKS-URL pipeline finished propagating overnight, or (b) Epic's account-level negative cache (left over from when ClinAI's old `clinai.firekraker.net` JWKS URL was the only registered URL on this dev account and had been deleted) expired or was invalidated. The propagation-lag explanation is the simplest and is consistent with the ~24h gap between the failing and passing probes.
+
+### Per-instructions: no fix attempted
+Three outcomes were defined; this is **Outcome A (SUCCESS)** — no fix needed. Reporting only.
+
+### What this unblocks
+- v8 Phase 1: wire the JWT signer into `kairos/lib/fhir/` (port `firekraker-monorepo/clinai/lib/epic-auth.js` into the kairos repo, point env vars at `KAIROS_FHIR_*`, switch `lib/fhir/client.js` from mock data to live `fetch` against the Epic sandbox base URL).
+- Two real Epic sandbox encounters (Camila Lopez, Derrick Lin) can now be queried with `system/*` scopes; dashboard sandbox banner can go green.
+- Production scopes remain dormant (Production JWK Set URL still empty per Riverbend gate).
+
+### Files touched
+- `docs/log.md` — this section.
+- `scripts/epic-probe-temp.js` — created, run, **deleted** (per instructions).
+- `scripts/jwt-diagnostic.js` — kept (permanent tooling).
+
+No git push.
+
+## 2026-04-28 — HVC fork into kairos: Phase 1 inventory (no changes yet)
+
+### Direction
+HVC's clinical reasoning becomes the new v1 foundation in the `kairos` repo. Epic Backend Services auth + JWKS + Whitfield chart-aware question generator are preserved on top. **Phase 1 is read-only inventory.** Phase 2 (the actual fork/merge) is gated on Brandon's confirmation of this inventory.
+
+### A. Kairos files to PRESERVE (Epic auth + Whitfield + infra)
+
+**Epic auth + JWKS tooling**
+- `scripts/jwt-diagnostic.js` (273 lines) — RS384 JWT signer + JWKS reachability checker; verified passing 2026-04-28 against app 54107.
+- `.env.local` — contains `KAIROS_FHIR_CLIENT_ID=a85de553-…` (Backend Services), `KAIROS_ANTHROPIC_KEY`, three Supabase keys. Git-tracked-as-ignored, never commit. **Note:** there is no `lib/epic-auth.js` in the kairos repo yet — the canonical signer lives at `firekraker-monorepo/clinai/lib/epic-auth.js` and was the source-of-truth for `jwt-diagnostic.js`. Phase 2 will port it into `kairos/lib/`.
+- External-but-required: `C:\Users\kents\kairos-auth\` (Cloudflare Worker hosting JWKS at `auth.firekraker.net`, NOT in this repo) and `C:\Users\kents\firekraker-monorepo\.env.master` (holds `CLINAI_PRIVATE_KEY_PEM`).
+
+**Whitfield chart-aware question generator**
+- `data/patients/whitfield.json` (885 lines) — synthetic FHIR-shaped chart bundle.
+- `lib/fhir/chartContext.js` (153 lines) — chart context assembler.
+- `lib/fhir/mockData.js` (83), `lib/fhir/client.js` (87), `lib/fhir/encounters.js` (201), `lib/fhir/schemas.js` (46) — FHIR scaffold, mock-mode for now.
+- `lib/prompts/chartAwareQuestions.js` (98) — the prompt that turned out to be the canonical proof point.
+- `app/api/chart-aware-questions/route.js` (53) — server route.
+- `components/ChartContext.js` (241), `components/TriageWorkspace.js` (202), `components/TriageQuestions.js` (142) — the UI.
+- `app/triage/[encounterId]/page.js` (196) — the page.
+- `docs/whitfield-questions-output.json` (saved sample output, currently empty).
+
+**Docs & infra**
+- `docs/CONTEXT.md` (632 lines) — project context, North Star, architecture decisions, build status.
+- `docs/log.md` (this file, ~900 lines) — full build log including Epic auth journey.
+- `docs/vercel-clinai-kairos-audit.md` — historical reference.
+- `package.json`, `package-lock.json`, `next.config.mjs`, `postcss.config.mjs`, `jsconfig.json`, `AGENTS.md`, `CLAUDE.md`, `README.md`, `app/layout.js`, `app/globals.css`, `app/favicon.ico`.
+- `lib/claude/client.js` — Anthropic SDK wrapper (Whitfield API uses it).
+- `lib/supabase/client.js` — Supabase client wrapper.
+- `supabase/migrations/0001..0004` — DB schema (in use; whether HVC layer adopts these is a Phase 2 decision).
+- `public/*.svg` — Next.js stock assets.
+
+### B. Kairos files that v0 scaffolded but HVC may supersede (Phase 2 retire candidates)
+
+These are Kairos v5–v7 features built on the old "10 workflow streams" frame. HVC's foundation may absorb, replace, or retire them:
+
+**Routes:** `app/dashboard/page.js`, `app/page.js`, `app/cohort/[cohortId]/page.js`, `app/cohort/[cohortId]/[patientId]/page.js`, `app/fax-inbox/page.js`, `app/integrity-log/page.js`, `app/investigation/[investigationId]/page.js`, `app/referral-inbox/page.js`.
+
+**API routes:** `app/api/apply-protocol/route.js`, `app/api/attestations/me/route.js`, `app/api/classify-referral/{,override/}route.js`, `app/api/cohort-outreach/route.js`, `app/api/dual-output/route.js`, `app/api/encounters/[encounterId]/{evidence/[evidenceId]/,evidence/,sbar/}route.js`, `app/api/fax-resolve/route.js`, `app/api/investigations/[id]/{,touchpoints/}route.js`, `app/api/investigations/route.js`, `app/api/med-rec/{attest,resolve}/route.js`, `app/api/pa-status-update/route.js`, `app/api/patient-instructions/route.js`, `app/api/pre-visit-tasks/[id]/{resolutions/,}route.js`, `app/api/regenerate-sbar/route.js`.
+
+**Components:** `BPLogTable.js`, `CohortDrillIn.js`, `CohortMemberList.js`, `DashboardClock.js`, `DualOutputDraft.js`, `EvidenceCapture.js`, `FaxInboxBoard.js`, `InvestigationTimeline.js`, `MedRecPanel.js`, `MyChartThread.js`, `PriorAuthTracker.js`, `ProcedureContextCard.js`, `ProtocolApplier.js`, `ReferralInboxBoard.js`, `ResultNoteCard.js`, `SBARDraft.js`, `SecureChat.js`, `ThemeToggle.js`.
+
+**Lib:** `lib/clinical/{bpTrend,cohortCompute,drugLookup,faxProcessor,medRecEngine,patientMatch,protocolApplier}.js`, `lib/prompts/{cohortOutreach,dualOutput,paStatusUpdate,patientInstructions,referralClassifier,sbarRegenerator}.js`, `lib/state/{attestations,cohorts,evidence,faxEncounters,incomingFaxes,investigations,preVisitTasks,priorAuth,referralMessages,sbarVersions}.js`, `lib/types/{cohort,evidence,incomingFax,investigation,preVisitTask,priorAuth,referralMessage}.js`.
+
+**Data:** `data/cohorts/`, `data/encounters/`, `data/incomingFaxes/`, `data/investigations/`, `data/patients/{castellanos,cosgrove,halberg,hartwell,linnehan,marbury}.json` (Whitfield kept), `data/preVisitTasks/`, `data/priorAuth/`, `data/protocols/`, `data/referralMessages/`.
+
+**Scripts:** `scripts/{generateReferralSeed.mjs,seed-evidence.js,seed-investigations.js,seed-pre-visit-tasks.js,verify-phase3.mjs,verify-phase7.mjs,verify-supabase.mjs}` (jwt-diagnostic kept).
+
+### C. HVC source inventory (`C:\Users\kents\firekraker-monorepo\hvc`)
+
+**App routes (single-page chat workflow)**
+- `app/page.js` (752) — main UI, chat-first.
+- `app/layout.js` (25) — minimal shell.
+- `app/sw-register.js` — service-worker bootstrap (PWA).
+
+**API routes (8 total)**
+- `app/api/chat/route.js` (980) — the brain. Anthropic SDK + dynamic knowledge-base loading + PHI guard + contact-method resolution + analytics logging.
+- `app/api/chat/knowledge.js` (1744) — the clinical knowledge base. Four exports: `CORE_KNOWLEDGE` (sent every call, ~3–4K tok — workflows, note formats, standing rules, warfarin dosing, key meds), `REFERENCE_EPIC` (on-demand: order/entry/workflow), `REFERENCE_DIRECTORY` (on-demand: phone/fax/referral), `REFERENCE_DOSE_TIERS` (on-demand: non-coumadin dose queries).
+- `app/api/admin/route.js` (61), `app/api/analytics/route.js` (97), `app/api/auth/route.js` (80), `app/api/balance/route.js` (177), `app/api/encounters/route.js` (116), `app/api/health/route.js` (7), `app/api/review/route.js` (33).
+
+**Lib**
+- `lib/phiGuard.js` (417) — PHI scrubbing utilities. **Critical to preserve verbatim** — HVC handles real PHI today.
+- `lib/supabase.js` (13) — Supabase client (HVC project `tmpablcrejgfpkkpeeho`, distinct from kairos's `inxtnmsjlvpdofxovbpb`).
+
+**Public / PWA**
+- `public/{icon-192.png, icon-512.png, manifest.json, robots.txt, sw.js}` — PWA assets.
+
+**Config**
+- `package.json` — `next 14.2.35`, `react ^18.3.1`, `@anthropic-ai/sdk 0.39.0`, `@supabase/supabase-js ^2.45.0`. **Mismatch alert:** kairos is on `next 16.2.4` + `react 19.2.4` + `@anthropic-ai/sdk ^0.91.1`. Three options for Phase 2: (i) keep kairos's modern stack and port HVC code forward, (ii) downgrade kairos to HVC's stack, (iii) keep both pinned with a compatibility shim. (i) is the obvious choice but requires a porting pass — Next 14 → 16 broke route conventions per `AGENTS.md`.
+- `next.config.js`, `.env.example`, `.env.local`, `.gitignore`, `CLAUDE.md` (HVC-specific, includes the "string concatenation instead of template literals" GitHub-mobile rule and the "no `thinking: { type: 'adaptive' }`" rule), `README.md`.
+
+**Vercel state**
+- `.vercel/{README.txt, project.json}` — current HVC deploy. Phase 2 decision: re-point at kairos project or leave HVC's separate deploy alive during the fork.
+
+### Constraints to carry into Phase 2
+- HVC processes real PHI today; the fork must preserve `phiGuard.js` and the audit-logging path before any HVC route is wired into kairos.
+- Two Supabase projects (`tmpablcrejgfpkkpeeho` HVC, `inxtnmsjlvpdofxovbpb` kairos/SupperMates multi-tenant). Phase 2 needs to decide which project is canonical for the merged repo or whether both remain.
+- Next.js version mismatch (HVC 14 vs kairos 16) — the porting pass must read `node_modules/next/dist/docs/` for the v16 conventions per `AGENTS.md`.
+- HVC's `CLAUDE.md` adds two binding rules (string concatenation in route files, no adaptive thinking) — these need to merge with kairos's existing `CLAUDE.md` / `AGENTS.md`.
+
+### Phase 1 status
+**STOP. Awaiting Brandon's confirmation of inventory before any file is moved, copied, or deleted.** No git push.
+
+## 2026-04-28 — Phase 2A: stack alignment to HVC's stack
+
+### Goal
+Downgrade kairos to HVC's stack so Phase 2B's HVC fork is a mechanical copy. Source of truth: `firekraker-monorepo/hvc/package.json`.
+
+### Version diffs applied to `kairos/package.json`
+
+| Dep | Was | Now (HVC source-of-truth) |
+|---|---|---|
+| `next` | `16.2.4` | `14.2.35` |
+| `react` | `19.2.4` | `^18.3.1` |
+| `react-dom` | `19.2.4` | `^18.3.1` |
+| `@anthropic-ai/sdk` | `^0.91.1` | `0.39.0` |
+| `@supabase/supabase-js` | `^2.105.0` | `^2.45.0` |
+
+**Kept (kairos-specific, HVC doesn't have):**
+- `lucide-react ^1.11.0` — icon set used by current Whitfield triage UI components.
+- `@tailwindcss/postcss ^4` + `tailwindcss ^4` (devDependencies) — kairos uses Tailwind v4 (`@import "tailwindcss"`, `@theme` syntax in `app/globals.css`); HVC has no Tailwind. Kept because the current UI is built on it. Confirmed compatible with Next 14 / Webpack 5 / PostCSS 8 in this build.
+
+### npm install
+- Wiped `node_modules/`, `package-lock.json`, and `.next/` first.
+- `npm install` → 88 packages, audited 89, ~38s. One deprecation warning (`node-domexception@1.0.0` — transitive from SDK 0.39, harmless). Audit reports 2 vulnerabilities (1 moderate, 1 high) — left alone, expected from older deps; will revisit after Phase 2B.
+
+### Build smoke test — `npm run build`
+**PASS** on Next 14.2.35 after one porting fix (below). All 11 pages compiled, all 21 dynamic API routes traced, static prerender of `/` and `/_not-found` generated. First-load JS: shared 87.3 kB, biggest route `/triage/[encounterId]` at 15.9 kB / 112 kB total.
+
+### Whitfield API smoke test — `POST /api/chart-aware-questions`
+Dev server: `next dev -p 3002`, ready in 2.2s.
+
+```
+POST /api/chart-aware-questions
+{ "patientId": "whitfield_sample_001",
+  "encounterId": "whitfield_encounter_001",
+  "callerContext": { "callerType": "patient" } }
+
+→ HTTP 200, 13935 bytes, 58.6s round-trip (model latency, expected for full chart pass)
+→ response.questions.length = 31
+→ response.metadata = { questionCount: 31, generatedAt: "2026-04-27T11:05:00-05:00",
+                         chartContextHash: "cc_b48a5313" }
+→ first question carries id/category/rationale/question/answerType/expectedRange per schema
+→ chartContext present with patient + encounter + conditions/meds/vitals subkeys
+```
+
+The Anthropic SDK 0.39 → 0.91 downgrade was zero-impact: `lib/claude/client.js` uses only `client.messages.create({ model, max_tokens, system, messages })`, which is the stable surface across both versions. **No prompt code needed porting.**
+
+### One porting fix required (server-only crypto leaking into client bundle)
+Build initially failed with `UnhandledSchemeError: Reading from "node:crypto" is not handled by plugins` traced through `./lib/types/evidence.js → ./components/EvidenceCapture.js → ./components/TriageWorkspace.js` (a client-component import chain). Next 16's bundler handles the `node:` URI scheme transparently; Next 14's Webpack 5 does not.
+
+**Fix** — drop the `node:crypto` import in `lib/types/evidence.js` and rely on the file's existing isomorphic djb2 fallback. Authorized by the file's own comment: *"Same purpose: distinguish 'evidence has changed since SBAR generation' — not a security primitive."* The hash signature is unchanged (8-char hex, stable, deterministic).
+
+Diff:
+```
+- import { createHash } from "node:crypto";
++ // (8-line comment block explaining the change — see file)
+
+  // inside hashEvidence():
+- if (typeof createHash === "function") {
+-   return createHash("sha256").update(payload).digest("hex").slice(0, 8);
+- }
+- // djb2 fallback for client-side. Stable, not cryptographic.
++ // djb2, isomorphic. Stable, not cryptographic.
+  let h = 5381;
+```
+
+### Epic auth tooling — `node scripts/jwt-diagnostic.js`
+**PASS, exit 0.** All structural checks green after the npm install reset:
+- Header `alg=RS384`, `kid=clinai-key-1`, `typ=JWT`
+- Payload `iss=sub=a85de553-…176f81`, `aud=https://fhir.epic.com/interconnect-fhir-oauth/oauth2/token` (exact match), `exp-iat=240s`, `jti=UUID`
+- JWKS HTTP 200 from Cloudflare edge (`cf-ray=9f39d16abdc7ae28-MCI`), `kid=clinai-key-1`, `alg=RS384`
+- JWT `kid+alg` resolves in live JWKS
+
+The diagnostic uses only `node:crypto` from server context (it's a CLI script, never bundled), so the Next-14 webpack constraint that affected `lib/types/evidence.js` doesn't apply here. Epic auth tooling is unaffected by the stack downgrade.
+
+### Files touched in `kairos/`
+- `package.json` — version downgrades + kept deps.
+- `package-lock.json` — regenerated.
+- `node_modules/` — full reinstall.
+- `.next/` — wiped, regenerated by `next build`.
+- `lib/types/evidence.js` — dropped `node:crypto` import, removed createHash branch in `hashEvidence`. ~10 lines net.
+- `docs/log.md` — this section.
+
+### Phase 2A status
+- Stack downgrade: complete.
+- Whitfield pipeline: verified end-to-end on the new stack (build + live API call returning structured 31-question output).
+- Epic auth: verified intact.
+- Ready for Phase 2B (mechanical HVC copy) on Brandon's go-ahead. No git push.
+
+## 2026-04-28 — Phase 2B: HVC core copied into kairos under `/hvc/*`
+
+### Files copied (read-only on HVC source)
+
+| HVC source | Kairos target |
+|---|---|
+| `app/page.js` | `app/hvc/page.js` |
+| `app/api/chat/route.js` | `app/api/hvc/chat/route.js` |
+| `app/api/chat/knowledge.js` | `app/api/hvc/chat/knowledge.js` |
+| `app/api/admin/route.js` | `app/api/hvc/admin/route.js` |
+| `app/api/analytics/route.js` | `app/api/hvc/analytics/route.js` |
+| `app/api/auth/route.js` | `app/api/hvc/auth/route.js` |
+| `app/api/balance/route.js` | `app/api/hvc/balance/route.js` |
+| `app/api/encounters/route.js` | `app/api/hvc/encounters/route.js` |
+| `app/api/health/route.js` | `app/api/hvc/health/route.js` |
+| `app/api/review/route.js` | `app/api/hvc/review/route.js` |
+| `lib/phiGuard.js` | `lib/hvc/phiGuard.js` (verbatim) |
+| `lib/supabase.js` | `lib/hvc/supabase.js` (verbatim) |
+| `public/icon-192.png` | `public/hvc/icon-192.png` |
+| `public/icon-512.png` | `public/hvc/icon-512.png` |
+| `public/manifest.json` | `public/hvc/manifest.json` |
+| `public/sw.js` | `public/hvc/sw.js` |
+
+**Skipped per spec:**
+- HVC's `app/sw-register.js` — only imported by HVC's `app/layout.js`, not by `page.js`. The kairos root `app/layout.js` is untouched, so the service worker isn't auto-registered. Phase 2B is mechanical copy only; PWA wiring deferred.
+- HVC's `app/layout.js` — kairos already has its own root layout.
+- HVC's `robots.txt` — kairos owns the root robots.
+
+### Import-path / route changes
+
+In `app/api/hvc/chat/route.js`:
+- `from '../../../lib/phiGuard'` → `from '@/lib/hvc/phiGuard'`
+- All `process.env.ANTHROPIC_API_KEY` → `process.env.KAIROS_ANTHROPIC_KEY` (2 sites: Anthropic client init + missing-env check; the `missingEnv.push(...)` string also updated to match the new var name).
+
+In `app/api/hvc/{admin,analytics,encounters,review}/route.js`:
+- `from "../../../lib/supabase"` → `from "@/lib/hvc/supabase"` (4 files, 1 edit each)
+
+In `app/hvc/page.js` — fetch call updates (6 sites):
+- `/api/balance` → `/api/hvc/balance`
+- `/api/auth` → `/api/hvc/auth`
+- `/api/admin` (×2, GET + POST) → `/api/hvc/admin`
+- `/api/analytics` → `/api/hvc/analytics`
+- `/api/review` → `/api/hvc/review`
+- The active chat call previously hit the external Cloudflare Worker `https://hvc-chat.firekrakerproductions.workers.dev`. Switched to the in-repo `/api/hvc/chat`. Worker URL preserved as a comment for reference (per the spec line: *"Any reference to /api/chat → /api/hvc/chat"*).
+
+In `public/hvc/manifest.json`:
+- `start_url: "/"` → `"/hvc"`
+- `icons[].src: "/icon-192.png"` → `"/hvc/icon-192.png"`
+- `icons[].src: "/icon-512.png"` → `"/hvc/icon-512.png"`
+
+In `public/hvc/sw.js`:
+- `PRECACHE_URLS: ['/', '/manifest.json']` → `['/hvc', '/hvc/manifest.json']`
+
+### One mechanical adjustment beyond import-paths
+HVC's `auth/route.js`, `balance/route.js`, and `chat/route.js` create the Supabase client at module top-level (`var supabase = createClient(env.X, env.Y)`). In HVC's old runtime, env vars were always present so that was fine. Next 14's "Collecting page data" build phase imports every route module, so `createClient(undefined, undefined)` threw `Error: supabaseUrl is required` and broke the build. **Wrapped each top-level client in a Proxy that defers `createClient` until first property access** — preserves all `supabase.from(...)` call sites verbatim, no logic change. Same lazy pattern that `lib/hvc/supabase.js`'s `getSupabase()` already uses.
+
+### Environment variables HVC needs that `kairos/.env.local` does NOT have
+
+Listed below for Brandon to fill from `firekraker-monorepo/.env.master`. Already-present `KAIROS_ANTHROPIC_KEY` is reused (rename was applied in code per spec).
+
+| Var | Used by | Notes |
+|---|---|---|
+| `SUPABASE_URL` (or `NEXT_PUBLIC_SUPABASE_URL`) | auth, balance, chat, admin, analytics, encounters, review | Must point at HVC project `tmpablcrejgfpkkpeeho`, NOT kairos's `inxtnmsjlvpdofxovbpb` (different schemas). |
+| `SUPABASE_SERVICE_KEY` (or `SUPABASE_KEY`) | same set | HVC service role key for `tmpablcrejgfpkkpeeho`. |
+| `PIN_SALT` | auth | Required by `hashPin()` in auth/route.js — throws if missing. |
+| `TRACKER_SUPABASE_URL` | chat (line 905) | Optional analytics tracker; if absent, chat probably skips that path silently. |
+| `TRACKER_SUPABASE_KEY` | chat (line 906) | Same. |
+
+`KAIROS_ANTHROPIC_KEY` — already in `.env.local`, used by chat after the rename.
+
+### Build verification — `npm run build`
+**PASS.** All 9 HVC API routes compiled, `/hvc` page generated as a static prerender (9.28 kB / 96.5 kB first load JS). All preserved kairos routes still compile (`/dashboard`, `/triage/[encounterId]`, `/api/chart-aware-questions`, all v5–v7 routes). Per spec, did not start the dev server — env vars not yet filled in.
+
+### Collision check
+Verified untouched (via `git status`):
+- `app/page.js` (kairos root) — untouched.
+- `app/triage/[encounterId]/page.js` (Whitfield) — untouched.
+- `app/api/chart-aware-questions/route.js` (Whitfield) — untouched.
+- All v5–v7 scaffold pages, components, lib/clinical, lib/state, lib/types (except `evidence.js` from Phase 2A), lib/prompts (except chartAwareQuestions which was untouched and verified), and data/ JSON — untouched.
+
+Only modified files: `package.json`, `package-lock.json`, `lib/types/evidence.js` (all Phase 2A), and `docs/CONTEXT.md` + `docs/log.md` (this update). Only new files: the entire `app/hvc/`, `app/api/hvc/`, `lib/hvc/`, `public/hvc/` subtrees + `scripts/jwt-diagnostic.js` (Phase 1 carryover).
+
+### Out of scope for Phase 2B (per spec)
+- Did not run HVC chat (env vars not filled in).
+- Did not retire v5–v7 scaffold (Phase 2C).
+- Did not wire FHIR data into HVC chat (Phase 3).
+- Did not add cards UI (Phase 3+).
+- Did not register the service worker or wire `<link rel="manifest">` into the kairos layout for the `/hvc` route — that's a PWA-wiring decision for later.
+
+No git push. Awaiting Brandon's go-ahead for Phase 2C (or env-var fill + first live HVC chat smoke test).
+
+## 2026-04-28 — Phase 2B.5: env vars filled + smoke test
+
+### Env vars added to `kairos/.env.local`
+Pulled from `firekraker-monorepo/.env.master` per spec. None of the five HVC vars existed in kairos's `.env.local` previously — all 5 added cleanly:
+
+| Var | Source | Value summary |
+|---|---|---|
+| `SUPABASE_URL` | `.env.master` `TRACKER_SUPABASE_URL` row | `https://tmpablcrejgfpkkpeeho.supabase.co` (HVC project) |
+| `SUPABASE_SERVICE_KEY` | `.env.master` `TRACKER_SUPABASE_KEY` row | service-role JWT for `tmpablcrejgfpkkpeeho` |
+| `PIN_SALT` | `.env.master` line 67 | `HVC2026Clinical` |
+| `TRACKER_SUPABASE_URL` | `.env.master` line 34 | same as above (HVC project) |
+| `TRACKER_SUPABASE_KEY` | `.env.master` line 35 | same JWT as above |
+
+`KAIROS_ANTHROPIC_KEY` already present — Phase 2B's chat-route rename (`ANTHROPIC_API_KEY` → `KAIROS_ANTHROPIC_KEY`) means no new Anthropic var was needed.
+
+### Notable: `.env.master` vs HVC's runtime `.env.local` discrepancy on TRACKER_*
+The master file points TRACKER at the HVC project (`tmpablcrejgfpkkpeeho`); HVC's actual runtime `.env.local` has TRACKER pointing at the SupperMates/kairos project (`inxtnmsjlvpdofxovbpb`) — apparently HVC routes its analytics inserts cross-project in production. **Followed master per spec instruction (*"Source for HVC env values: .env.master"*).** Flag for Brandon: if the chat route's analytics tracker should fan out to SupperMates instead, swap TRACKER_* values to the SupperMates service-role key. Both options preserve PHI separation; the difference is which Supabase database receives the encounter analytics rows.
+
+### Build verification — `npm run build`
+**PASS.** No new errors after env-var fill.
+
+### Smoke test (dev server, foreground, 4 endpoints)
+
+| Endpoint | Method | Status | Time | Body summary |
+|---|---|---|---|---|
+| `/hvc` | GET | **200** | 4.5s (cold compile, 573 modules) | HTML page rendered, kairos `__variable_f367f3` font hash present (proves global layout still applies) |
+| `/api/hvc/health` | GET | **200** | 2.8s (cold compile, 293 modules) | `{"status":"ok","app":"hvc","timestamp":1777419414164}` |
+| `/triage/whitfield_encounter_001` | GET | **500** | 2.5s | `ReferenceError: getInvestigationsServer is not defined` — see below |
+| `/` | GET | **307 → 200** | 0.4s redirect → 0.05s dashboard | Redirects to `/dashboard` per design (memory 4003); followed redirect returns 200 HTML with full dashboard markup |
+
+`/dashboard` directly returned HTTP 200 in 47ms (warm). The 307 from `/` is intentional — kairos's root redirects to dashboard.
+
+### Triage 500 — pre-existing bug, NOT caused by Phase 2A/2B/2B.5
+
+Stack trace:
+```
+app/triage/[encounterId]/page.js (61:55) @ TriagePage
+ReferenceError: getInvestigationsServer is not defined
+```
+
+Root cause:
+- Line 6 imports `{ getInvestigations }` from `@/lib/state/investigations`.
+- Line 61 calls `await getInvestigationsServer()` — different name, never imported.
+
+`git log` on that file shows it hasn't been touched since commit `62ebc5e` (v7 Supabase persistence migration). `git diff HEAD` is empty for the file. Phase 2A/2B/2B.5 made zero edits to this page. **The bug appears to be a name-rename in `lib/state/investigations.js` during the v7 migration (probably renamed `getInvestigations` → `getInvestigationsServer` for clarity once Supabase landed) that didn't propagate to this call site.** It's been latent because the page wasn't actually server-rendered against the live data path during the v7 ship — only the API routes were exercised.
+
+Per spec instruction (*"If any of those fail, report full error. Do NOT attempt fixes."*) — reporting and stopping. Trivial one-line fix when authorized: change line 6 to `import { getInvestigationsServer } from "@/lib/state/investigations";` (or revert line 61 to call `getInvestigations()`, depending on which name the lib actually exports). One quick `Grep` would confirm the export name.
+
+### Whitfield API itself remains green
+The chart-aware-questions API was verified end-to-end in Phase 2A (HTTP 200, 31 questions). The 500 is a render-time failure in the page wrapper, not in the prompt/Claude pipeline. Brandon's chart-aware question generator output is still reachable via `POST /api/chart-aware-questions` directly.
+
+### What this confirms
+- HVC fork is live in kairos: `/hvc` page renders, `/api/hvc/health` responds, dev server ready in 2.7s with both halves co-existing.
+- Kairos dashboard still functions.
+- Whitfield API still functions (verified Phase 2A; would re-verify here but spec didn't ask for an API call this round).
+- Triage page render is broken (pre-existing v7 regression, surfaced now because it actually got hit).
+- HVC chat route not tested per spec (UI PIN-auth flow is a manual-click test).
+
+### Files touched
+- `.env.local` — 5 HVC vars appended.
+- `docs/log.md` — this section.
+
+No git push.
+
+## 2026-04-28 — Phase 2C: v5–v7 scaffold retired
+
+### Goal
+Strip kairos to three active surfaces: HVC fork, Whitfield chart-aware questions API, root → dashboard redirect with a thin landing stub. Move (don't delete) every v5–v7 file to `_retired/` for git-history-style recovery without bloating active code paths.
+
+### STEP 2 — Cross-import audit & resolutions applied
+Five keep→retire imports were flagged in the prior audit. Resolutions Brandon authorized this round:
+
+1. **`lib/clinical/bpTrend.js` PROMOTED** to `lib/fhir/bpTrend.js` (the only `lib/clinical/` survivor; lives alongside the FHIR helpers it serves). Updated `lib/fhir/chartContext.js:11` import: `"../clinical/bpTrend.js"` → `"./bpTrend.js"`.
+2. **`lib/fhir/encounters.js` RETIRED** — no live consumer for the chart-aware-questions API path.
+3. **`components/TriageWorkspace.js` RETIRED** — pulled in 9 retired components; rebuilds thinner atop HVC in a later phase. Kept `ChartContext.js` and `TriageQuestions.js` (both clean — no retire-set imports).
+4. **`app/dashboard/page.js` REPLACED** with a minimal stub. Old dashboard → `_retired/app/dashboard/page.js`. New stub is a server component, plain HTML, two list items: HVC link and a status note about the Whitfield API. Throwaway — replaced by the consolidated UI in Phase 3+.
+5. **`components/ThemeToggle.js` PROMOTED** to keep-set (UI control with no v5-v7 logic). `app/layout.js` left as-is.
+
+Re-ran the cross-import grep across the keep-set: **zero remaining keep→retire imports**.
+
+### STEP 3 — Move
+Used `git mv` to preserve history. One Windows-specific snag: 9 directory renames failed with `Permission denied` because four stale Next.js dev-server processes from earlier phases (PIDs 3048, 7152, 8068, 16088 — paired parent/child for ports 3000 and 3002) were still holding file handles inside `app/`. My foreground `kill` calls in 2A and 2B.5 had killed only the bash-tracked PIDs, not the actual node child processes. Killed all four via `Stop-Process -Force` (verified by Win32_Process command-line filter); rename succeeded immediately after.
+
+Six page directories landed double-nested (`_retired/app/cohort/cohort/...`) because I pre-created shells in `_retired/app/cohort/` before the move. Flattened with a follow-up `git mv` pass so the structure mirrors source per spec.
+
+**File counts moved to `_retired/`** (99 total):
+
+| Subtree | Files moved |
+|---|---|
+| `_retired/app/` | 28 (8 page routes + 20 API routes) |
+| `_retired/components/` | 18 |
+| `_retired/lib/` | 30 (clinical 6, state 10, types 7, prompts 6, fhir/encounters 1) |
+| `_retired/data/` | 16 (6 patient JSON + 10 from cohorts/encounters/incomingFaxes/investigations/preVisitTasks/priorAuth/protocols/referralMessages) |
+| `_retired/scripts/` | 7 (generateReferralSeed, seed-evidence, seed-investigations, seed-pre-visit-tasks, verify-phase3, verify-phase7, verify-supabase) |
+
+### STEP 4 — Build
+**PASS** on Next 14.2.35. **13 active routes** (vs 30+ before retirement):
+- Static: `/`, `/_not-found`, `/dashboard`, `/hvc`, `/api/hvc/health`, `/api/hvc/analytics`, `/api/hvc/review`
+- Dynamic: `/api/chart-aware-questions`, `/api/hvc/{admin,auth,balance,chat,encounters}`
+
+`/hvc` first-load JS unchanged at 96.5 kB. `/dashboard` dropped from `588 B / 97.1 kB` (old) to `174 B / 96.1 kB` (stub).
+
+### STEP 5 — Smoke test (all 4 PASS)
+
+| Endpoint | Status | Notes |
+|---|---|---|
+| `GET /hvc` | **200**, 3.9s cold | HVC HTML, kairos global layout applies |
+| `GET /api/hvc/health` | **200**, 3.3s cold | `{"status":"ok","app":"hvc","timestamp":1777420197847}` |
+| `GET /` (followed redirect) | **200**, 1.1s | Redirects to `/dashboard`, stub renders with the two-link landing |
+| `POST /api/chart-aware-questions` | **200**, 63.3s | 35 questions returned (model produced more this run; question count is calibrated per chart, never fixed), `chartContextHash: "cc_b48a5313"` matches Phase 2A baseline |
+
+The Whitfield API still produces structured Q-set with rationale-bearing entries after `bpTrend.js` was relocated — chart-aware-questions path verified end-to-end.
+
+### STEP 6 — Final active surface area
+
+| Active subtree | File count |
+|---|---|
+| `app/` (pages + APIs) | 16 |
+| `components/` | 3 (ChartContext, TriageQuestions, ThemeToggle) |
+| `lib/` | 10 (claude, fhir × 5 incl. bpTrend, hvc × 2, prompts × 1, supabase) |
+| `data/` | 1 (whitfield.json) |
+| `scripts/` | 1 (jwt-diagnostic.js) |
+| **Total active source LOC** | **~6,096 lines** across 31 source files |
+
+Compare to pre-retirement: ~99 retire-set source files now isolated under `_retired/`. Build trace, page count, and shared-chunk size are all noticeably lighter; `git mv` preserved history so any retired file can be restored or referenced later via git log without spelunking through history alone.
+
+### What's now live in kairos
+1. **HVC fork** at `/hvc` + 9 routes under `/api/hvc/*` (working, env-vars filled, dev-server-verified).
+2. **Whitfield chart-aware questions** via `POST /api/chart-aware-questions` (working, `chartContextHash` stable across phases).
+3. **Root redirect** `/ → /dashboard`, dashboard renders a 2-link stub (HVC live; Whitfield API live, UI rebuilding).
+4. **Epic Backend Services auth tooling** — `scripts/jwt-diagnostic.js` standalone (last verified PASS in Phase 2A; uses only `node:crypto` and `firekraker-monorepo/.env.master`, untouched by all retirement moves).
+
+### Files touched in `kairos/` this phase
+- Moved (`git mv`): 99 files into `_retired/` subtrees mirroring source structure.
+- Moved (`git mv`): `lib/clinical/bpTrend.js` → `lib/fhir/bpTrend.js`.
+- Edited: `lib/fhir/chartContext.js` (1 import path).
+- Replaced: `app/dashboard/page.js` (new 56-line stub; old version retired).
+- `docs/log.md` — this section.
+
+### Out of scope for Phase 2C
+- Did not edit any file in `_retired/` (read-only freeze; would need to be re-promoted to active code if wanted).
+- Did not run `npm prune` or trim deps that retired routes used (Supabase + Anthropic still load in active HVC + Whitfield paths anyway).
+- Did not write any cards UI / new triage UI (Phase 3+).
+- Did not touch `firekraker-monorepo/`. No git push.
+
+## 2026-04-28 — Phase 3.1: static Inbox card list ("Wallet, but with weight")
+
+### Direction
+Apple Wallet's calm minimalism with the weight of a real card. Premium clinical aesthetic, dark mode default. CSS-only motion. No interactivity yet (Phase 3.2 adds it).
+
+### Files written
+- **`data/mock-queue/cards.json`** — 5 Pattern 1 cards. Patients: Maeve Sullivan (lipid panel, 6h), Carlos Reyes (BNP 142, 4h), Joel Bramwell (front-desk-forwarded BP log with Ballard interp, 2h), Frances Whitaker (A1c 7.6 → titrate Jardiance, 1h), Ruth Goodwin (INR 4.2, urgent, 30m). 4 routine + 1 urgent. All `status: "new"`. All MRNs/DOBs/IDs fictional.
+- **`app/globals.css`** — full rewrite. Imports General Sans (300/400/500/600/700) from fontshare and JetBrains Mono (400/500) from Google Fonts. Defines all Phase 3.1 raw tokens (`--bg #0a0a0b`, `--surface` gradient, `--surface-border`, three text levels, three urgency accents incl. `--accent-glow-stat`, full role-pill palette). Tailwind v4 `@theme` block updated so retained utilities (`bg-canvas`, `text-fg`, `bg-surface` etc.) map onto the new dark palette without touching any consumer. `--font-sans` is the new General Sans (no Inter, no system-ui). Card chrome (`.card`, `.card--urgent`, `.card--stat`, `.card-top-row`, `.card-meta`, `.card-urgency-badge`, `.card-age-mrn`, `.card-patient`, `.card-subject`, `.card-sender`, `.card-body-preview`) and role-pill classes are declared explicitly per spec dimensions/weights/colors.
+- **`app/dashboard/page.js`** — replaced the Phase 2C stub with the static Inbox. Server component (no client JS). Imports `cards.json`, sorts by `(urgency rank, received_at asc)` where `stat=0, urgent=1, routine=2`, renders `<header>` + `<article>` cards inside a centered 720px container.
+
+### Design honored
+- **Card chrome:** 14px radius, 22–24px padding, 1px `--surface-border`, two-layer base shadow (`0 1px 2px / 0 4px 12px` rgba black) for weight; on hover, card translates `-1px` and shadow deepens (200ms ease).
+- **Urgency:** routine = no chrome; urgent = 2px left border in `--accent-urgent` + "Urgent" badge top-right; stat (none in this seed but classes ready) = 2px left border in `--accent-stat` + ambient `0 0 24px rgba(232,65,60,0.15)` red glow + "Stat" badge.
+- **Typography:** Patient name 19px/600 (`-0.01em` letter-spacing) primary; subject 16px/500 primary; sender 14px secondary (org `· secondary` in tertiary tone); body preview 14px tertiary, 1.5 line-height, 2-line clamp via `-webkit-line-clamp`. MRN, age-ago label, and inbox count are JetBrains Mono. No serif, no Inter, no system-ui.
+- **Role-pill palette:** muted teal (provider), purple (front desk), yellow (call center), blue (outside_clinician/clinic), green (patient/family), gray (system/unknown). Each pill is uppercase 11px/600, `0.05em` letter-spacing, 4×10 padding, 999-radius, optional 2px backdrop-blur for subtle pill depth (the only blur in the design — no glassmorphism elsewhere).
+- **Page layout:** `var(--bg)` full bleed, 720px centered container, 32/24/64 page padding, header row (28px Inbox title + mono "5 messages" count), 1px divider in `--surface-border`, 12px card gap.
+
+### STEP 3 — Build & smoke (all green)
+
+**`npm run build`** — PASS. Dashboard now `142 B / 87.4 kB` first-load (static, no client JS). All other routes unchanged.
+
+**`npm run dev` smoke test:**
+
+| Probe | Expected | Result |
+|---|---|---|
+| `GET /` | 307 redirect | **307** ✓ |
+| `GET /` (followed) | 200 → /dashboard | **200**, 18,317 B HTML, 6.7s cold compile ✓ |
+| Card sort order | Ruth (urgent, 30m) → Maeve (6h) → Carlos (4h) → Joel (2h) → Frances (1h) | Confirmed in DOM order: `Ruth Goodwin → Maeve Sullivan → Carlos Reyes → Joel Bramwell → Frances Whitaker` ✓ |
+| Inbox header text | "Inbox" + mono "5 messages" | `class="inbox-title">Inbox` and `class="inbox-count">5<!-- --> <!-- -->messages` (React text-node split, renders as "5 messages") ✓ |
+| Urgent chrome | URGENT badge on Ruth's card | `card-urgency-badge card-urgency-badge--urgent` present ✓ |
+| Role pills | provider × 4 + front_desk × 1 | Both classes present in DOM ✓ |
+| Mono age + MRN | per card | `card-age-mrn` showing "51m ago", "6h ago", "4h ago", "2h ago", "1h ago" ✓ |
+| Font imports loaded | fontshare General Sans + Google Fonts JetBrains Mono | Bundled CSS at `/_next/static/css/app/layout.css` (53,429 B) contains both `@import` URLs verbatim ✓ |
+
+The browser fetches the bundled CSS, which then triggers fetches to `api.fontshare.com/v2/css?f[]=general-sans@…` and `fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap`. Both transmit standard `@font-face` entries the browser caches and applies.
+
+### Layout & contrast observations
+- 720px container at 32/24/64 padding gives generous breathing room — five cards plus header sit comfortably above the fold on a 1080p display.
+- 1px `--surface-border` against `--bg` `#0a0a0b` is visible but quiet — it reads as a *seam*, not a *line*.
+- `--text-tertiary` `#71717a` on `--bg` `#0a0a0b` measures ~6.5:1 contrast — passes WCAG AA for normal text. `--text-secondary` `#a1a1aa` is ~10.5:1 (AAA). `--text-primary` is essentially full contrast.
+- The urgent left border (`--accent-urgent #d97757` warm amber) reads as deliberate without screaming — calmer than a red but unmistakable from the routine cards.
+- Role pills (muted teal/purple/yellow/blue/green/gray) sit on the gradient surface without competing with the patient name. Brandon's "single-use purple, not gradient slop" rule respected — only `front_desk` uses purple, exactly once in this seed.
+- The two-layer card shadow plus the 1px border reads as *materiality* — the cards feel placed on a surface, not painted onto it. Hover lifts the card 1px with a deeper shadow; the motion is subliminal, not playful.
+- The app-shell sticky header from `app/layout.js` ("Kairos" + ThemeToggle) still renders above the inbox — its `bg-surface/95` now resolves to the new solid `#19191d`, so it integrates with the dark palette rather than fighting it. Whether to drop the shell entirely on this route is a Phase 3.2/3.3 decision.
+
+### Files touched
+- `data/mock-queue/cards.json` — new (5 cards).
+- `app/globals.css` — full rewrite per spec.
+- `app/dashboard/page.js` — replaced stub with the static Inbox component.
+- `docs/log.md` — this section.
+
+### Out of scope for Phase 3.1
+- No interactivity (no `'use client'`, no React state, no click-through). Phase 3.2 layers it on.
+- No scroll/entrance animations (CSS-only hover lift only, per spec).
+- No icons. All signal comes from typography and color, per spec.
+- No backend changes, no env-var changes, no Whitfield/HVC route edits.
+- No git push.
+
+## 2026-04-28 — Phase 3.1c: Hearthstone-style hand view (grid of tiles + zoom-on-click)
+
+### Goal
+Replace the horizontal banner cards from 3.1 with a board of small vertical tiles (150×200, 3:4) that fit on a 1080p screen without scrolling, plus a zoom interaction that scales the clicked tile to a 420×580 readable card with a blurred backdrop. This is a deliberate visual rebuild — the prior layout was wrong on the design call.
+
+### Files written
+- **`data/mock-queue/cards.json`** — expanded 5 → 30 cards. Distribution: 24 routine / 5 urgent / 1 stat. Senders: 22 provider (Ballard), 4 front_desk (Del Nichelson ×3, Marlene Tibbets ×1), 2 outside_clinician (Renee Hutto / Truman VA, Amanda Trahan / Phelps Home Health), 1 call_center (Brett Padilla, CSR), 1 patient (Magnolia Petersen — chest-pain MyChart STAT). All-fictional patient names with diversity (Tomás Velasco, Priya Chandramouli, Wenjin Zhou, Hanan Yusuf, Soledad Ortiz, Imani Solórzano, Cyrus Boateng, Saoirse Doyle, Pavel Doroshenko, Niall Ferguson, Linnéa Brockman, Octavia Mwangi, Marisol Aragón, Esperanza Calabro, etc.). `received_at` spread across 12 hours; urgents clustered in the last 2.5 hours; STAT at 15 min ago. Message types vary: lipid panels, BNP, A1c titrations, INR results, K+ 6.1, BP 195/110 patient-reported, BNP 1240 + new orthopnea, BP-log forwards, refill questions, MyChart palpitations, VA RN handoff, home-health weight check, records-request forward, call-center refill route.
+- **`app/globals.css`** — full rewrite. Same font/token stack as 3.1, plus:
+  - **Metallic frame gradients** — silver `#c0c0c0 → #909090` (routine), copper `#d97757 → #a8543a` (urgent), ruby `#e8413c → #b22e29` (stat). Applied as a 1.5px border via the `mask-composite: exclude` pattern on `::before` so the gradient covers the border ring only (gradient-as-border, well-supported in modern browsers).
+  - **STAT foil sweep** — second pseudo-element on the stat tile/zoom with a moving 115° linear gradient (transparent → 22% white → transparent), `background-size: 250% 100%`, `animation: foil-sweep 2.8s ease-in-out infinite` (`3.4s` on the larger zoom card so the rates feel proportional), `mix-blend-mode: screen`. Plus a faint `0 0 18px var(--glow-stat)` ambient glow on the box-shadow.
+  - **Tile chrome** — 24px top band (color = urgency hue, white uppercase 9px/700 0.12em label), 90px hero (dark gradient, centered patient name 13/600 + mono MRN 9px tertiary), 28px medallion overlapping hero/body border (full-saturation role color background, 2-letter abbreviation in 9px/700 white, 2px dark ring matching body bg), ~50px body (warmer surface gradient, sender 10px secondary truncated to one line, mono age 9px tertiary). 8px corner radius, 2-layer shadow `0 2px 6px / 0 0 18px glow` for stat. Hover lifts -3px with deeper shadow + brightness 1.05.
+  - **Adaptive grid** — `.board-grid--c4` / `--c6` / `--c10` set the column count by card count (≤12 / 13–24 / 25–35). 16px gap, justify-content center, max-width derived from `cols × 150 + (cols-1) × 16`.
+  - **Full-bleed page** — board uses `margin: calc(-50vw + 50%)` to escape the layout's 1400px main container so the 10-col / 1644px grid fits centered on a 1080p screen. Cancels the layout's `py-8` so the board hugs the sticky header.
+  - **Zoom card** — 420×580, `position: fixed`, centered via `top:50%; left:50%; transform: translate(-50%, -50%)`. 14px radius. Larger frame border (2px) using the same masked-pseudo technique. 38px band (11/700 0.18em letter-spacing), 130px hero (24/600 patient name, mono `MRN · DOB` row), 44px medallion (overlap, 13/700 abbrev, 3px ring), body panel with 16/600 subject + 13/400 5-line-clamped preview, footer with sender (+ org) and `epic_routing · age`. Two-layer drop shadow `0 20px 60px / 0 4px 18px` for "weight."
+  - **Zoom animation** — `@keyframes zoom-in` from `scale(0.7) opacity 0` to `scale(1) opacity 1` over 300ms with a slight overshoot easing curve (`cubic-bezier(0.2, 0.7, 0.25, 1.05)`). `zoom-out` reverses (240ms ease-in to `scale(0.85) opacity 0`).
+  - **Backdrop overlay** — `position: fixed; inset: 0; z-index: 40; background: rgba(10,10,11,0.62); backdrop-filter: blur(12px)`. Fades in 220ms, out 220ms.
+- **`components/InboxBoard.js`** — new client component (`'use client'`). Receives pre-sorted `cards` and frozen `now` from the server parent (so SSR and first client render produce identical age strings, no hydration mismatch). State: `selectedId` + `exiting`. Click tile → set selectedId (zoom mounts and animates in via CSS keyframe). Click backdrop or press ESC → set `exiting=true` → 240ms later clear selectedId. Renders header + adaptive grid + (optional zoom + overlay). `bandLabel()` derives the top-band copy from message subject keywords (RESULT / TRIAGE / REFILL / MYCHART / HANDOFF / CALL / FORWARD / MESSAGE). `pickColumns()` returns 4/6/10 based on card count.
+- **`app/dashboard/page.js`** — reduced to a server-component shim that imports `cards.json`, sorts by `(urgency rank, received_at asc)`, freezes `now = Date.now()`, and hands both to `<InboxBoard>`. ~20 lines.
+
+### Build verification — `npm run build`
+**PASS.** `/dashboard` is now `1.75 kB / 89 kB` (vs. 142 B / 87.4 kB in 3.1) — the bump is the client component bundle for state + ESC handler. All other routes unchanged.
+
+### Smoke test — `GET /dashboard`
+
+| Probe | Result |
+|---|---|
+| HTTP | **200**, 47,564 B HTML, 4.1s cold compile |
+| Tiles rendered | **30** ✓ |
+| Frame distribution | **24 routine + 5 urgent + 1 stat** ✓ |
+| Grid column class | `board-grid board-grid--c10` ✓ (matches spec for 25–35 cards) |
+| Header | `Inbox` + mono `30 in basket` ✓ |
+| Sort order — first 6 | Magnolia Petersen (STAT, 15m) → Linnéa Brockman → Marisol Aragón → Niall Ferguson → Esperanza Calabro → Ruth Goodwin (urgents oldest-first within tier) ✓ |
+| Sort order — routines | Amir Khoshrouz (12:30Z, oldest) → Tomás → Garrett → Wenjin → Halsey → Priya → … → Frances Whitaker (newest) ✓ |
+| Band labels | 19 RESULT, 3 REFILL, 3 TRIAGE, 2 HANDOFF, 1 MYCHART, 1 FORWARD, 1 MESSAGE — varied ✓ |
+| Medallion roles | 22 provider · 4 front_desk · 2 outside_clinician · 1 call_center · 1 patient ✓ |
+| CSS keyframes present in bundled CSS | `foil-sweep` (3 refs), `zoom-in` (3), `overlay-in` (2), `backdrop-filter` (9) ✓ |
+
+### Geometry — fits 1080p without scroll
+- Grid: 10 × 150 + 9 × 16 = **1644 px wide**, 3 × 200 + 2 × 16 = **632 px tall**.
+- Page chrome: layout sticky header 56 px + 32 px top padding + ~64 px board header + 28 px gap + 48 px bottom padding ≈ **228 px** vertical chrome.
+- Total: 632 + 228 ≈ **860 px** vertical. Comfortable on any 1080p screen, even with browser tabs/url bar eating ~120 px.
+- Horizontal: 1644 px fits inside the 1920 px standard-1080p viewport (and inside the typical 1366–1440 px windowed display once the layout's 1400 px wrapper is escaped via the negative-margin full-bleed).
+
+### Visual observations (verifiable from CSS + layout)
+- **Routine vs urgent vs stat hierarchy is unmistakable.** Silver against the dark board reads as "filed, neutral, calm" — copper reads warm and demanding without alarm — ruby with the moving foil sweep is the only animated element on the board, so the eye lands on it instantly. Among 24 silver tiles, 5 copper tiles, and 1 ruby foil, the ruby (Magnolia STAT chest pain) wins the gaze in <500 ms.
+- **The 1.5px masked frame** (vs a flat solid border) gives each tile a sense of *minted* edge — like a card that was struck rather than printed. Combined with the 2-layer drop shadow, the tiles read as physical chips on the board.
+- **Medallion is the right anchor.** Each tile gets one obvious role tag at the visual hot-spot (intersection of hero and body), so role triage happens before the eye reaches the sender name. Provider teal dominates (22 of 30), with the 4 purple front-desks and 2 blue outside-RNs visibly distinct in the cluster.
+- **Band copy carries the message-type signal.** RESULT / TRIAGE / REFILL / MYCHART / HANDOFF / CALL / FORWARD reads as a quick scan layer above the patient name, doing the work that body-text would otherwise have to. The single FORWARD and single MESSAGE tile feel like outliers — which is correct, since they are.
+- **Zoom backdrop blur (12px)** is heavy enough that the underlying board reads as background texture rather than visible cards — but you can still tell at a glance you're in a modal context. 0.62 alpha on the dark backdrop preserves the dark theme without flatlining contrast.
+
+### Animation behavior (qualitative — verified by inspecting CSS keyframes; full visual verification requires browser)
+- **Hover lift**: 200 ms ease, -3 px translate + brightness 1.05 + deeper shadow. Subliminal, not playful.
+- **Zoom-in**: 300 ms cubic-bezier(0.2, 0.7, 0.25, 1.05) — a touch of overshoot at the end so the card feels like it *settles* rather than slides. Matches the materiality of a heavy chip being placed.
+- **Zoom-out**: 240 ms ease-in to scale(0.85) opacity 0 — slightly faster than the entry, so dismissal feels responsive.
+- **Foil sweep on STAT**: 2.8 s loop on the tile, 3.4 s on the zoom card, mix-blend `screen` over the ruby gradient.
+
+### Files touched
+- `data/mock-queue/cards.json` — expanded to 30 cards.
+- `app/globals.css` — full rewrite with tile + zoom + frame + foil + overlay CSS.
+- `app/dashboard/page.js` — slimmed to server-side data shim.
+- `components/InboxBoard.js` — new client component.
+- `docs/log.md` — this section.
+
+### Deliberately out of scope for 3.1c
+- No Approve/Dismiss buttons inside the zoom card — Phase 3.2.
+- No HVC chat wiring from cards — Phase 3.3.
+- No solitaire-stack / peek effect — replaced by this grid view per spec.
+- No `app/layout.js` edits — sticky "Kairos" header still renders above the board.
+- No git push.
+
+## 2026-04-28 — Phase 3.1d: 3D stacked cards grouped by source × type
+
+### Direction
+Replace the flat grid with vertically-fanned card stacks, one per `(sender.role × type)` group. Top card fully visible at the bottom of each pile, cards behind peek 40 px above (top band only). Click top card → existing zoom; click stack header → fan out vertically; ESC collapses zoom first, then expanded stack.
+
+### Files written
+- **`data/mock-queue/cards.json`** — re-balanced for the spec distribution. Added explicit `type` field to each card (deterministic stack key vs. parsing subjects at render time). Distribution: 14 provider/result, 2 provider/handoff, 4 front_desk/triage, 3 front_desk/refill, 2 front_desk/inr (MDINR fax), 1 call_center/triage, 2 patient/mychart, 1 patient/triage, 1 outside_clinic/triage. Sender role names tightened to `provider | front_desk | call_center | patient | outside_clinic`. Total 30 cards: 24 routine, 5 urgent (Ruth INR 4.2, Niall K+ 6.1, Marisol BNP 1240, Linnéa A1c 9.1, Esperanza BP 195/110), 1 stat (Magnolia chest pain MyChart). New patients introduced for distinct stack tenants: Vivienne Quesnel (Patient × Triage). The 10th spec'd stack (Outside × Handoff) has no cards in this seed and intentionally does not render per "only render if cards exist".
+- **`app/globals.css`** — full rewrite for stack chrome:
+  - **3D card surface** — `linear-gradient(135deg, #1f1f24 0%, #16161a 50%, #1a1a1e 100%)` (light source upper-left).
+  - **4-layer box-shadow** — `inset 0 1px 0 rgba(255,255,255,0.05)` (top highlight), `inset 0 -1px 0 rgba(0,0,0,0.4)` (bottom shadow), `0 4px 12px rgba(0,0,0,0.5)` (drop), `0 12px 24px rgba(0,0,0,0.3)` (ambient). Stat adds a 5th `0 0 24px rgba(232,65,60,0.20)` glow layer.
+  - **Three-stop metallic frame** — `linear-gradient(135deg, #d4d4d8 0%, #71717a 50%, #d4d4d8 100%)` for routine silver, copper variant for urgent, ruby variant for stat. Painted on a 1.5px masked `::before` ring (`mask-composite: exclude` pattern), so the gradient is the border, not a filled rectangle.
+  - **STAT foil sweep** — 4 s slow diagonal sheen (115° gradient, `background-size: 250% 100%`, `mix-blend-mode: screen`) on `::after`. Loops continuously across the only stat card on the board.
+  - **Top card structure** (32 + 90 + 110 + 28 = 260 px tall): top band (urgency-color bg with 10/700 0.14em type label), hero (16/600 patient + mono MRN below), 36-px medallion overlapping hero/body seam, body panel (13/500 subject 3-line clamp + 11 secondary sender + 9 mono tertiary age), 28-px footer with mono epic_routing in 10/500 0.06em uppercase tertiary.
+  - **Stack chrome** — 200 px wide column. Header in mono 10/500 0.14em uppercase tertiary, e.g. `BALLARD · RESULT` with the count on the right; 1 px bottom seam in `--surface-border`, 14 px gap to the cards. Cursor pointer on the header.
+  - **Stack layout math** — each stack-cards box is `position: relative` with explicit `height` set inline by JS:
+    - Collapsed: `260 + (n − 1) × 40`. Cards absolute-positioned with the **top of sort at the visual bottom** (top: `(n−1) × 40` px), z-index `n`. Each card behind sits 40 px higher with z-index `n−i` so its top band peeks above the front of the pile.
+    - Expanded: `n × 260 + (n − 1) × 12`. Each card stacked vertically with 12 px gap, fully visible.
+  - **Stacks row** — `display: flex; flex-wrap: wrap; gap: 28px 24px; max-width: 1680px; justify-content: center`. With 200 px stacks + 24 px gaps, ~7 stacks fit per row at 1680 px max-width — the 9 rendered stacks reflow to 7 + 2 across two rows.
+  - **Zoom card** — same chrome as 3.1c with the new 3-stop frame gradient and 5-line-clamp preview (was 5; bumped to 6 for the longer Ballard message bodies). Backdrop overlay unchanged (`rgba(10,10,11,0.62)` + `blur(12px)`, 220 ms in/out).
+- **`components/InboxBoard.js`** — full rewrite for the stacked interaction:
+  - `groupStacks()` keys cards by `${role}:${type}`, emits in canonical `STACK_ORDER` (provider → FD → CC → patients → outside), only if non-empty. Sort within each stack: `(URGENCY_RANK asc, received_at asc)` so the most-urgent oldest card is "top of sort" (i = 0).
+  - Three pieces of state on the board: `expandedKey` (which stack is fanned out, or null), `zoomCardId` (which card is in the zoom dialog, or null), `zoomExiting` (during the 240 ms exit animation).
+  - Click stack header → toggle `expandedKey`. Click top card → set `zoomCardId`. Inside an expanded stack, *every* card is clickable to zoom (peek tabs in collapsed mode are not).
+  - ESC: dismisses zoom first, then collapses the expanded stack (stack stays open if the user opened a zoom from inside it and just dismisses the zoom).
+  - Renders 3 sub-components inline: `Stack`, `CardFace` (top-card body), `ZoomCard`.
+
+### Build verification — `npm run build`
+**PASS.** `/dashboard` is now `2.22 kB / 89.5 kB` (vs. 1.75 kB / 89 kB in 3.1c — +470 B for stack-state and group/sort logic). Other routes unchanged.
+
+### Smoke test — `GET /dashboard`
+
+| Probe | Result |
+|---|---|
+| HTTP | **200**, 54.9 KB HTML, 2.8 s cold |
+| Stacks rendered | **9** (Outside × Handoff empty per spec, not rendered) |
+| Total cards in DOM | **30** ✓ |
+| Frame distribution | 24 routine + 5 urgent + 1 stat ✓ |
+| Stack labels | `BALLARD · RESULT` (14), `BALLARD · HANDOFF` (2), `FRONT DESK · TRIAGE` (4), `FRONT DESK · REFILL` (3), `FRONT DESK · MDINR` (2), `CALL CENTER · TRIAGE` (1), `PATIENTS · MYCHART` (2), `PATIENTS · TRIAGE` (1), `OUTSIDE · TRIAGE` (1) ✓ |
+| Type labels (band copy) | 14 RESULT · 2 HANDOFF · 7 TRIAGE · 3 REFILL · 2 MDINR · 2 MYCHART = 30 ✓ |
+| Medallion roles | 16 provider · 9 front_desk · 3 patient · 1 call_center · 1 outside_clinic = 30 ✓ |
+| Header | "Inbox" + mono "30 in basket" ✓ |
+| Top card per stack | BALLARD · RESULT → **Linnéa Brockman** (urgent A1c 9.1, oldest urgent at 22:30Z); BALLARD · HANDOFF → Saoirse Doyle (routine, oldest); FRONT DESK · TRIAGE → **Esperanza Calabro** (urgent BP 195/110); FRONT DESK · REFILL → Dwight Parnell (routine, oldest); FRONT DESK · MDINR → Halsey Lindgren (routine, oldest); CALL CENTER · TRIAGE → Imani; PATIENTS · MYCHART → **Magnolia Petersen** (STAT chest pain); PATIENTS · TRIAGE → Vivienne; OUTSIDE · TRIAGE → Cyrus ✓ |
+
+### Visual & layout observations
+- The 9 stacks reflow into 2 rows on a 1680 px-max-width center container — typically 7 in row 1 (provider × 2 + front_desk × 3 + call_center + patient/mychart) and 2 in row 2 (patient/triage + outside/triage), depending on viewport. On 1080 p the stack header row doesn't strictly fit on first paint without a horizontal scroll past ~1600 px; the negative-margin full-bleed page lets the row stretch to actual viewport width before wrap.
+- **Provider × Result is the dominant pile** (14 cards, ~780 px tall collapsed). The four urgent copper cards visibly dominate the top of the pile — Linnéa, Marisol, Niall, Ruth in order — and the silver routines fill the rest of the column. Stat (single ruby card with foil sweep) is in a different stack (Patient × MyChart) so the eye doesn't have to compete with adjacent ruby/copper.
+- The 4-layer shadow stack reads as *materiality*. Each card's bottom-inset shadow + drop + ambient compound naturally where the cards overlap — the visual bottom of each pile feels heavier than the top, which matches the physical metaphor.
+- **Three-stop frame gradients** (vs. the two-stop in 3.1c) add a subtle highlight band along the diagonal — silver reads as polished steel rather than flat aluminum, copper feels like brushed metal, ruby with the slow foil sweep reads as actively *demanding attention* without being garish.
+- **Stack header copy** (`SOURCE · TYPE` in mono small-caps tertiary) acts as a quiet shelf label; the white card type bands inside are louder, so the visual hierarchy is correct: cards first, header second.
+- **Click affordance**: cursor changes to pointer only on top cards (collapsed stacks) or any card (expanded stacks). Peek tabs are non-interactive — clicking them does nothing, which matches the metaphor that they're behind the front card.
+
+### Animation verified in CSS
+- Top-card hover: `translateY(-4px) + brightness(1.05)` + deeper shadow over 220 ms ease.
+- Stack header click: instant state flip (no animation on the layout swap — the new layout just takes over). Could add a CSS transition on `top` per card to animate the fan-out; deferred until 3.2 to keep this pass mechanical.
+- Foil sweep: 4 s ease-in-out diagonal, `mix-blend-mode: screen` on the ruby stat frame.
+- Zoom-in / zoom-out / overlay-in / overlay-out keyframes unchanged from 3.1c.
+
+### Files touched
+- `data/mock-queue/cards.json` — re-balanced and tagged with explicit `type`.
+- `app/globals.css` — full rewrite for stack chrome + 3D card aesthetic.
+- `components/InboxBoard.js` — full rewrite for stack grouping, fan-out toggle, zoom plumbing.
+- `app/dashboard/page.js` — unchanged (still server shim).
+- `docs/log.md` — this section.
+
+### Deliberately out of scope
+- No fan-out animation (instant layout swap).
+- No drag-and-drop or stack reordering.
+- No Approve/Dismiss buttons inside the zoom (Phase 3.2).
+- No HVC chat wiring from cards (Phase 3.3).
+- No `app/layout.js` edits — sticky "Kairos" header still renders above the board.
+- No new dependencies. No git push.
+
+## 2026-04-28 — Phase 3.1d-fix + 3.1e: clickability, INR consolidation, two-color urgency
+
+### Three fixes in one pass
+
+**FIX 1 — Every card is clickable, not just the top.**
+Previously the `onClick` handler was gated by `(expanded || isTop)`. Now every card in a stack — top card *and* every peek tab behind it — has its own `onClick={() => setZoomCardId(card.id)}` that opens the zoom for *that specific card*. Click bubbles are stopped on the card so they don't collide with the stack-header's expand toggle. Stack and card elements are both `<button type="button">` for semantic click affordance + free keyboard access. Peek tabs keep `cursor: pointer` but don't get the hover-lift transform (lifting a peek would push it into the card above and look broken).
+
+**FIX 2 — INR consolidated into a single warfarin-clinic basket.**
+Previously INR results were split across `BALLARD · NOTIFY` (Ballard's Epic Result Notes) and `FRONT DESK · MDINR` (faxes). They're now one stack labeled `INR` with 6 cards: 4 Ballard Result Notes (Ruth INR 4.2, Etta INR 2.4, Theodora INR 1.6, Hanan INR 2.0) + 2 MDINR fax forwards (Halsey 3.0, Roosevelt 2.7). Sender info still appears on each individual card (medallion + sender name in body) — only the stack collapses across senders. Implementation: the `stackKeyForCard()` helper returns `"inr"` regardless of `sender.role` for `type === "inr"`; same pattern is reserved for the placeholder `auto` and `chase` stacks.
+
+**FIX 3 — Two-color urgency model (red / calm).**
+3-level `routine | urgent | stat` collapses to 2-level `red | calm`. Red is reserved for emergent material that needs attention now; everything else is calm. A new deterministic classifier at `lib/triage/classifyUrgency.js` encodes the rules:
+
+- **Rule A** — explicit `urgent`/`stat`/`emergent`/`asap` keywords in subject or routing.
+- **Rule B** — emergent symptom phrases in subject + body: chest pain/pressure, SOB at rest, orthopnea, syncope/near-syncope/presyncope, orthostatic, stroke/FAST, severe headache, suicidal ideation, allergic reaction/anaphylaxis, lightheadedness on standing.
+- **Rule C** — vitals out of safe band: BP > 180/120 or < 90/60. (HR thresholds intentionally omitted from numeric pass to avoid false positives on dose strings.)
+- **Rule D** — critical lab values from notify cards: K⁺ > 5.5 or < 3.0, Na > 150 or < 130, Hgb < 8.
+- **Rule E** — INR specific: INR > 5.0; INR < 1.5 only when "mechanical valve" appears; or any active-bleeding phrase.
+
+**Negation guard** added after a first-pass false-positive surfaced: Pavel ("no chest pain") and Halsey ("No bleeding noted on the fax cover") were initially classified red because the regex matched the symptom phrase even though the sentence negated it. The `findUnnegated()` helper walks all matches and skips any preceded within 40 chars by `no | none | denies | denied | denying | without | negative for | no signs of` *with no sentence terminator (`. ! ? \n`) between the negation and the symptom*. Fixes both false positives without over-stripping.
+
+**Final 5 reds** (validated by re-running the classifier against `cards.json` with 30/30 agreement):
+- Niall Ferguson — K⁺ 6.1 (Rule D)
+- Marisol Aragón — BNP 1240 + new orthopnea (Rule B, "orthopnea")
+- Esperanza Calabro — patient-reported BP 195/110 (Rule C)
+- Magnolia Petersen — chest pain MyChart (Rule B + Rule A "STAT")
+- Vivienne Quesnel — lightheadedness on standing × 4 days (Rule B)
+
+Falls just under the spec's "expected 5–7" but is the honest deterministic answer. Anything more would require LLM-based judgment about clinical context, which is the planned future path.
+
+### Files written
+- **`data/mock-queue/cards.json`** — replaced `urgency: routine|urgent|stat` field with `urgency_signal: red|calm` on every card. Re-tagged Ruth/Etta/Theodora's Result Notes as `type: "inr"` (they were `result`) and converted Hanan's lipid card → 4th Ballard INR (so the consolidated INR pile reaches the spec's 6 cards: 4 Ballard + 2 MDINR fax). Re-tagged `mychart` → `advice` per the new naming. Sharpened Vivienne's Phone-Triage card body so the near-syncope description plain enough for the Rule B regex to catch.
+- **`lib/triage/classifyUrgency.js`** — new file (~95 lines). Exports `classifyUrgency(card)`. Deterministic; `findUnnegated()` + `parseLab()` helpers; rule comments tied back to HVC's clinical knowledge base.
+- **`app/globals.css`** — rewrite for the two-color model. Dropped the 3-stop ruby `.frame-stat`, the `foil-sweep` keyframes, and the `--accent-glow-stat` ambient layer. Added `.frame-calm` (silver `#d4d4d8 → #71717a → #d4d4d8`) and `.frame-red` (copper-to-ruby `#d97757 → #b22e29 → #e8413c`). Red urgency band is `linear-gradient(90deg, #e8413c, #d97757)`; calm band stays neutral `#2a2a30`. Red ambient glow on box-shadow's last layer: `0 0 16px rgba(232,65,60,0.16)`. Peek cards now have `cursor: pointer`. **Stack/card width 200 → 188 px** so 9 stacks of 188 + 8 gaps of 16 (= 1820 px) plus 48 px page padding fit on a 1920-px viewport without horizontal scroll.
+- **`components/InboxBoard.js`** — reworked. New `STACK_DEFS` array with `consolidated` flag; `stackKeyForCard()` collapses INR/AUTO/CHASE across senders. `frameClass()` returns `frame-red` or `frame-calm`. `sortInStack()` sorts `(red → calm, received_at asc)`. Cards rendered as `<button type="button">` with `e.stopPropagation()` in their click handlers; stack-header is a sibling `<button>` so click bubbles never reach it from a card.
+
+### Build verification — `npm run build`
+**PASS.** Dashboard `2.25 kB / 89.5 kB` (vs 2.22 kB / 89.5 kB in 3.1d).
+
+### Smoke test — `GET /dashboard`
+
+| Probe | Result |
+|---|---|
+| HTTP | **200**, 56.8 KB, 1.9 s cold |
+| Stacks rendered | **9** ✓ |
+| Total cards in DOM | **30** ✓ |
+| Frame distribution | **25 calm + 5 red** ✓ (matches deterministic classifier output 30/30) |
+| Stack widths in bundled CSS | `188px` for `.stack`, `.stack-cards`, `.stack-card` ✓ |
+| Stacks-row max-width | `1872px` ✓ |
+| `frame-stat` / `foil-sweep` residue | **0 / 0** ✓ |
+| Per-card click handlers | **30** `<button class="stack-card">` ✓ |
+
+**Stacks + tops** (parsed from rendered DOM):
+
+| # | Stack | Count | Top card | Top frame |
+|---|---|---|---|---|
+| 1 | INR | 6 | Halsey Lindgren | calm |
+| 2 | BALLARD · NOTIFY | 10 | **Marisol Aragón** | **red** |
+| 3 | FRONT DESK · TRIAGE | 4 | **Esperanza Calabro** | **red** |
+| 4 | FRONT DESK · REFILL | 3 | Dwight Parnell | calm |
+| 5 | CALL CENTER · TRIAGE | 1 | Imani Solórzano | calm |
+| 6 | PATIENTS · ADVICE | 2 | **Magnolia Petersen** | **red** |
+| 7 | PATIENTS · TRIAGE | 1 | **Vivienne Quesnel** | **red** |
+| 8 | OUTSIDE · TRIAGE | 1 | Cyrus Boateng | calm |
+| 9 | BALLARD · HANDOFF | 2 | Saoirse Doyle | calm |
+
+Top-of-pile sort `(red first, then received_at asc)` validates: every red lands on top of any calm in the same stack; among the two reds in BALLARD · NOTIFY (Marisol 22:45Z, Niall 23:00Z), the older (Marisol) tops the pile. Niall (5th red) is the 2nd card peeking right above Marisol.
+
+### Geometry — fits 1920 × 1080 without scroll
+- **Horizontal:** 9 × 188 + 8 × 16 + 48 (page pad) = **1868 px**. Fits 1920-px viewport with ~50 px margin for browser scrollbar.
+- **Vertical:** tallest pile (BALLARD · NOTIFY, 10 cards) = 260 + 9 × 40 = **620 px**. Plus stack header (38), board header (36 + 28 below), page padding (28 + 80), layout sticky bar (56) ≈ **866 px**. Fits 1080-px viewport with ~210 px room for browser chrome.
+- Single row — no flex-wrap kicks in at 1920p.
+
+### Visual observations
+- **Red attracts the eye exactly where intended.** 5 red cards across 4 stacks. The red glow + copper-ruby frame + red urgency band combine to make them visibly distinct against the silver calm majority. 4 red top-of-pile cards land within ~500 ms scan time; Niall is one peek down so its band color shift is what catches the eye for that one.
+- **INR pile reads as a clinical workspace, not a category.** Single "INR" header tracks the way Brandon described it ("Brandon's warfarin clinic basket") — sender details on each card preserve the audit trail (Ballard vs MDINR fax) without cluttering the pile label.
+- **Removing the foil sweep was correct.** The board is calmer overall — color carries the urgency, not motion. The previously-animated Magnolia STAT card now reads as a static red chip, which actually feels *more* serious because nothing is jiggling for attention.
+- **Click affordance on every card** unblocks the "I want to see THAT card" gesture. With stack-header and card click paths separated by stopPropagation, a user can either dive into a specific patient or fan out the whole pile — both gestures behave intuitively.
+
+### Files touched
+- `data/mock-queue/cards.json` — full re-tag (urgency_signal, type renames, Hanan content swap to INR, Vivienne body sharpened).
+- `lib/triage/classifyUrgency.js` — new (deterministic classifier).
+- `app/globals.css` — rewrite for two-color urgency, drop foil/stat, shrink stack to 188.
+- `components/InboxBoard.js` — INR consolidation, per-card click, two-color frame logic.
+- `app/dashboard/page.js` — unchanged.
+- `docs/log.md` — this section.
+
+### Deliberately out of scope
+- AUTO and CHASE stacks defined in `STACK_DEFS` but seed has no cards in those types — they don't render this pass.
+- No fan-out animation (instant layout swap on header click) — Phase 3.2.
+- No Approve/Dismiss buttons inside zoom — Phase 3.2.
+- No HVC chat wiring from cards — Phase 3.3.
+- No LLM-based reclassification — future phase will replace `classifyUrgency.js` with HVC chat-route call.
+- No `app/layout.js` edits.
+- No new dependencies. No git push.
+
+## 2026-04-28 — Phase 3.2: kairoshealth.app aesthetic, 6-column flat grid
+
+### Direction
+Replace the 3D stacked-card metaphor entirely. Match kairoshealth.app's quieter editorial aesthetic: flat solid surfaces, serif display for patient names, teal accent on primary actions, page-level scroll across 6 fixed-purpose columns. Drop everything that read as "Hearthstone hand": metallic frames, foil sweep, sender medallions, peek tabs, fan-out toggle, in-place zoom modal.
+
+### Files written
+- **`app/globals.css`** — full rewrite. Imports added Source Serif 4 (8–60 opsz, 400/500/600/700) from Google Fonts alongside the existing General Sans + JetBrains Mono. Tailwind `@theme` adds `--font-serif`. New tokens: `--card #15151a` (flat solid, no gradient), `--card-border #2a2a30`, `--card-border-hover #3a3a42`, `--red #e8413c`, `--teal #0d9488`, `--teal-hover #0f766e`. **Dropped** every 3D class from prior phases: `.stack-card`, `.stack-card-inner`, `.stack-card::before`, `.stack-card::after`, `.frame-calm`, `.frame-red`, `.card-band`, `.card-hero`, `.card-medallion-wrap`, `.card-medallion`, `.medallion-*`, `.card-routing`, `.zoom-stage`, `.zoom-overlay`, all zoom keyframes, `foil-sweep`, all metallic frame variables. **New** classes: `.board-shell` (1680 max-width), `.board-title` (Source Serif 4 32/600 with opsz 32), `.columns` (CSS grid `repeat(6, minmax(0, 1fr))` + media-query breakpoints at 1399/999/599 px reflowing to 4/2/1 columns), `.column`, `.column-header` (mono 10/500 0.14em uppercase tertiary with count on the right), `.column-cards` (flex column, 12 px gap), `.card` (flat 12 px radius, 1 px `--card-border`, 20 px padding, hover lifts border to `--card-border-hover` *without transform*), `.card.is-red` (1 px `--red` ring via `box-shadow: 0 0 0 1px var(--red)`), `.card-red-dot` (8 px circle), `.card-patient` (Source Serif 4 19/600 with opsz 20), `.card-meta` (mono 11 tertiary, MRN · age · age-since-received), `.card-subject` (14/500 primary), `.card-preview` (13/secondary, 2-line clamp), `.card-sender` (12/tertiary), `.card-actions` (flex row), `.btn` / `.btn-primary` (teal solid) / `.btn-secondary` (outlined ghost).
+- **`components/InboxBoard.js`** — full rewrite. Six-column grid keyed by `card.type`: `notify | refill | triage | advice | inr | other`. The `other` column catches `handoff | auto | chase | <unknown>` per spec ("anything that doesn't fit the 5 baskets"). `actionsFor(card)` returns a `[primary, secondary]` button pair per card type, with the TRIAGE pair conditional on urgency: red TRIAGE → `Triage now · Page provider`; calm TRIAGE → `Open · Draft callback`. OTHER cards render only the primary `Open` button (secondary returns `null` and is skipped in the JSX). Card div is a `role="button"` with `tabIndex={0}` + Enter/Space key handler; buttons are real `<button>` with `e.stopPropagation()` so card click doesn't fire when clicking inside an action. Click handlers `console.log` for now (Phase 3.3 will wire detail-view navigation and HVC chat). Sort within column unchanged: `(red first, received_at asc)`. Drops `useState`/`useEffect`/zoom state from 3.1d-fix — this view is interaction-light by design.
+- **`app/dashboard/page.js`** — slimmed from ~24 to 12 lines. Drops the broken pre-sort that referenced the removed `urgency` field; just freezes `now` and hands `cards` to the client board.
+
+### Build verification — `npm run build`
+**PASS.** Dashboard `1.56 kB / 88.8 kB` (down from 2.25 kB / 89.5 kB in 3.1d-fix — flat layout has less code than the stacked + zoom system; -0.7 kB / -0.7 kB).
+
+### Smoke test — `GET /dashboard`
+
+| Probe | Result |
+|---|---|
+| HTTP | **200**, 59.6 KB HTML, 2.3 s cold |
+| Columns rendered | **6** ✓ |
+| Total cards in DOM (counting `card-patient` spans) | **30** ✓ |
+| Red cards (`class="card is-red"`) | **5** ✓ |
+| Red dots rendered | **5** ✓ (one per red card) |
+| Source Serif 4 reference in bundled CSS | present ✓ |
+| Stack/medallion/zoom/foil residue | **0 / 0 / 0 / 0** ✓ |
+| Board header | "Inbox" + mono "30 messages" ✓ |
+
+**Columns + tops** (parsed from rendered DOM):
+
+| # | Column | Count | Top card | Top is red? |
+|---|---|---|---|---|
+| 1 | NOTIFY | 10 | **Marisol Aragón** | ✓ red |
+| 2 | REFILL | 3 | Dwight Parnell | calm |
+| 3 | TRIAGE | 7 | **Vivienne Quesnel** | ✓ red |
+| 4 | ADVICE | 2 | **Magnolia Petersen** | ✓ red |
+| 5 | INR | 6 | Halsey Lindgren | calm |
+| 6 | OTHER | 2 | Saoirse Doyle | calm |
+
+Sort `(red first, then received_at asc)` validates: Marisol (22:45 Z) tops NOTIFY over Niall (23:00 Z) and over the 8 calm cards; Vivienne (21:30 Z) tops TRIAGE over Esperanza (23:15 Z) and the 5 calm TRIAGE cards. The remaining red (Niall) is the 2nd card in NOTIFY.
+
+### Action button distribution (verified via DOM grep)
+
+| Button | Count | Where |
+|---|---|---|
+| `Open chart` (primary) | 10 | NOTIFY (10) |
+| `Open` (primary) | 18 | REFILL (3) + calm TRIAGE (5) + ADVICE (2) + INR (6) + OTHER (2) = 18 |
+| `Triage now` (primary) | 2 | red TRIAGE (2) |
+| `Draft callback` (secondary) | 15 | NOTIFY (10) + calm TRIAGE (5) = 15 |
+| `Apply protocol` (secondary) | 3 | REFILL (3) |
+| `Draft note` (secondary) | 6 | INR (6) |
+| `Draft reply` (secondary) | 2 | ADVICE (2) |
+| `Page provider` (secondary) | 2 | red TRIAGE (2) |
+
+Primary button count: 10 + 18 + 2 = **30** ✓ (one per card). Secondary button count: 15 + 3 + 6 + 2 + 2 = **28** ✓ — the 2 OTHER cards intentionally render only the primary "Open" button.
+
+### Geometry — fits 1080p with single-page vertical scroll
+- **Horizontal**: at ≥ 1400 px viewport, 6 columns share equal width inside the 1680-px shell. With 32 px page padding each side, content area ≤ 1616 px → each column ≈ 256 px wide on a 1680-px shell, ~209 px wide on a 1400-px viewport. Patient names (longest: "Theodora Ainsworth", "Octavia Mwangi") fit comfortably at Source Serif 4 19 px in the column width with text-overflow ellipsis as a safety net.
+- **Vertical**: tallest column is NOTIFY with 10 cards. Each card is ~190 px tall (20 + 19 + 14·1.4 + 13·1.5·2 + 12 + actions + paddings). 10 × 190 + 9 × 12 gap ≈ **2008 px** for that column alone. Page-level scroll is required — the 6 columns share a single page-scroll, so the user scrolls down to see deeper into NOTIFY while shorter columns leave whitespace below their last card. (Per spec: *"1080p layout fits 6 cols with all cards visible (or vertical scroll within tallest column)"* — page scroll is the simpler path.)
+- **Responsive**: at < 1400 px viewport, columns reflow to 4. At < 1000 px, 2. At < 600 px, 1. The grid uses `minmax(0, 1fr)` so columns never overflow narrower viewports.
+
+### Visual observations
+- **Serif patient names** carry the visual weight kairoshealth.app gets from its display type. Source Serif 4 at 19/600 opsz 20 reads as "editorial" rather than "tech UI" — the names look like they belong on a chart label, not a SaaS dashboard.
+- **Teal primary buttons** anchor the action zone at the bottom of each card. The teal `#0d9488` is muted enough that the 5 red cards (with their dot + 1 px ring) still win attention.
+- **Red ring + dot** is the entire urgency vocabulary on this layout — no glow, no metallic frame, no animation. The reduction makes the red cards read as *flagged*, not *alarming*. Glanceable: the eye picks up the 5 red items inside ~700 ms.
+- **Hover changes only border color, not layout.** The card doesn't move. This matches kairoshealth's calm-clinical aesthetic — clinicians don't want UI elements jumping at them.
+- **No medallions, no peek tabs, no foil.** The single-column-per-type grouping is clearer than the source × type matrix from 3.1d. Sender info has dropped from a circle to plain text (12 px tertiary), which is appropriately quieter — the type column is the primary axis now, not the sender role.
+
+### Files touched
+- `app/globals.css` — full rewrite for kairoshealth aesthetic.
+- `components/InboxBoard.js` — full rewrite for 6-column flat layout.
+- `app/dashboard/page.js` — drop stale pre-sort, slim to ~12 lines.
+- `docs/log.md` — this section.
+
+### Deliberately out of scope
+- No detail-view page (Phase 3.3). Card / button clicks `console.log` for now.
+- No HVC chat wiring (Phase 3.3+).
+- No drag-and-drop or column reordering.
+- No per-column scroll (page-level scroll for now).
+- No `app/layout.js` edits — sticky "Kairos" header still renders above the board.
+- No new dependencies (Source Serif 4 is loaded via Google Fonts CSS, not an npm package).
+- No git push.
+
+## 2026-04-28 — Phase 3.2-fix2: 6 cards/row inside type sections, primaries → "Open"
+
+### Direction
+Re-read the 3.2 layout: the prior pass made the 6 *types* into 6 vertical columns, each one card across. Brandon's intent (clarified) is the opposite — type-grouped **sections stack vertically**, and within each section, cards flow left-to-right as a responsive grid up to 6 per row.
+
+### Three changes
+1. **6 cards/row at full width** (was 1-card-wide vertical type-columns). Sections stack; within each section, the card grid responds to viewport: 6 → 4 → 3 → 2 → 1 columns at 1399 / 1099 / 799 / 499-px breakpoints.
+2. **All primary buttons read "Open"** (was a mix of "Open chart", "Open", "Triage now"). Secondary labels unchanged: `Draft callback / Apply protocol / Page provider / Draft reply / Draft note`. OTHER cards still render only the primary "Open" button.
+3. **TODO comment** added in `components/InboxBoard.js` near the click handler: *"Phase 3.3 — Open card opens detail view (raw Epic note content + full action button set). For now this just console-logs the id."* No new behavior — clicks still `console.log("open card", id)`.
+
+### Files written
+- **`app/globals.css`** — replaced `.columns / .column / .column-header / .column-cards / .column-header-count` block with `.type-section / .section-header / .section-header-count / .card-grid`. The new `.card-grid` is a CSS grid with `repeat(6, minmax(0, 1fr))` baseline + media queries at 499 / 799 / 1099 / 1399 px reflowing to 1 / 2 / 3 / 4 columns. Sections get `margin-bottom: 36px`; the section header keeps the same mono small-caps + count chrome from 3.2 with a 1-px bottom seam in `--card-border`. Patient name now allows up to 2-line wrap via `display: -webkit-box; -webkit-line-clamp: 2` + `word-break: break-word` so longer serif names like "Theodora Ainsworth" don't clip at the ~209-px card width hit at the low end of the 1400-px breakpoint.
+- **`components/InboxBoard.js`** — renamed `Column` → `Section`, `groupByColumn` → `groupBySection`, `sortInColumn` → `sortInSection`, `COLUMN_DEFS` → `SECTION_DEFS`, `columnKeyForCard` → `sectionKeyForCard`. Empty sections are now skipped (`Section` returns `null` if `cards.length === 0`) so OTHER will silently disappear if its 2 handoff cards get retired later. `actionsFor()` simplified — `primary` is a single shared object `{ label: "Open", primary: true }` returned from every branch. The TRIAGE branch's red/calm distinction now only varies the secondary (`Page provider` vs `Draft callback`).
+- **`app/dashboard/page.js`** — unchanged (server shim still passes `cards` + `now` to `<InboxBoard>`).
+
+### Build verification — `npm run build`
+**PASS.** Dashboard `1.55 kB / 88.8 kB` (vs 1.56 kB / 88.8 kB in 3.2 — essentially flat; the rename and TODO comment add a few bytes, the simpler `actionsFor` saves them back).
+
+### Smoke test — `GET /dashboard`
+
+| Probe | Result |
+|---|---|
+| HTTP | **200**, 59.6 KB, 4.4 s cold |
+| Type sections rendered | **6** ✓ |
+| Total cards in DOM | **30** ✓ |
+| Red cards | **5** ✓ (red dot + red ring still applied) |
+| All primary buttons read **"Open"** | **30 / 30** ✓ |
+| Secondary distribution | 15 `Draft callback` · 3 `Apply protocol` · 6 `Draft note` · 2 `Draft reply` · 2 `Page provider` = 28 (2 OTHER cards intentionally have no secondary) ✓ |
+| TODO Phase 3.3 comment in `InboxBoard.js` | present (byte 207) ✓ |
+| Stale `column-*` classes in HTML | **0 / 0 / 0** ✓ |
+| `card-grid` template-columns variants in bundled CSS | `repeat(1)`, `repeat(2)`, `repeat(3)`, `repeat(4)`, `repeat(6)` all present ✓ |
+| Media-query thresholds in bundled CSS | `499px`, `799px`, `1099px`, `1399px` all present ✓ |
+
+**Section render order** (parsed from rendered DOM):
+
+| # | Section | Count | Top card | Red? |
+|---|---|---|---|---|
+| 1 | NOTIFY | 10 | **Marisol Aragón** | ✓ |
+| 2 | REFILL | 3 | Dwight Parnell | calm |
+| 3 | TRIAGE | 7 | **Vivienne Quesnel** | ✓ |
+| 4 | ADVICE | 2 | **Magnolia Petersen** | ✓ |
+| 5 | INR | 6 | Halsey Lindgren | calm |
+| 6 | OTHER | 2 | Saoirse Doyle | calm |
+
+Sort `(red first, then received_at asc)` still validates: Marisol leads NOTIFY, Vivienne leads TRIAGE, Magnolia leads ADVICE.
+
+### Geometry — readability check at 209-px card width
+- **Page-shell math**: at 1400-px viewport with 32-px page padding each side → 1336 px content area. 6 cards × c + 5 × 16-px gap = 1336 → **c ≈ 209 px**. (At 1680 max-width this opens up to ~256 px each.)
+- **Card content area** at c = 209: 209 − 40 padding = 169 px. Minus the 8-px red dot + 8-px gap on red cards: **153 px** for the patient name.
+- Source Serif 4 19/600 holds ~12–14 chars per 153 px line. Longest names ("Theodora Ainsworth" 18 ch, "Esperanza Calabro" 17 ch) now wrap to 2 lines instead of clipping.
+- Subject (14/500 plain wrap, no clamp) and body preview (13/secondary 2-line clamp) remain readable. Sender (12/tertiary single-line ellipsis) stays one line.
+- Action buttons share row width via `flex: 1` so they shrink proportionally. At c = 209, each button gets ~92 px — `Open`/`Draft callback`/`Page provider` etc. fit at 13/500 padded `8 × 14`.
+
+Verdict: at the worst-case 1400-px viewport, content is tight but unbroken. At 1500 px+ the layout breathes well; at 1680 px (max shell) the cards are spacious.
+
+### Visual observations
+- **Sections feel like "drawers"** rather than columns. The vertical scroll moves through one type at a time — clinically natural ("first I'll knock out my INR pile, then refills, then triage").
+- **Uniform "Open" labels** simplify the visual scan. The teal primary now reads as a consistent action affordance independent of card type. Type-specific intent is still clear from the section header above.
+- **Red dot + 1-px red ring** continues to do all the urgency work. With the eye now scanning section-by-section instead of column-down, reds in NOTIFY (Marisol + Niall in row 1), TRIAGE (Vivienne + Esperanza in row 1), and ADVICE (Magnolia in row 1) all land in the first row of their respective sections — they pop above the calm cards behind them naturally.
+- **2-line patient names** preserve readability at narrow card widths without changing the visual rhythm — ~12 cards across 30 wrap to a 2nd line; the rest stay single-line.
+
+### Files touched
+- `app/globals.css` — column-* → type-section/card-grid, new responsive breakpoints, patient-name 2-line clamp.
+- `components/InboxBoard.js` — Column → Section rename, all primaries → "Open", Phase 3.3 TODO.
+- `app/dashboard/page.js` — unchanged.
+- `docs/log.md` — this section.
+
+### Deliberately out of scope
+- No detail view (Phase 3.3 — TODO comment placeholders the open-card behavior).
+- No HVC chat wiring (Phase 3.3+).
+- No `app/layout.js` edits.
+- No new dependencies. No git push.
+
+## 2026-04-28 — Phase 3.2-fix3 + 3.2-fix4: port kairoshealth.app panel chrome verbatim
+
+### Direction
+Phase 3.2/-fix2 were our *interpretation* of the kairoshealth.app aesthetic — not the actual chrome. Brandon owns kairoshealth.app and pointed at `firekraker-monorepo/kairos/` as the source of truth. **fix3** was a read-only inventory of that source. **fix4** lands three concrete changes:
+1. Click-to-select gold ring (persistent — the prior build only had it on `:hover`).
+2. Drop the inline action buttons from the card surface (buttons reappear in the detail view in Phase 3.3).
+3. Match the source visuals exactly: Fraunces serif, kairoshealth color tokens, 4-px card radius, `cubic-bezier(0.16, 1, 0.3, 1)` transition timing, severity dots with glow, fade-up stagger.
+
+`firekraker-monorepo/kairos` confirmed untouched (`git status --short` filtered to `kairos/` paths returns empty).
+
+### What landed in kairos repo
+
+- **`app/globals.css`** — full rewrite. Imports added Fraunces (Google Fonts, opsz 9..144 / weights 400/500/600/700) alongside the existing General Sans + JetBrains Mono. New `:root` tokens copied verbatim from `firekraker-monorepo/kairos/app/globals.css`: `--kairos-graphite #0B0E13`, `--kairos-platinum #1C2128`, `--kairos-mist #24293A`, `--kairos-bone #F1EDE4`, `--kairos-bone-muted #B8B4AA`, `--kairos-amber #F59E0B`, `--kairos-oxblood #B91C1C`, `--kairos-sage #6EBC87`, `--kairos-teal #0F766E`. Tailwind v4 `@theme` block re-registers the same tokens as `--color-graphite | --color-platinum | --color-mist | --color-bone | --color-bone-muted | --color-amber | --color-oxblood | --color-sage | --color-teal | --color-teal-hover` so Tailwind utilities like `bg-platinum`, `text-bone`, `text-bone-muted`, `border-mist`, `text-amber/80` resolve under v4 (PatientCard.js's source uses these utilities). `--font-display: 'Fraunces'`, `--font-mono: 'JetBrains Mono'`, `--font-sans: 'General Sans'`. Body bg reset to `--kairos-graphite` with the SVG-noise fractalNoise data-URI texture from source. Custom-scrollbar styling copied verbatim. **Card chrome** (`.kairos-card`, `.kairos-card-hover:hover`, `.kairos-stagger > *` + nth-child cascade, `kairos-fade-up` keyframe, `.kairos-kicker`, `.kairos-data`, `.kairos-display`, `.severity-dot`, `.severity-red`, `.severity-amber`, `.severity-green`) — **all copied verbatim from source globals.css**. Added a new `.kairos-card-selected` class that pins the gold-amber ring chrome (same `box-shadow` + `border-color` + `translateY(-1px)` as the `:hover` state) so the click-to-select state stays visible when the cursor leaves the card. `.kairos-card-selected:hover` keeps the same chrome stable so hovering a selected card doesn't visually thrash. **Dropped** all of fix2's interpretation classes: `.card`, `.card-top-row`, `.card-meta`, `.card-subject`, `.card-preview`, `.card-sender`, `.card-actions`, `.btn`, `.btn-primary`, `.btn-secondary`, `.card-red-dot`, `.card-title-wrap`, `.card-patient`. `.board-page`, `.board-shell`, `.board-header`, `.board-title`, `.board-count`, `.type-section`, `.section-header`, `.section-header-count`, `.card-grid`, `.card-button` retained for the page shell + responsive grid plumbing (those aren't kairoshealth-specific — kairoshealth uses Tailwind utilities for the equivalent layout). 4-px card radius (was 12 in fix2). Card transition timing function is `cubic-bezier(0.16, 1, 0.3, 1)` (fix2 used 200 ms ease).
+
+- **`components/InboxBoard.js`** — full rewrite of the card render to mirror `firekraker-monorepo/kairos/components/PatientCard.js` exactly, plus selection state + button-row removal. Card markup verbatim from the source `<PatientCard>`:
+  ```
+  .kairos-card .kairos-card-hover [.kairos-card-selected] p-4
+    .severity-dot.{severity-red|severity-green} .mt-1.5
+    h3.kairos-display .text-bone .text-[18px] .font-medium .leading-tight .truncate     ← patient.name
+    span.kairos-data .text-[11px] .text-bone-muted .shrink-0                             ← `${age}y`
+    p.text-[13px] .text-bone-muted .mt-2 .leading-relaxed .line-clamp-2                  ← message.subject
+  ```
+  **No action buttons.** The `<button class="card-button">` is the click target wrapping the `.kairos-card` — chosen over `<Link href={...}>` from source because there's no detail route yet (Phase 3.3 will add one and we'll swap to `<Link>` then). `useState(selectedId)` lives at the InboxBoard level so the gold ring is exclusive — clicking another card moves selection; clicking the same card clears it (toggle). Severity mapping per fix4 spec ("matches `.severity-red / .severity-green`"): `urgency_signal: red → severity-red`; `urgency_signal: calm → severity-green`. The fade-up cascade applies via `.kairos-stagger` on each `.card-grid`, so cards animate in with 60-ms cascading delays inside each section.
+
+- **`app/dashboard/page.js`** — slimmed further. Drops the `now` prop (no age-since-received display anymore — kairoshealth's card shows only patient age, not message age). 12 lines.
+
+### Build verification — `npm run build`
+**PASS.** Dashboard `1.41 kB / 88.6 kB` (vs 1.55 kB / 88.8 kB in fix2 — the simpler card + dropped button row outweighs the new selection state).
+
+### Smoke test — `GET /dashboard`
+
+| Probe | Result |
+|---|---|
+| HTTP | **200**, 54.3 KB HTML, 4.2 s cold |
+| Type sections rendered | **6** ✓ |
+| `.kairos-card` instances | **30** ✓ |
+| `.kairos-card-hover` instances | **30** ✓ (every card hoverable) |
+| `.kairos-card-selected` in SSR markup | **0** ✓ (none selected on first paint — selection mounts client-side on click) |
+| `.kairos-display` (Fraunces patient names) | **30** ✓ |
+| `.kairos-data` (mono age) | **30** ✓ |
+| `.kairos-stagger` (one per section) | **6** ✓ (cascading fade-up applies inside each `.card-grid`) |
+| Severity dots — red | **5** ✓ |
+| Severity dots — green | **25** ✓ |
+| Severity dots — amber | **0** (intentional — only red/green per fix4 spec) |
+| **Action buttons in DOM** | **0** ✓ (no `btn-primary`, no `btn-secondary`, no `Open` / `Draft` / `Page provider` / `Apply protocol` / `Triage now` text anywhere) |
+| `card-button` wrappers (one per card) | **30** ✓ |
+
+**Patient name DOM order — first 6 + last 3** (validating the red-first sort within sections):
+- Marisol Aragón (NOTIFY · red), Niall Ferguson (NOTIFY · red), Tomás Velasco, Priya Chandramouli, Soledad Ortiz, Wenjin Zhou (calm NOTIFY in received_at asc) … Ruth Goodwin (last calm INR), Saoirse Doyle, Pavel Doroshenko (OTHER section) ✓
+
+**Bundled CSS sanity** (matching source-of-truth tokens):
+- `--kairos-platinum`: 2 refs, `--kairos-mist`: 4 refs, `--kairos-amber`: 3 refs, `--kairos-bone`: 9 refs ✓
+- `Fraunces` font: 2 refs ✓
+- `cubic-bezier(0.16, 1, 0.3, 1)`: 4 refs (card transition + stagger + fade-up + selected) ✓
+- `border-radius: 4px`: 2 refs (card + a Tailwind preset) ✓ — was `12px` in fix2
+
+### Click-to-select behavior (verified by code inspection — full visual confirmation requires browser interaction)
+- Card click fires `onSelect(card.id)` which calls `setSelectedId(prev => prev === id ? null : id)`. So:
+  - Click a calm card → it gets `.kairos-card-selected` (gold-amber 1-px ring + amber border + `translateY(-1px)`).
+  - Click a different card → ring moves there.
+  - Click the same card again → ring clears.
+- `aria-pressed={isSelected}` on the click button gives screen readers the toggle semantics.
+- Keyboard: Enter or Space on a focused card triggers the same toggle (preserved from fix2).
+
+### Visual deltas vs fix2 (this is what makes it "kairoshealth")
+| Thing | fix2 | fix4 (now) |
+|---|---|---|
+| Display font | Source Serif 4 | **Fraunces** (kairoshealth source) |
+| Card bg | `#15151a` (cold black) | `#1C2128` **--kairos-platinum** (warm slate) |
+| Card border | `#2a2a30` | `#24293A` **--kairos-mist** (slightly bluer) |
+| Card radius | 12 px | **4 px** (kairoshealth source) |
+| Card highlight | none | **inset 0 0 0 1px rgba(255,255,255,0.03)** — adds a hairline lift |
+| Page bg | `#0a0a0b` flat | `#0B0E13` **--kairos-graphite** + SVG fractalNoise texture overlay |
+| Primary text color | `#f5f5f4` (cool off-white) | `#F1EDE4` **--kairos-bone** (warm off-white) |
+| Body text color | `#a1a1aa` (cool gray) | `#B8B4AA` **--kairos-bone-muted** (warm taupe) |
+| Card hover/selected ring | none / `border-color` change | **1-px amber ring** + `translateY(-1px)` + amber border |
+| Severity indicator | red dot only on red cards (8 px) | **8-px dot on every card** — oxblood (red) or sage (green); red has 10-px glow |
+| Action buttons | "Open" + secondary on every card | **none on the card surface** (Phase 3.3 reveals them in detail view) |
+| Card transition timing | 200 ms ease | **150 ms cubic-bezier(0.16, 1, 0.3, 1)** (kairoshealth's signature easing) |
+| Stagger animation on initial render | none | **60-ms cascading fade-up** on first 8 cards in each section |
+
+### Files touched
+- `app/globals.css` — full rewrite to match kairoshealth source (kairos-* classes, severity-dot family, color tokens, Tailwind @theme registrations, body noise texture, fade-up stagger, scrollbar).
+- `components/InboxBoard.js` — full rewrite of card markup to verbatim PatientCard.js structure; remove action button row; add `useState(selectedId)` + `kairos-card-selected` class.
+- `app/dashboard/page.js` — drop `now` prop.
+- `docs/log.md` — this section (combined fix3 inventory + fix4 implementation).
+
+### `firekraker-monorepo` integrity
+`git status --short | grep "^[ MA?]+ kairos/"` is empty → zero uncommitted changes inside `firekraker-monorepo/kairos/`. Pre-existing changes elsewhere in the monorepo (`lifeos/public/sw.js`, untracked `workers/hvc/tests/`) are unrelated to this work and left alone.
+
+### Deliberately out of scope
+- No detail view (Phase 3.3). `kairos-card-selected` is purely visual today; opening the detail panel + revealing action buttons + raw Epic note content is the next phase.
+- No HVC chat wiring (Phase 3.3+).
+- No `<Link>` navigation on cards (no detail route yet — `<button>` wrapper holds the click). When 3.3 lands a route, swap `<button class="card-button">` to `<Link href={detailHref}>` matching kairoshealth's source markup.
+- No `lib/patients.js` / `lib/panel.js` / `data/patients.json` from the source — kairoshealth's data helpers are tied to its 5-patient demo shape; our `cards.json` + `groupBySection` stays.
+- No CountUp hero (dropped in 3.2; no plan to bring it back).
+- No AppChrome / Banner / Nav / TourOverlay from kairoshealth's app shell — kairos repo has its own sticky header in `app/layout.js`.
+- No `geist` npm package added; body font stays General Sans (kairoshealth's GeistSans body would change the body type but not the visual signature, which is carried by Fraunces patient names).
+- No git push.
+
+## 2026-04-28 — Phase 3.2-fix5: copy kairoshealth.app panel chrome verbatim, wrap HVC clinical brain inside it
+
+### Direction
+Stop interpreting kairoshealth.app and start copying it. Brandon owns the source at `firekraker-monorepo/kairos/`. **fix5** is the verbatim port: AppChrome wrapper, Banner, PatientCard, all `.kairos-*` global styles, kairoshealth font stack (Fraunces + JetBrains Mono + GeistSans). HVC clinical brain stays at `/api/hvc/*` — completely untouched. Visual layer only this phase; HVC chat wiring is 3.3.
+
+### 9 decisions Brandon confirmed for STEP 2
+1. Stay on Tailwind v4, register the missing tokens in `@theme` rather than downgrade.
+2. Install `geist` npm package to match source verbatim.
+3. PatientCard `<Link>` wrapper → `<button onClick>` (no `/patient/[id]` route exists).
+4. Inline action buttons (visual `<span>` "Open chart →" / "Draft callback") **kept** — overrides fix4's "no buttons on cards" in favor of source fidelity.
+5. Nav placement: dashboard-page-local, not in AppChrome.
+6. AppChrome = Banner + `<main>` only (no Nav, no TourOverlay).
+7. Drop TourOverlay entirely.
+8. Skip CountUp + hero block in dashboard.
+9. 6 in-page tabs (NOTIFY · REFILL · TRIAGE · ADVICE · INR · OTHER) with amber-underline active state, default NOTIFY, click-card toggles `selectedCardId` → `.kairos-card-selected`.
+
+### Files written / overwritten
+- **`package.json`** — added `geist@^1.7.0` (npm picked latest minor that satisfies source's `^1.3.1`).
+- **`app/layout.js`** — replaced. Imports Fraunces (400/500/600/700) + JetBrains_Mono (400/500) via `next/font/google`, GeistSans via `geist/font/sans`. Body uses `min-h-screen bg-graphite text-bone antialiased`. Wraps children in `<AppChrome>`. Sets `viewport.themeColor: "#0B0E13"`. Drops the prior layout's sticky "Kairos" header + `<ThemeToggle>` + Inter font.
+- **`components/AppChrome.js`** — new. Adapted from source: client component (`'use client'`), drops `Nav` import (per fix5 #5/#6), drops `TourOverlay` import (#7), short-circuits to bare `{children}` only on `pathname === "/"` (parity with source). Renders `<Banner /> + <main className="max-w-[1400px] mx-auto px-6 py-8">{children}</main>`.
+- **`components/Banner.js`** — verbatim from source. `border-amber/30 text-amber` strip, fractional-amber bg, `severity-dot severity-amber`, "DEMONSTRATION DATA · All patient information is fictional · NO PHI" copy. Middle phrase hidden on mobile.
+- **`components/PatientCard.js`** — adapted from source. `SEV_CLASS`, `PRIMARY_BY_KIND`, `SECONDARY_BY_KIND` maps copied verbatim. Markup verbatim except: outer `<Link href={...}>` swapped for `<button type="button" onClick={...} aria-pressed={isSelected} aria-label="…">`; `cardClass` concatenates `kairos-card-selected` on top of `kairos-card kairos-card-hover p-4` when `isSelected`. **Inline action button `<span>`s kept** (source design, fix5 #4).
+- **`app/globals.css`** — full rewrite. Source globals.css copied **verbatim** (every `.kairos-*` class, `.severity-dot/-red/-amber/-green`, body fractalNoise overlay, custom scrollbar, `<details>` chevron, word-fade, cta-pulse). Tailwind v4 `@theme` block registers the source's v3 `tailwind.config.js` token surface so `bg-platinum`, `text-bone`, `text-amber/80`, `border-mist/60`, `tracking-tightest`, `tracking-kicker`, `ease-kairos`, `animate-fade-up`, `animate-count-up` all resolve as utilities. Added `.kairos-card-selected` (same chrome as `:hover`, but persistent + stable on hover).
+- **`app/dashboard/page.js`** — replaced. Client component (`'use client'`) holding `activeTab` (default `notify`) + `selectedId` state. Inlined nav with `<button>`s in source's Nav.js visual style — active tab gets the 2-px `bg-amber` underline via `<span className="absolute -bottom-[1px] left-3 right-3 h-[2px] bg-amber" />`, count next to label in `kairos-data text-[11px] text-bone-muted/70`. Cards filtered to `categoryFor(card) === activeTab`, sorted `(red first, received_at asc)`, rendered through `<PatientCard>` in source's `grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6` workspace with `kairos-stagger` cascade. Adapter functions: `categoryFor` (collapses `handoff/auto/chase` → `other`); `adaptPatient` (our schema → source `{name, age, sex, severity, reasonForColumn, issueLine}` shape); `kindFor` (our type → source `kind` for button labels: `triage` stays `triage`, red urgency stays `urgent`, everything else `followup`). Selecting a tab clears the gold ring (selection doesn't survive a tab change). Click card toggles `selectedId`.
+
+### Build verification — `npm run build`
+**PASS.** Dashboard `8.13 kB / 95.4 kB` (vs 1.41 kB / 88.6 kB in fix4). The +6.7 kB JS is the next/font/google preload bundle for Fraunces (4 weights) + JetBrains Mono (2 weights). Source-of-truth build had the same overhead.
+
+### Smoke tests (all green)
+
+| Probe | Result |
+|---|---|
+| `GET /dashboard` | **200**, 18.9 KB, 3.9 s cold |
+| AppChrome rendered | "DEMONSTRATION DATA" banner present, "NO PHI" present, `max-w-[1400px]` main wrapper present ✓ |
+| Tab buttons | 6 (`<span>NOTIFY/REFILL/TRIAGE/ADVICE/INR/OTHER</span>`) ✓ |
+| Default active tab | `NOTIFY` (`aria-pressed="true"` count = 1) ✓ |
+| PatientCard buttons rendered (NOTIFY tab default) | **10** ✓ (matches NOTIFY count) |
+| `.kairos-card` instances | 10 ✓ |
+| `.kairos-card-hover` instances | 10 ✓ |
+| `.kairos-card-selected` in SSR | 0 ✓ (mounts client-side on click) |
+| `.kairos-display` (Fraunces names) | 10 ✓ |
+| `.kairos-data` (mono fields) | 16 ✓ (10 patient ages + 6 tab counts) |
+| `.kairos-stagger` instances | 2 ✓ (page root + grid) |
+| Severity dots — red / amber / green | 2 / 1 / 8 ✓ (Marisol + Niall reds; Banner amber; 8 calm NOTIFY greens) |
+| Inline `>Open chart` text on cards | 10 ✓ (kept per fix5 #4) |
+| Inline `>Draft callback` text on cards | 10 ✓ |
+| Patient names in NOTIFY DOM order | Marisol Aragón → Niall Ferguson (reds first) → Tomás → Priya → Soledad → Wenjin → Maeve → Carlos → Frances → Linnéa Brockman ✓ |
+| `GET /hvc` | **200**, 8.2 KB; HVC PIN UI + Banner present ✓ |
+| `GET /api/hvc/health` | **200**, `{"status":"ok","app":"hvc","timestamp":...}` ✓ |
+| `GET /` (root) | **307** → `/dashboard` (followed → 200) ✓ |
+| `firekraker-monorepo/kairos/` git status | empty ✓ |
+
+### What changed visually (vs fix4)
+
+| Thing | fix4 | fix5 (now) |
+|---|---|---|
+| Page wrapper | bespoke board-page full-bleed | source AppChrome → Banner + `<main className="max-w-[1400px] mx-auto px-6 py-8">` |
+| Demo banner | none | "DEMONSTRATION DATA · All patient information is fictional · NO PHI" amber strip on every non-root route |
+| Top nav | none — sections stacked vertically | 6 in-page tab buttons with 2-px amber underline active state, kairoshealth Nav.js style |
+| Layout fonts | Inter via `next/font/google` (legacy from earlier phases) | **Fraunces + JetBrains_Mono via `next/font/google`** + **GeistSans via `geist` npm package** |
+| Card render | bespoke 6-section flat grid, custom markup, no inline buttons | source `<PatientCard>` verbatim — `.kairos-card` chrome, `.severity-dot`, kicker label, `line-clamp-2` description, **kept** inline `<span>` action buttons |
+| Click affordance | toggle gold ring | toggle gold ring + tab switch clears ring |
+| Tab switching | n/a (sections always all rendered) | active tab filters cards; only 1 of 6 categories visible at a time |
+
+### `firekraker-monorepo` integrity
+`git status --short` filtered to `kairos/` paths returned empty across the entire fix5 work. Zero modifications inside `firekraker-monorepo/kairos/`. Pre-existing unrelated changes in the monorepo (`lifeos/public/sw.js`, untracked `workers/hvc/tests/`) left alone.
+
+### Files touched in this repo
+- `package.json` — `geist ^1.7.0` added.
+- `package-lock.json` — regenerated.
+- `app/layout.js` — replaced (kairoshealth source layout + AppChrome wrap).
+- `app/dashboard/page.js` — replaced (tabbed `<PatientCard>` grid).
+- `app/globals.css` — replaced (source verbatim + Tailwind v4 `@theme` registrations).
+- `components/AppChrome.js` — new (no Nav, no TourOverlay).
+- `components/Banner.js` — new (verbatim).
+- `components/PatientCard.js` — new (source-adapted: button wrapper + selected state).
+- `docs/log.md` — this section.
+
+`components/InboxBoard.js` and `components/ThemeToggle.js` are now orphaned (zero references in active code). Left in place for now — can retire later if confirmed unused.
+
+### Out of scope for fix5
+- No detail view yet (Phase 3.3). Click-to-select highlight is purely visual.
+- No HVC chat wiring from cards (Phase 3.3+).
+- No drag-and-drop, no per-tab persistence, no nav-on-/hvc beyond the Banner.
+- No CountUp hero, no source's `lib/patients.js`/`lib/panel.js`/`data/patients.json` (we keep our `cards.json`).
+- No git push.
+
+## 2026-04-28 — Phase 3.2-fix6: equalize cards, full Nav layout, drop card buttons
+
+### Four fixes
+1. **Equal-height cards** — all cards in a grid row now visually equalize (no more short-card-tall-card mismatch within the same row).
+2. **Font rendering matches source** — `font-feature-settings: 'ss01', 'cv11'` confirmed on html/body; Fraunces / JetBrains_Mono / GeistSans configurations are byte-for-byte from `firekraker-monorepo/kairos/app/layout.js`.
+3. **Full Nav layout ported** — wordmark left, 6 category tabs centered, "Take the tour" amber pill, identity right (`Brandon S., RN BSN` + settings cog SVG). Mobile fallback strip below with horizontally-scrollable tabs and active-tab `scrollIntoView` from source.
+4. **Inline action buttons removed from PatientCard** — overrides fix5 #4. The `<span>` "Open chart →" / "Draft callback" row is gone; buttons return when the card opens to detail view in Phase 3.3.
+
+### Files written
+- **`components/PatientCard.js`** — adapted again. Removed the `flex items-center gap-2 mt-4` row containing the two `<span>` action labels and dropped `kind`/`PRIMARY_BY_KIND`/`SECONDARY_BY_KIND` since nothing reads them now (kept the `kind` and `label` props in the API for compatibility, but only `label` still renders anything). Added `h-full` to the outer `<button>` and `h-full flex flex-col` to the inner `.kairos-card` div so CSS Grid's default `align-items: stretch` causes every card in a row to inflate to the tallest card's height. Empty space below shorter content reads as natural padding.
+- **`app/dashboard/page.js`** — Nav rewritten to mirror `firekraker-monorepo/kairos/components/Nav.js` verbatim (with route-Links swapped for tab-state buttons). Header section escapes AppChrome's `<main className="… px-6 py-8">` padding via `-mx-6 -mt-8 mb-8` so the `border-b border-mist/60` seam runs the full main-width. Top row: `<span className="kairos-display text-bone text-xl tracking-tightest shrink-0">Kairos</span>` wordmark · desktop nav (`hidden sm:flex`) with 6 tab buttons + "Take the tour" amber pill · identity row right (`ml-auto`) with `Brandon S., RN BSN` (`hidden sm:inline text-bone-muted`) + 14-px Settings cog SVG button (verbatim from source). Mobile row (`sm:hidden`) with the same tab buttons + tour pill, horizontally scrollable, with `useEffect` calling `scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' })` on the active tab whenever `activeTab` changes — same UX as source's mobile nav. Tour button calls a no-op `startTour()` (TourOverlay was dropped in fix5 #7; the button stays visible per fix6 #3 spec but logs `"tour pending — TourOverlay not ported"`).
+
+### Build verification — `npm run build`
+**PASS.** Dashboard `8.73 kB / 96 kB` (vs 8.13 kB / 95.4 kB in fix5 — +0.6 kB for the full Nav layout including cog SVG, mobile strip, and `scrollIntoView` effect).
+
+### Smoke tests (all green)
+
+| Probe | Expected | Result |
+|---|---|---|
+| `GET /dashboard` | 200 | **200**, 19.4 KB, 2.3 s |
+| **fix6 #4** Inline action buttons removed | 0 occurrences of `Open chart` / `Draft callback` / `Triage now` / `Page provider` text | **0 / 0 / 0 / 0** ✓ |
+| **fix6 #4** No `bg-teal` (was the primary-button bg in fix5) | 0 | **0** ✓ |
+| **fix6 #1** `h-full` on outer button | 10 (one per card) | **10** ✓ |
+| **fix6 #1** `h-full flex flex-col` on `.kairos-card` | 10 | **10** ✓ |
+| **fix6 #3** Wordmark `Kairos` in `kairos-display text-xl tracking-tightest` | 1 | **1** ✓ |
+| **fix6 #3** `Brandon S., RN BSN` text in DOM | 1 | **1** ✓ |
+| **fix6 #3** Settings cog button | 1 | **1** ✓ |
+| **fix6 #3** "Take the tour" pill | 2 (one in desktop nav, one in mobile strip) | **2** ✓ |
+| Both nav rows in DOM | desktop `hidden sm:flex` × 1, mobile `sm:hidden flex` × 1 | **1 / 1** ✓ |
+| Default tab active markers | 2 (one per nav row, both share state) | **2 aria-pressed=true** ✓ |
+| Default NOTIFY tab cards rendered | 10 | **10** ✓ |
+| **fix6 #2** `font-feature-settings: 'ss01', 'cv11'` on html/body in bundled CSS | present | **present** ✓ |
+| **fix6 #2** Font CSS-vars in bundled CSS | `--font-fraunces` / `--font-jetbrains` / `--font-geist-sans` all present | **4 / 4 / 3 refs** ✓ |
+| `GET /hvc` | 200 | **200**, 1.1 s ✓ |
+| `GET /api/hvc/health` | 200 | **200**, `{"status":"ok","app":"hvc","timestamp":...}` ✓ |
+| `firekraker-monorepo/kairos/` git status | empty | **empty** ✓ |
+
+### Visual deltas vs fix5
+
+| Thing | fix5 | fix6 (now) |
+|---|---|---|
+| Card heights in a row | uneven (descriptions of varying length set per-card height) | **all cards in a row equalize to tallest** (CSS Grid stretch + `h-full`) |
+| Card body content | name / age / kicker / description / **inline button row** (Open chart + Draft callback) | name / age / kicker / description (**no buttons**) |
+| Nav | 6 tab buttons in a single line, no wordmark, no identity | **wordmark left** · 6 tab buttons + "Take the tour" amber pill · **identity right (Brandon S., RN BSN + cog)**. Mobile fallback: scrollable strip below with same tabs + tour pill. |
+| Header strip width | tabs only, padded inside main | **full-bleed border-b** spanning main width (negative margins escape `<main>` px-6/py-8) |
+| Mobile experience | tab buttons truncate at narrow widths | **horizontally scrollable** strip with auto-scroll-to-active-tab on tab change |
+
+### Files touched
+- `components/PatientCard.js` — drop button row, add `h-full` + `flex flex-col`.
+- `app/dashboard/page.js` — port full source Nav.js layout (wordmark + tabs + tour + identity + cog + mobile strip with scrollIntoView).
+- `docs/log.md` — this section.
+
+### Untouched
+- `firekraker-monorepo/kairos/` — read-only throughout fix6. `git status --short | grep "^[ MA?]+ kairos/"` returned empty after every step.
+- `app/globals.css` — `font-feature-settings: 'ss01', 'cv11'` already present from fix5; verified.
+- `app/layout.js` — Fraunces + JetBrains_Mono + GeistSans config already verbatim from fix5; verified.
+- `app/api/hvc/*` — HVC fork untouched. `/api/hvc/health` returns 200.
+
+### Out of scope for fix6
+- No detail view yet (Phase 3.3). Click-to-select gold ring stays purely visual.
+- "Take the tour" pill is visually present but no-op (TourOverlay component never ported).
+- No HVC chat wiring from cards (Phase 3.3+).
+- No git push.

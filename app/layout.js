@@ -1,46 +1,50 @@
-import { Inter } from "next/font/google";
-import Link from "next/link";
-import "./globals.css";
-import ThemeToggle from "@/components/ThemeToggle";
+// Phase 3.2-fix5 — adapted from firekraker-monorepo/kairos/app/layout.js.
+// Differences vs source:
+//   • Title/description tuned for this repo build.
+//   • AppChrome no longer wraps a Nav (the nav lives inside /dashboard now).
+//
+// Otherwise font setup (Fraunces + JetBrains_Mono via next/font/google,
+// GeistSans via the geist npm package) and viewport theme color match source.
 
-const inter = Inter({
-  variable: "--font-inter",
+import "./globals.css";
+import { Fraunces, JetBrains_Mono } from "next/font/google";
+import { GeistSans } from "geist/font/sans";
+import AppChrome from "@/components/AppChrome";
+
+const fraunces = Fraunces({
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-fraunces",
+  display: "swap",
+});
+
+const jetbrains = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-jetbrains",
   display: "swap",
 });
 
 export const metadata = {
-  title: "Kairos",
-  description: "Clinical workflow platform with bidirectional Epic FHIR integration",
+  title: "Kairos — Cardiology Nurse Workstation",
+  description: "Clinical decision intelligence for cardiology nursing. Demonstration data. No PHI.",
 };
 
-const themeInitScript = `(function(){try{var s=localStorage.getItem('kairos-theme');var d=s==='dark'||((s==null||s==='system')&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d)document.documentElement.classList.add('dark');}catch(e){}})();`;
+// Explicit graphite theme-color stops iOS Safari (and Android Chrome) from
+// auto-tinting the mobile status bar amber based on the prominent
+// kairos-cta-pulse button + amber-on-graphite favicon.
+export const viewport = {
+  themeColor: "#0B0E13",
+};
 
 export default function RootLayout({ children }) {
   return (
     <html
       lang="en"
-      className={`${inter.variable} h-full`}
-      suppressHydrationWarning
+      className={`${fraunces.variable} ${jetbrains.variable} ${GeistSans.variable}`}
     >
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-      </head>
-      <body className="min-h-full bg-canvas text-fg flex flex-col">
-        <header className="sticky top-0 z-40 h-14 border-b border-line-faint bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/80">
-          <div className="mx-auto flex h-full max-w-[1400px] items-center justify-between px-4 sm:px-8">
-            <Link
-              href="/dashboard"
-              className="text-[15px] font-semibold tracking-[-0.01em] text-fg"
-            >
-              Kairos
-            </Link>
-            <ThemeToggle />
-          </div>
-        </header>
-        <main className="mx-auto w-full max-w-[1400px] flex-1 px-4 py-8 sm:px-8">
-          {children}
-        </main>
+      <body className="min-h-screen bg-graphite text-bone antialiased">
+        <AppChrome>{children}</AppChrome>
       </body>
     </html>
   );
