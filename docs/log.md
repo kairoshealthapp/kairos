@@ -1972,6 +1972,96 @@ Stop interpreting kairoshealth.app and start copying it. Brandon owns the source
 
 ## [2026-04-29] kairos | Tour Mode polish pass — 8-fix bundle: (1) 1x speed slowed ~50% via durationMultiplier(speed) — 1x=1.5x duration, 2x=1.0x; typing animation in EncounterDetail also reads kairos-tour-speed from sessionStorage and scales intervalMs in lockstep. (2) all "Mr. {provider}" → "Dr. {provider}" — 78 total replacements (43 active fixtures + tour, 2 legacy cards.json, 33 legacy mock-encounters JSONs) across 32 files; patient prefixes (Mr Aldington, Ms Hesperdale, Mrs. Underwell, Ms Brexley, Ms Larvendel, etc.) preserved; HVC fork app/api/hvc/* untouched per scope. (3) SpotlightOverlay scrollIntoView({behavior:smooth, block:center}) before measuring; 450ms scroll-settle delay; 250ms re-measure no longer re-scrolls; pickPosition() edge-flips right→left, top→bottom etc. when bubble would clip viewport. (4) PhoneScriptPane.js → ExplanationPane.js rename; pane title "PHONE SCRIPT" → "HOW TO EXPLAIN THIS"; action button labels "Generate Phone Script" → "Generate Note + Explanation", "Generate Voicemail Variant" → "Voicemail Talking Points" (Patterns 7 + 14 in lib/patterns.js); OutputPane.js mounts ExplanationPane in lieu of PhoneScriptPane when channel=phone. (5) framing subtitle "Example explanation — adapt in your own words." rendered under pane title in italic bone-muted. (6) ephemeral chip "Not part of patient record" rendered as uppercase pill below subtitle. (7) auto-clear: handleAuthorize sets paneState.phoneScript="" before fly-off; explicit Dismiss button (top-right of ExplanationPane) wired through dismissExplanation→OutputPane→onDismiss prop, clears only the explanation pane, leaves Nurse Note + MyChart untouched. (8) Wexbury (Card 5) tour narration reframed in lib/tourScript.js: bubble titles "An example, not a script" / "Voicemail talking points" / "Channel-aware example."; bodies use "talking points" / "your own words" / "use what fits, edit what doesnt, skip what is not relevant" / "the words are yours" — zero "spoken register" / "phone script" / "read aloud" wording remains in Wexbury entry. Build clean, all 24 encounter routes SSG.
 
+## [2026-04-29] kairos | Voice narration + Apple-style text/voice split + mute control across the full 9-fixture tour. OpenAI TTS (onyx voice), 56 pre-generated MP3s in public/tour-audio/, $0.13 cost.
+
+Builds on commits 58245a7 (P1–P4 audit fixes) and 5ca4e8c (3-fixture promotion + 9-card deck). This commit adds voice narration end-to-end, splits every bubble into short on-screen `displayText` + full conversational `voiceText`, wires audio playback into the tour engine with audio-driven dwell timing, and adds a persistent mute toggle.
+
+### What landed in this commit
+
+**Voice/text split — every bubble now has both fields:**
+- `displayText`: 4-8-word headline rendered on screen. Anchors the moment without competing with voice.
+- `voiceText`: full conversational narration. Numbers spelled out ("twenty-seven" not "27"), contractions, em-dash breath cues, no parentheticals.
+- `audioKey`: stable identifier for `/tour-audio/{audioKey}.mp3` lookup.
+- Legacy `body` field preserved (mirrors `displayText`) for graceful fallback in any non-tour code path that still reads it.
+
+Example reframe (Aldington opening):
+- displayText: `"Twenty-seven unread. Only nine are yours."`
+- voiceText: `"This card came from your Results Follow-Up box. Epic shows twenty-seven unread, but only nine are actually yours once you filter by provider..."`
+
+**Audio infrastructure:**
+- `app/api/tts/route.js` — POST endpoint, body `{text, voice}`, voice defaults to "onyx", proxies to `https://api.openai.com/v1/audio/speech` (model `tts-1`, response_format `mp3`), returns audio/mpeg stream. String concatenation (no template literals) per spec. 1y immutable cache header.
+- `scripts/generate-tour-audio.js` — Standalone Node script, walks `lib/tourScript.js` regex-extracting every `audioKey` + `voiceText` pair (keeps the script ESM-import-free), POSTs each to OpenAI directly, writes `public/tour-audio/{audioKey}.mp3`. Loads `.env.local` manually (no dotenv dep). Skips existing files for cheap re-runs. Logs char totals + cost estimate.
+- `package.json` — added `"generate-tour-audio": "node scripts/generate-tour-audio.js"`.
+
+**Audio playback wiring (TourMode.js):**
+- New `loadAudio(audioKey)` helper: creates an `Audio` element, awaits `loadedmetadata`, returns the element on success or `null` on error/4s timeout.
+- New `beginBubble(data)` helper: stops any prior audio, loads the new one, kicks off `audio.play()` (catches autoplay rejections silently), and returns the dwell ms — `audio.duration*1000 + 500` if the MP3 loaded, else falls back to the existing length-aware `computeDwell` formula. The mute state is applied via `audio.muted` so toggling mid-tour doesn't restart audio.
+- `showNarrator` and `showSpotlight` rewritten around `beginBubble`. `pwait` still does the pause-aware sleep; only the dwell length changed.
+- Banner-handler annotations still use `computeDwell` (banner audio not yet wired since no current fixture uses on-banner triggers post-Brexley-cut — left as-is to avoid scope creep).
+- Preload: when fixture i starts, the orchestrator fire-and-forgets `Audio.load()` for every bubble in fixture i+1 so playback is gapless across fixture boundaries.
+- `stopAudio()` is called on skip/freeExplore/post-bubble-dwell so audio never bleeds into the next state.
+
+**Mute toggle:**
+- `mutedRef` + `muted` state in TourMode, init from `sessionStorage["kairos.tour.muted"]` ("1"/"0"), default OFF (voice ON).
+- `toggleMuted` callback sets both ref and state, persists to sessionStorage, applies `audio.muted` to the currently-playing audio so toggling mid-bubble is seamless.
+- New `<SpeakerOnIcon>` / `<SpeakerOffIcon>` SVGs in `components/NarratorCorner.js` (no lucide-react dep — kairos uses lucide-react@1.11 which doesn't export these specific icons reliably; inline SVG is cleaner).
+- Mute button rendered in the HUD button row left of the speed pill, with hover/title hints. Tooltip flips between "Voice narration off — click to turn on" and "Voice narration on — click to mute" depending on state.
+
+**Voice picker scaffolding removed (throwaway):**
+- Deleted `app/voice-picker/page.js`.
+- Deleted `app/api/tts-preview/route.js`.
+
+### Files touched
+| File | Δ | Change |
+|---|---|---|
+| `lib/tourScript.js` | full rewrite, ~580 lines | Every bubble across all 9 fixtures gets `audioKey`, `displayText`, `voiceText`. Legacy `body` mirrors displayText. Header doc updated. |
+| `components/TourMode.js` | +~110 lines | Audio loading, audio-driven dwell, mute state with sessionStorage, preload helpers, stopAudio on lifecycle exits. |
+| `components/NarratorCorner.js` | full rewrite, +~30 lines | Two inline SVG icons, new mute button in HUD row, accepts `muted` + `onToggleMuted` props. |
+| `app/api/tts/route.js` | NEW, 60 lines | OpenAI TTS proxy. |
+| `scripts/generate-tour-audio.js` | NEW, 110 lines | Audio generation CLI. |
+| `package.json` | 1 line | npm script entry. |
+| `app/voice-picker/page.js` | DELETED | Throwaway scaffolding. |
+| `app/api/tts-preview/route.js` | DELETED | Throwaway scaffolding. |
+| `public/tour-audio/*.mp3` | NEW × 56 | Pre-generated narration. ~10.4 MB total. |
+
+### Verification
+
+**Build:** `npm run build` ✓ Compiled successfully. 39/39 static pages, 24 encounter routes, `/api/tts` registered as Dynamic. No new lint errors.
+
+**Audio generation:** `npm run generate-tour-audio` produced **56 MP3s**, **8,622 voiceText chars**, **est. $0.1293** at TTS-1 pricing ($15/1M chars). Average ~155 chars/bubble; longest is Larvendel onArrival at 288 chars (the 8-day denial cascade timeline read-out). All 56 files under `public/tour-audio/`. File sizes range 26 KB (Wexbury transition: "One more. The closer.") to 389 KB (Aldington pre, full inbox math intro).
+
+**Static-analysis checks:**
+- `grep "fixtureId:" lib/tourScript.js | wc -l` → **9**
+- `grep '"of 9"' lib/tourScript.js` → all 18 progressLabel + title strings.
+- Banned-phrase grep `I used | this caught | saved me | Kairos caught | Kairos remembered | I clocked | I worked through` → **zero hits**.
+- `grep "audioKey:" lib/tourScript.js | wc -l` → **56** matches `ls public/tour-audio/*.mp3 | wc -l`. One audio file per bubble; nothing orphaned.
+- `grep "displayText:" lib/tourScript.js | wc -l` → **56** (every bubble paired).
+- TourEndModal mic-drop preserved verbatim.
+
+**Estimated tour runtime at 1× with audio:**
+
+Audio durations weren't read back per-file (would need ffprobe), but TTS-1 averages ~14.5 chars/sec at default speed for English narration. With 8,622 total chars and 56 bubbles plus 500 ms tail buffer per bubble:
+- Narration audio: ~8622 / 14.5 ≈ **595 s** of voice
+- Per-bubble buffers: 56 × 0.5 s = **28 s**
+- Per-fixture overhead (action runtime + nav settle + auto-authorize + inter-step pwait): ~22 s × 9 fixtures = **198 s**
+- **Total estimated runtime at 1×: ~821 s ≈ 13:30–14:00 end-to-end.**
+
+That's ~30-60 s longer than the silent length-aware estimate (12:30–13:00) since voice cadence is gentler than the dwell formula's worst-case ceiling. At 2× toggle the audio path still uses real audio.duration (no compression — the audio plays at native speed regardless of speed toggle). If Brandon wants 2× to actually speed up audio, that needs a follow-up: HTMLAudioElement `playbackRate` knob plus shorter dwell. **Flagged for follow-up.**
+
+**What I could NOT verify without playing the tour interactively:**
+- Whether the bubble's display text remains visible (and audio audible) for the full audio.duration on dense-text bubbles. Audio-driven dwell should match voice perfectly, but the 500 ms tail buffer is a guess; if bubbles dismiss before the voice fully fades, raise `AUDIO_TAIL_BUFFER_MS` to 700-800.
+- Whether mute toggle persists across browser refresh (sessionStorage scope is per-tab). Verified the storage key write and read paths exist; needs eyeball.
+- Whether mid-bubble mute toggle silences cleanly (it sets `audio.muted = true` on the live element, which all major browsers honor without restart). Code path verified; visual confirmation needed.
+- Whether autoplay is blocked on initial bubble. Browsers require a user gesture before playing audio; the tour starts via the "Take a tour" button click which counts as a gesture, so the first bubble should play. If it doesn't, the catch on `audio.play()` swallows the rejection silently — bubble still dwells correctly with the audio-derived duration but no sound. Mitigation: surface a "click to start audio" prompt on autoplay-block, deferred to a follow-up.
+- Voice quality for clinical proper nouns (Crestor, Lexiscan, Evolent, peer-to-peer, INR, BNP, Holter, paresthesias). TTS-1 generally pronounces these correctly; the bigger risk is "MyChart" being read as M-Y-C-H-A-R-T or "my chart." Spot-check before the demo; if "MyChart" reads wrong, the script can substitute "patient portal" in voiceText only (displayText keeps the brand).
+
+### Out of scope
+- HVC fork (`app/api/hvc/*`) untouched.
+- mock-encounters JSON untouched.
+- No git push — Brandon visually verifies in the morning.
+- No 2× speed support for audio — flagged as follow-up (`playbackRate`).
+- NURSE-DEMO-INTRO.md still says "four to five minutes" — third time flagged stale, still not auto-edited.
+
 ## [2026-04-29] kairos | Tour expanded to 9-fixture deck with full 6-category coverage. Promoted norreys/quennell/maundrell from skeleton to fully scripted and wired into the tour route between Hesperdale and Underwell.
 
 Builds on the demo-blocker patch (commit 58245a7 — P1–P4 audit fixes). This commit adds three fixtures and re-orders the tail of the tour. P1–P4 already in HEAD before this commit; nothing in this commit re-touches them.

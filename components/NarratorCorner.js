@@ -1,9 +1,29 @@
 // Phase 3.3 Tour Mode — persistent corner narrator box.
 // Bottom-right by default. Used for pre-arrival, post-Authorize, and
 // transition narration. Carries the tour HUD: progress, speed toggle,
-// skip button.
+// mute toggle, skip button.
 
 "use client";
+
+function SpeakerOnIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+      <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+    </svg>
+  );
+}
+
+function SpeakerOffIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+      <line x1="22" y1="9" x2="16" y2="15" />
+      <line x1="16" y1="9" x2="22" y2="15" />
+    </svg>
+  );
+}
 
 export default function NarratorCorner({
   title,
@@ -16,6 +36,8 @@ export default function NarratorCorner({
   onSkip,
   onContinue,
   paused,
+  muted,
+  onToggleMuted,
 }) {
   const pct = total > 0 ? Math.round(((step + 1) / total) * 100) : 0;
   return (
@@ -33,6 +55,17 @@ export default function NarratorCorner({
           {progressLabel || "Tour"}
         </span>
         <div className="flex items-center gap-1 shrink-0">
+          {onToggleMuted ? (
+            <button
+              type="button"
+              onClick={onToggleMuted}
+              className="text-bone-muted hover:text-bone bg-graphite/40 border border-mist/60 rounded-pill p-1"
+              title={muted ? "Voice narration off — click to turn on" : "Voice narration on — click to mute"}
+              aria-label={muted ? "Unmute voice narration" : "Mute voice narration"}
+            >
+              {muted ? <SpeakerOffIcon /> : <SpeakerOnIcon />}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={onToggleSpeed}
