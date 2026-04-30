@@ -1,0 +1,61 @@
+{
+  "id": "enc-011",
+  "patternId": 11,
+  "patternName": "ADMINISTRATIVE (Layer 1)",
+  "urgency": "calm",
+  "sourceChannel": "mychart",
+  "sourceBox": "rx-request",
+  "mychartStatus": "active",
+  "tab": "refill",
+  "receivedAt": "2026-04-29T12:02:00Z",
+  "investigationState": "AUTO_CLEARED",
+  "patient": {
+    "name": "Brindelhart, Vesper",
+    "displayName": "Vesper Brindelhart",
+    "age": 71,
+    "sex": "F",
+    "dob": "1955-10-09",
+    "mrn": "10847295",
+    "proxyName": null
+  },
+  "source": {
+    "title": "Rx Request — Lisinopril 20mg refill (auto-eligible)",
+    "sender": "Pharmacy (via Surescripts)",
+    "receivedAt": "2026-04-29 07:02",
+    "body": "Refill request for lisinopril 20mg daily. Surescripts protocol checks: last appt within 12mo (3/15/2026), future appt scheduled (10/15/2026), dx HTN active on problem list. All criteria met → 365-day refill, dx-associated, cosign Beckweldon."
+  },
+  "nurseNote": "Pattern 11 ADMINISTRATIVE — Layer 1 agent surface. Per design Section 4, this is NOT a v1 nurse-facing card; it is a background process that prevents cards from existing. Surfaced here only as a placeholder card for the 4-pane shell to demonstrate the visual scaffold; in v1.5+ the auto-clear is invisible to the nurse unless flagged.\n\nNo nurse action required. Audit trail logged.",
+  "output": {
+    "channel": "mychart",
+    "mychart": {
+      "recipient": "Vesper Brindelhart",
+      "proxyName": null,
+      "subject": "Refill processed",
+      "notifyBy": "2026-05-02",
+      "repliesAllowed": "Replies allowed; nurse on alert",
+      "greeting": "Ms Brindelhart,",
+      "body": "Your lisinopril 20 mg refill has been sent to your pharmacy. No clinic action needed.\n\nBrandon Sterne, RN BSN / Heart and Vascular Clinic"
+    }
+  },
+  "orderPad": {
+    "orders": [
+      {
+        "type": "Lisinopril 20mg daily — refill 365 days",
+        "codeVariant": null,
+        "reason": "Layer 1 auto-clear (Surescripts criteria met)",
+        "associatedDx": ["Essential hypertension"],
+        "priority": "Routine",
+        "class": "Medication refill",
+        "status": "Active",
+        "expectedDate": "2026-04-29",
+        "expires": "2027-04-29",
+        "clinicalQuestions": [],
+        "releaseToPatient": true,
+        "ccResults": ["Beckweldon"],
+        "cosign": "Beckweldon"
+      }
+    ],
+    "hasUnansweredQuestions": false,
+    "note": "Pattern 11 — Layer 1 agent. Not a v1 nurse-facing card; placeholder only."
+  }
+}

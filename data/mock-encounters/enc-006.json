@@ -1,0 +1,60 @@
+{
+  "id": "enc-006",
+  "patternId": 6,
+  "patternName": "SYNTHESIS + HANDOFF",
+  "urgency": "calm",
+  "sourceChannel": "epic-result",
+  "sourceBox": "results-followup",
+  "mychartStatus": "active-recent",
+  "tab": "notify",
+  "receivedAt": "2026-04-29T13:01:00Z",
+  "investigationState": "AWAITING_NURSE",
+  "patient": {
+    "name": "Wendelfaer, Catriona",
+    "displayName": "Catriona Wendelfaer",
+    "age": 28,
+    "sex": "F",
+    "dob": "1998-07-14",
+    "mrn": "60017802",
+    "proxyName": null
+  },
+  "source": {
+    "title": "Result Note: CTA abdomen — incidental pancreatic cyst, please forward to PCP",
+    "sender": "Beckweldon, Cardiology",
+    "receivedAt": "2026-04-29 08:01",
+    "body": "CTA abdomen reviewed. Cardiac findings unremarkable. Incidental 1.4 cm simple-appearing pancreatic cyst noted; below standard threshold for cardiology workup. Please forward results to her PCP (Felicity Falkenrath MD) for further follow-up."
+  },
+  "nurseNote": "Dr. Beckweldon reviewed CTA abdomen today. Cardiac findings unremarkable. Incidental 1.4 cm simple-appearing pancreatic cyst noted; below threshold for cardiology workup. Forwarded to PCP (Felicity Falkenrath MD) for further follow-up per provider request.\n\nPatient notified via MyChart.",
+  "output": {
+    "channel": "mychart",
+    "mychart": {
+      "recipient": "Catriona Wendelfaer",
+      "proxyName": null,
+      "subject": "Test results",
+      "notifyBy": "2026-05-02",
+      "repliesAllowed": "Replies allowed; nurse on alert",
+      "greeting": "Ms Wendelfaer,",
+      "body": "Dr. Beckweldon has reviewed your recent CT scan. From a heart standpoint everything looks unremarkable.\n\nThe scan also showed a small 1.4 cm cyst on your pancreas (an incidental finding), which is not something we follow from cardiology. We have forwarded the results to your primary care provider (Dr. Felicity Falkenrath) so her office can decide on any additional follow-up. If you have not heard from them within the next week or two, feel free to reach out to her office directly.\n\nBrandon Sterne, RN BSN / Heart and Vascular Clinic"
+    }
+  },
+  "orderPad": {
+    "orders": [
+      {
+        "type": "Route imaging study to PCP (Felicity Falkenrath MD)",
+        "codeVariant": null,
+        "reason": "Incidental pancreatic cyst, non-cardiology follow-up",
+        "associatedDx": ["Other specified disorders of pancreas"],
+        "priority": "Routine",
+        "class": "Communication / Route",
+        "status": "Staged",
+        "expectedDate": "2026-04-29",
+        "expires": null,
+        "clinicalQuestions": [],
+        "releaseToPatient": false,
+        "ccResults": [],
+        "cosign": "Beckweldon"
+      }
+    ],
+    "hasUnansweredQuestions": false
+  }
+}

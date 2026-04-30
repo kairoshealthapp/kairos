@@ -1,0 +1,60 @@
+{
+  "id": "enc-009",
+  "patternId": 9,
+  "patternName": "TRANSACTIONAL REPLY",
+  "urgency": "calm",
+  "sourceChannel": "mychart",
+  "sourceBox": "pt-advice",
+  "mychartStatus": "active",
+  "tab": "advice",
+  "receivedAt": "2026-04-29T14:11:00Z",
+  "investigationState": "AWAITING_NURSE",
+  "patient": {
+    "name": "Norreys, Wendell",
+    "displayName": "Wendell Norreys",
+    "age": 65,
+    "sex": "M",
+    "dob": "1961-07-22",
+    "mrn": "47281065",
+    "proxyName": null
+  },
+  "source": {
+    "title": "Pt Advice Reply (re: warfarin dose decrease 6.5→6mg sent 4/21)",
+    "sender": "Patient (via MyChart)",
+    "receivedAt": "2026-04-29 09:11",
+    "body": "\"Need refill 6mg warfrin\""
+  },
+  "nurseNote": "Patient confirms new warfarin 6mg dose (decreased from 6.5mg on 4/21 for INR 3.9 hold). Refill requested. Pharmacy send placed. Encounter closed.\n\nPatient notified via MyChart.",
+  "output": {
+    "channel": "mychart",
+    "mychart": {
+      "recipient": "Wendell Norreys",
+      "proxyName": null,
+      "subject": "Warfarin refill",
+      "notifyBy": "2026-05-01",
+      "repliesAllowed": "Replies allowed; nurse on alert",
+      "greeting": "Mr Norreys,",
+      "body": "Got it — your warfarin 6 mg refill has been sent to your pharmacy. Please continue at the new dose and we will check INR at your next routine draw.\n\nBrandon Sterne, RN BSN / Heart and Vascular Clinic"
+    }
+  },
+  "orderPad": {
+    "orders": [
+      {
+        "type": "Warfarin 6mg daily — refill 90 days",
+        "codeVariant": null,
+        "reason": "transactional refill confirmed",
+        "associatedDx": ["Atrial fibrillation"],
+        "priority": "Routine",
+        "class": "Medication refill",
+        "status": "Active",
+        "expectedDate": "2026-04-29",
+        "expires": "2026-07-29",
+        "clinicalQuestions": [],
+        "releaseToPatient": true,
+        "ccResults": ["Skarsdale"],
+        "cosign": "Skarsdale"
+      }
+    ],
+    "hasUnansweredQuestions": false
+  }
+}
