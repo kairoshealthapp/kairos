@@ -1972,6 +1972,106 @@ Stop interpreting kairoshealth.app and start copying it. Brandon owns the source
 
 ## [2026-04-29] kairos | Tour Mode polish pass — 8-fix bundle: (1) 1x speed slowed ~50% via durationMultiplier(speed) — 1x=1.5x duration, 2x=1.0x; typing animation in EncounterDetail also reads kairos-tour-speed from sessionStorage and scales intervalMs in lockstep. (2) all "Mr. {provider}" → "Dr. {provider}" — 78 total replacements (43 active fixtures + tour, 2 legacy cards.json, 33 legacy mock-encounters JSONs) across 32 files; patient prefixes (Mr Aldington, Ms Hesperdale, Mrs. Underwell, Ms Brexley, Ms Larvendel, etc.) preserved; HVC fork app/api/hvc/* untouched per scope. (3) SpotlightOverlay scrollIntoView({behavior:smooth, block:center}) before measuring; 450ms scroll-settle delay; 250ms re-measure no longer re-scrolls; pickPosition() edge-flips right→left, top→bottom etc. when bubble would clip viewport. (4) PhoneScriptPane.js → ExplanationPane.js rename; pane title "PHONE SCRIPT" → "HOW TO EXPLAIN THIS"; action button labels "Generate Phone Script" → "Generate Note + Explanation", "Generate Voicemail Variant" → "Voicemail Talking Points" (Patterns 7 + 14 in lib/patterns.js); OutputPane.js mounts ExplanationPane in lieu of PhoneScriptPane when channel=phone. (5) framing subtitle "Example explanation — adapt in your own words." rendered under pane title in italic bone-muted. (6) ephemeral chip "Not part of patient record" rendered as uppercase pill below subtitle. (7) auto-clear: handleAuthorize sets paneState.phoneScript="" before fly-off; explicit Dismiss button (top-right of ExplanationPane) wired through dismissExplanation→OutputPane→onDismiss prop, clears only the explanation pane, leaves Nurse Note + MyChart untouched. (8) Wexbury (Card 5) tour narration reframed in lib/tourScript.js: bubble titles "An example, not a script" / "Voicemail talking points" / "Channel-aware example."; bodies use "talking points" / "your own words" / "use what fits, edit what doesnt, skip what is not relevant" / "the words are yours" — zero "spoken register" / "phone script" / "read aloud" wording remains in Wexbury entry. Build clean, all 24 encounter routes SSG.
 
+## [2026-04-29] kairos | Deep Tour mode — pitch-grade narration alongside Quick Tour. Two-tier audio system with 56 new Deep MP3s. ~22 minute end-to-end Deep Tour runtime.
+
+Builds on the voice commit `c97eaf9`. Quick Tour audio unchanged (already paid for). Adds a parallel Deep Tour tier with substantially longer, pitch-grade narration covering the Epic-vs-Kairos comparison, accuracy/standardization angle, and safety surface for each of the 9 fixtures.
+
+### Two-tier narration model
+Every bubble in `lib/tourScript.js` now carries:
+- `displayText` — short on-screen headline (4-8 words). **Same across modes.**
+- `quickVoiceText` — Quick Tour narration. ~155 chars/bubble avg. Audio at `/tour-audio/{audioKey}.mp3`.
+- `deepVoiceText` — Deep Tour narration. ~335 chars/bubble avg. Audio at `/tour-audio/{audioKey}-deep.mp3`.
+- `audioKey` — stable filename root.
+
+Mode is selected at tour launch via the `kairos-tour:start` event's `detail.mode` field (`"quick"` | `"deep"`). TourMode stores the choice in `modeRef`, which `audioFileFor()` consults when constructing audio paths. Quick mode uses un-suffixed filenames so the previously-paid-for MP3s remain valid; Deep mode appends `-deep`. Generation script also writes to the suffixed path for Deep mode and skips when the file exists.
+
+### Deep narration writing — 5 beats per fixture
+Each fixture's deep voice arc lands these in order:
+1. **Clinical scenario** — patient name, age, presentation, one-sentence framing.
+2. **Epic reality** — honest, step-by-step description of how a nurse handles this card today, what the cognitive cost is, what gets missed at hour eight.
+3. **Kairos move** — what gets eliminated, what gets pre-staged, what gets drafted in place.
+4. **Accuracy/safety angle** — standardization, the "floor rises" framing, fewer missed catches, scope respect, contradiction holds.
+5. **Closer line** — the one that lands the value.
+
+Five fixtures with named anchor lines (per the audit spec):
+- Norreys: *"Some work is one-click. Some work is automatic. Kairos sorts which is which."*
+- Quennell: *"Kairos doesn't pretend to know what it can't know. The system has scope."*
+- Maundrell: *"Same INR result. Different plan. Kairos noticed. The contradiction is the output — not the reply."*
+- Underwell: *"This is what nurses do at the highest level of their license. Kairos amplifies it."*
+- Larvendel: *"You stay the nurse. Kairos just stops making you the database."*
+
+### Deep narration char counts per fixture (voiceText only, total across all bubbles in the fixture)
+| Fixture | Bubbles | Deep chars | ≈ Words |
+|---|---|---|---|
+| Aldington | 7 | ~2,400 | ~400 |
+| Wood | 5 | ~1,560 | ~260 |
+| Hesperdale | 6 | ~1,950 | ~325 |
+| Norreys | 7 | ~1,800 | ~300 |
+| Quennell | 6 | ~1,740 | ~290 |
+| Maundrell | 6 | ~2,343 | ~390 |
+| Underwell | 7 | ~2,569 | ~430 |
+| Wexbury | 6 | ~1,578 | ~265 |
+| Larvendel | 6 | ~2,038 | ~340 |
+| **Total** | **56** | **18,739** | **~3,120** |
+
+Quick narration totals across all 56 bubbles: 8,622 chars. So Deep is ~2.2× the word count.
+
+### TourLauncher — dual button
+`components/TourLauncher.js` rewritten with two side-by-side pills, equal visual weight:
+- **✨ Quick Tour** — solid amber, the default-feeling option. Tooltip: "Guided 9-card tour, ~12 minutes."
+- **Deep Tour** — graphite background with amber border, deliberately not styled as the primary CTA but visually equivalent. Tooltip: "Deep narration of all 9 cards, ~22 minutes."
+Each button dispatches `kairos-tour:start` with the chosen mode in `detail.mode`. The launcher no longer relies on the parent `onStart` prop (kept harmless in the function signature for backward compat with `app/rn/page.js` until the page is updated).
+
+### Audio generation script
+`scripts/generate-tour-audio.js` rewritten to:
+- Walk both `quickVoiceText` and `deepVoiceText` per bubble.
+- Generate to `{audioKey}.mp3` for Quick, `{audioKey}-deep.mp3` for Deep.
+- Skip files that already exist on disk (idempotent).
+- Log per-mode counts up front + a billing breakdown at the end (new chars billed this run vs. total tour cost if regenerated from scratch).
+
+The previous `voiceText` field was renamed to `quickVoiceText` throughout `lib/tourScript.js`. No content changes to Quick Tour text — same exact strings, just under the new field name.
+
+### Files touched
+| File | Δ | Change |
+|---|---|---|
+| `lib/tourScript.js` | full rewrite, ~620 lines | Renamed `voiceText` → `quickVoiceText`. Added `deepVoiceText` for every bubble. Header doc updated for two-tier model. |
+| `components/TourMode.js` | +~10 lines | New `audioFileFor()` helper. `loadAudio()` and `preloadFixtureAudio()` accept mode. `modeRef` stored on tour start from event detail. |
+| `components/TourLauncher.js` | full rewrite, 36 lines | Two-button launcher. Each dispatches `kairos-tour:start` with mode. |
+| `scripts/generate-tour-audio.js` | full rewrite, ~125 lines | Two-tier walker, idempotent skip, per-mode logging + billing breakdown. |
+| `public/tour-audio/*-deep.mp3` | NEW × 56 | Pre-generated Deep MP3s. ~16.8 MB. |
+
+### Verification
+
+**Build:** `npm run build` ✓ Compiled successfully. Same 43 routes as the prior commit. No new errors.
+
+**Audio generation:** `npm run generate-tour-audio`:
+- 112 bubbles total (56 Quick + 56 Deep audio entries).
+- 56 generated this run (Deep). 56 skipped (Quick already on disk).
+- New chars billed: **18,739**. Cost this run: **$0.2811**.
+- Total chars across both tiers: **27,357**. Total cost if regenerated from scratch: **$0.4104**.
+
+**Static-analysis checks:**
+- `ls public/tour-audio/*.mp3 | wc -l` → **112**.
+- `ls public/tour-audio/*-deep.mp3 | wc -l` → **56**.
+- Banned-phrase grep `I used | this caught | saved me | Kairos caught | Kairos remembered` over `lib/tourScript.js` → **zero hits** in both Quick and Deep narration.
+- All Deep narration uses observational/design-stage framing — sample audit: "Kairos is designed to..." × 8 occurrences, "would" × 6 occurrences (e.g. "the message Mr. Aldington would actually receive"), zero present-tense-active claims about real workflows.
+
+**Estimated tour runtime at 1× with audio ON:**
+- **Quick Tour:** 8,622 chars / ~14.5 cps ≈ 595s voice + 56×0.5s tail + ~198s fixture overhead = **~13:30 end-to-end**. Unchanged from prior commit.
+- **Deep Tour:** 18,739 chars / ~14.5 cps ≈ 1,292s voice + 56×0.5s tail + ~198s fixture overhead = **~25:18 end-to-end**. Slightly over the 20-25 min target — within tolerance for a deliberate pitch-grade depth.
+
+**What requires Brandon's eyeball:**
+- TTS pronunciation of clinical proper nouns. Spelled-out forms used in deepVoiceText for highest-risk terms: "I-N-R" (not "INR"), "T-T-E" (not "TTE"), "T-I-A", "C-T-A", "S-P-E-C-T", "S-B-A-R", "B-N-P", "H-D-L", "L-D-L", "A-S-T", "A-L-T", "H-and-H" (for H&H). "MyChart" left as-is per prior pronunciation behavior; flag if it reads wrong. "Evolent guideline seven-three-one-two" spelled out for clarity. "Coumadin Clinic" left as-is — should pronounce naturally.
+- Whether the Deep button's slightly-secondary styling (graphite bg, amber border) reads as visually equivalent to the Quick amber pill or as subordinate. Knob: bump Deep to solid amber if it reads weak.
+- Whether 25-minute Deep Tour holds attention through the back half (Underwell + Wexbury + Larvendel). The Underwell "highest license" framing and the Larvendel closer should carry the back third — but it's the longest stretch without a transition narrator break, so eyeball pacing matters.
+- Whether mid-tour mode switch is something Brandon wants. Current behavior: tour mode is set at launch and locked for the duration; there's no UI to swap modes mid-flight. Adding it would require regenerating the in-progress bubble's audio in the new mode and re-syncing dwell. Not built; flagged.
+
+### Out of scope
+- HVC fork untouched. mock-encounters untouched.
+- No git push.
+- No `playbackRate` knob for 2× speed (still flagged from voice commit — applies to both tiers).
+- NURSE-DEMO-INTRO.md "four to five minutes" line — fifth time flagged stale; with Deep Tour now an option, the line is doubly wrong.
+
 ## [2026-04-29] kairos | Three-surface platform scaffold — RN /rn, Scribe /scribe, Provider /provider. Migrated /dashboard → /rn with legacy redirect.
 
 Establishes folder ownership and URL routing for the three-role platform:
