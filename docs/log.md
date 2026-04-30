@@ -2888,3 +2888,38 @@ Suggested apply order: 3 (visual snap, lowest risk) → 2 (timing model, foundat
 - `quickVoiceText` / `displayText` fields — untouched.
 - Quick Tour MP3s — untouched.
 - Local commit only. Not pushed.
+
+## [2026-04-30 12:05a CDT] kairos-tour | Quick narration rewrite — match Deep's Epic-only baseline
+
+**Why:** The prior commit (f8fa6a2) rewrote Deep narration to describe the unaugmented Epic-only baseline, but Quick narration was left in its earlier "Kairos is designed to..." framing — short, but still adjacent to AI-tool-augmented language in places. Quick must match Deep's discipline: nurses today work from memory with no AI assist; Kairos is the contrast.
+
+**What changed:**
+- Rewrote all 56 `quickVoiceText` fields across the nine fixtures in `lib/tourScript.js`.
+- Same five-beat spine as Deep: clinical scenario → Epic-only reality → Kairos move → standardization angle → closer. Just shorter prose.
+- Observational credibility line placed in `aldington-tte-pre`: "These observations come from over a year of studying the synthesis patterns in cardiology practice." (Quick variant — Deep already has the slightly longer version.)
+- `deepVoiceText` and `displayText` fields untouched.
+
+**Forbidden-language guard:** ripgrep across `lib/tourScript.js` for `copy|paste|drafting tool|translation tool|cut and paste|chat tool` (case-insensitive, full file) — zero hits.
+
+**Audio regen:**
+- Deleted 56 Quick MP3s (un-suffixed) from `public/tour-audio/`. Deep MP3s left intact.
+- Ran `node scripts/generate-tour-audio.js` — 56 Quick generated, 56 Deep skipped (existed).
+- 11,441 chars billed at TTS-1 ($15/1M) → $0.17 incremental.
+- Total Quick narration corpus now ~11,382 chars (was ~9.5k pre-rewrite).
+- Voice: `onyx` (unchanged).
+
+**Verification:**
+- `npm run build` ✓ clean. All 43 routes generated.
+- 56/56 Quick MP3s present, 56/56 Deep MP3s untouched (file size + mtime preserved).
+
+**Spot-check — Aldington pre (Quick, first bubble):**
+> Twenty-seven unread in your Results Follow-Up box. Only nine are actually yours after you filter by provider. Most apps stop at the basket count. Kairos doesn't. These observations come from over a year of studying the synthesis patterns in cardiology practice.
+
+**Spot-check — Norreys pre (Quick):**
+> Rx Request box. Mr. Norreys had a supratherapeutic I-N-R nine days ago — Marchetti dropped his warfarin from six-point-five to six milligrams. Today he wants the refill. Most cards in this box look exactly like this — same rule, fifty times a shift.
+
+**Scope discipline:**
+- `firekraker-monorepo/` — untouched.
+- `app/api/hvc/*` — untouched.
+- `deepVoiceText` / `displayText` fields — untouched.
+- Deep MP3s — untouched.
