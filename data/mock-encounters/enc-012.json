@@ -1,0 +1,45 @@
+{
+  "id": "enc-012",
+  "patternId": 12,
+  "patternName": "SCOPE-CONSTRAINED PATIENT QUESTION",
+  "urgency": "calm",
+  "sourceChannel": "mychart",
+  "sourceBox": "pt-advice",
+  "mychartStatus": "active",
+  "tab": "advice",
+  "receivedAt": "2026-04-29T15:44:00Z",
+  "investigationState": "REPLY_RECEIVED",
+  "patient": {
+    "name": "Quennell, Cordelia",
+    "displayName": "Cordelia Quennell",
+    "age": 64,
+    "sex": "F",
+    "dob": "1962-09-10",
+    "mrn": "55738201",
+    "proxyName": null
+  },
+  "source": {
+    "title": "Pt Advice (clarification received): re: H&H elevation",
+    "sender": "Patient (via MyChart)",
+    "receivedAt": "2026-04-29 10:44",
+    "body": "Original message: \"Could this cause low blood pressure?\"\n\nClarification (after nurse asked what \"this\" referred to): \"I meant the elevated H&H you mentioned in your message about my labs from earlier. Sorry I wasn't clear.\""
+  },
+  "nurseNote": "Patient asked vague follow-up to earlier multi-lab Result Note (H&H mildly elevated, hematology referral placed). Vague-question classifier triggered clarification subroutine; patient confirmed reference is to H&H elevation.\n\nScope-respecting answer drafted: cardiology RN scope is the cardiology workup, not interpreting hematologic effects on BP. Reply directs patient to bring this question to the hematology referral visit, with a calm reassurance that current cardiology medications are unchanged.",
+  "output": {
+    "channel": "mychart",
+    "mychart": {
+      "recipient": "Cordelia Quennell",
+      "proxyName": null,
+      "subject": "Re: your question about H&H",
+      "notifyBy": "2026-05-02",
+      "repliesAllowed": "Replies allowed; nurse on alert",
+      "greeting": "Ms Quennell,",
+      "body": "Thanks for clarifying — you are asking about the elevated H&H result.\n\nThat question is best answered by the hematology specialist Dr. Loxley referred you to. They will review your full blood count history and explain how it might or might not affect your blood pressure or other symptoms. We will not change any of your cardiology medications based on this lab alone.\n\nIf you have not heard from hematology scheduling within the next week, let us know and we will help nudge things along.\n\nBrandon Sterne, RN BSN / Heart and Vascular Clinic"
+    }
+  },
+  "orderPad": {
+    "orders": [],
+    "hasUnansweredQuestions": false,
+    "note": "Pattern 12 — no orders fire from this card."
+  }
+}

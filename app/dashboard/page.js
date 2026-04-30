@@ -1,77 +1,59 @@
-// Phase 3.2-fix5 + fix6 — kairoshealth.app panel chrome wrapping HVC clinical data.
-//
-// fix6 changes:
-//   #1 — equal-height cards (handled in PatientCard via h-full + flex flex-col;
-//        CSS Grid auto-stretches cells to the tallest card in the row)
-//   #3 — full Nav layout ported from firekraker-monorepo/kairos/components/Nav.js
-//        (wordmark left, 6 category tabs, "Take the tour" pill, identity right
-//        with cog). Mobile fallback strip below. Scroll-active-into-view on
-//        mobile preserved from source.
-//
-// Per fix5 decisions:
-//   • Client component (useState for activeTab + selectedCardId).
-//   • Nav lives here, not in AppChrome — uses negative margins to escape
-//     AppChrome's `<main className="max-w-[1400px] mx-auto px-6 py-8">` so the
-//     header border-b spans the full main-width seam.
-//   • TourOverlay was dropped in fix5 — the "Take the tour" button stays
-//     visible per fix6 spec, but its onClick is a no-op (logs intent).
-//   • HVC chat wiring + opening a card to a detail view = Phase 3.3.
+// Phase 3.2-fix5 + fix6 + Phase 3.3 — kairoshealth.app panel chrome
+// wrapping the 14-pattern fixture set. Card click → /encounter/{id} with
+// tab state preserved via ?tab=. Authorized cards are filtered out of the
+// dashboard via sessionStorage between visits.
 
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import cards from "@/data/mock-queue/cards.json";
+import { listFixtures } from "@/data/fixtures/encounters";
 import PatientCard from "@/components/PatientCard";
+import TourLauncher from "@/components/TourLauncher";
 
 const TABS = [
   { key: "notify", label: "NOTIFY" },
   { key: "refill", label: "REFILL" },
   { key: "triage", label: "TRIAGE" },
   { key: "advice", label: "ADVICE" },
-  { key: "inr",    label: "INR" },
-  { key: "other",  label: "OTHER" },
+  { key: "inr", label: "INR" },
+  { key: "other", label: "OTHER" },
 ];
 
 const PRIMARY_TYPES = new Set(["notify", "refill", "triage", "advice", "inr"]);
+const STORAGE_KEY = "kairos.authorizedCards.v1";
 
 function categoryFor(card) {
-  return PRIMARY_TYPES.has(card.type) ? card.type : "other";
+  return PRIMARY_TYPES.has(card.tab) ? card.tab : "other";
 }
 
-function ageFromDOB(dob) {
-  if (!dob) return "";
-  const birth = new Date(dob);
-  if (isNaN(birth.getTime())) return "";
-  const now = new Date();
-  let age = now.getFullYear() - birth.getFullYear();
-  const m = now.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
-  return age;
-}
-
-function adaptPatient(card) {
+function adaptPatient(fixture) {
+  const p = fixture.patient || {};
+  const sev =
+    fixture.urgency === "high"
+      ? "red"
+      : fixture.card && fixture.card.severity
+      ? fixture.card.severity
+      : "green";
   return {
-    id: card.id,
-    name: card.patient.name,
-    age: ageFromDOB(card.patient.dob),
-    sex: "",
-    severity: card.urgency_signal === "red" ? "red" : "green",
-    reasonForColumn: card.message?.subject || "",
-    issueLine: card.message?.subject || "",
+    id: fixture.id,
+    name: p.displayName || p.name,
+    age: p.age || "",
+    sex: p.sex || "",
+    severity: sev,
+    reasonForColumn: (fixture.card && fixture.card.subject) || "",
+    issueLine: (fixture.card && fixture.card.subject) || "",
   };
 }
 
 function sortInTab(list) {
   return [...list].sort((a, b) => {
     const u =
-      (a.urgency_signal === "red" ? 0 : 1) -
-      (b.urgency_signal === "red" ? 0 : 1);
+      (a.urgency === "high" ? 0 : 1) - (b.urgency === "high" ? 0 : 1);
     if (u !== 0) return u;
-    return new Date(a.received_at) - new Date(b.received_at);
+    return new Date(a.receivedAt || 0) - new Date(b.receivedAt || 0);
   });
 }
 
-// Settings cog SVG matches firekraker-monorepo/kairos/components/Nav.js verbatim.
 function CogIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -82,29 +64,61 @@ function CogIcon() {
 }
 
 function startTour() {
-  // No-op for now — TourOverlay was dropped in fix5 #7. Phase 3.3+ may wire
-  // an actual product tour. Keeping the button visible per fix6 #3 spec.
-  // eslint-disable-next-line no-console
-  console.log("tour pending — TourOverlay not ported");
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("kairos-tour:start"));
+  }
+}
+
+function readAuthorized() {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return new Set();
+    return new Set(JSON.parse(raw));
+  } catch {
+    return new Set();
+  }
 }
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("notify");
-  const [selectedId, setSelectedId] = useState(null);
+  const [authorized, setAuthorized] = useState(() => new Set());
   const mobileNavRef = useRef(null);
+
+  // On mount: pick up ?tab= from the URL (preserves dashboard tab when the
+  // user navigates back from the encounter detail route). Reading via
+  // window.location avoids the Suspense boundary required for useSearchParams
+  // during static export.
+  useEffect(() => {
+    setAuthorized(readAuthorized());
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const t = params.get("tab");
+      if (t) setActiveTab(t);
+    }
+    const onFocus = () => setAuthorized(readAuthorized());
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+  }, []);
+
+  const visibleFixtures = useMemo(() => {
+    return listFixtures().filter((f) => !authorized.has(f.id));
+  }, [authorized]);
 
   const counts = useMemo(() => {
     const c = { notify: 0, refill: 0, triage: 0, advice: 0, inr: 0, other: 0 };
-    for (const card of cards) c[categoryFor(card)]++;
+    for (const f of visibleFixtures) c[categoryFor(f)]++;
     return c;
-  }, []);
+  }, [visibleFixtures]);
 
   const visibleCards = useMemo(() => {
-    return sortInTab(cards.filter((c) => categoryFor(c) === activeTab));
-  }, [activeTab]);
+    return sortInTab(visibleFixtures.filter((f) => categoryFor(f) === activeTab));
+  }, [visibleFixtures, activeTab]);
 
-  // Scroll the active tab into view inside the mobile scrollable strip.
-  // Ported from source Nav.js — only fires when the active key changes.
   useEffect(() => {
     const container = mobileNavRef.current;
     if (!container) return;
@@ -116,27 +130,16 @@ export default function DashboardPage() {
   function selectTab(key) {
     if (activeTab === key) return;
     setActiveTab(key);
-    setSelectedId(null);
-  }
-
-  function toggleSelect(id) {
-    setSelectedId((prev) => (prev === id ? null : id));
   }
 
   return (
     <>
-      {/* Header strip — wordmark + tabs + tour + identity. Negative margins
-          escape AppChrome's <main> padding (px-6 py-8) so the border-b spans
-          the main width. */}
       <header className="border-b border-mist/60 -mx-6 -mt-8 mb-8">
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6">
-          {/* TOP ROW — wordmark + (desktop nav inline) + identity */}
           <div className="h-14 flex items-center gap-3 sm:gap-8 justify-between sm:justify-start">
             <span className="kairos-display text-bone text-xl tracking-tightest shrink-0">
               Kairos
             </span>
-
-            {/* Desktop nav — inline alongside wordmark (>=sm) */}
             <nav className="hidden sm:flex items-center gap-1 ml-4">
               {TABS.map((tab) => {
                 const active = activeTab === tab.key;
@@ -161,16 +164,10 @@ export default function DashboardPage() {
                   </button>
                 );
               })}
-              <button
-                type="button"
-                onClick={startTour}
-                className="ml-2 text-[12px] font-semibold text-graphite bg-amber hover:bg-amber/90 px-3 py-1.5 rounded-full transition-colors whitespace-nowrap"
-              >
-                Take the tour
-              </button>
+              <span className="ml-2">
+                <TourLauncher onStart={startTour} />
+              </span>
             </nav>
-
-            {/* Identity — name hidden on mobile, cog kept */}
             <div className="ml-auto flex items-center gap-3 text-[12px] shrink-0">
               <span className="hidden sm:inline text-bone-muted">Brandon S., RN BSN</span>
               <button
@@ -182,8 +179,6 @@ export default function DashboardPage() {
               </button>
             </div>
           </div>
-
-          {/* MOBILE NAV ROW — horizontally scrollable tab strip (<sm only) */}
           <nav
             ref={mobileNavRef}
             className="sm:hidden flex items-center gap-1 -mx-4 px-4 pb-2 overflow-x-auto"
@@ -214,18 +209,13 @@ export default function DashboardPage() {
                 </button>
               );
             })}
-            <button
-              type="button"
-              onClick={startTour}
-              className="ml-1 shrink-0 text-[12px] font-semibold text-graphite bg-amber hover:bg-amber/90 px-3 py-1 rounded-full transition-colors whitespace-nowrap"
-            >
-              Take the tour
-            </button>
+            <span className="ml-1 shrink-0">
+              <TourLauncher onStart={startTour} />
+            </span>
           </nav>
         </div>
       </header>
 
-      {/* 4-col card grid — matches source panel/page.js workspace. */}
       {visibleCards.length === 0 ? (
         <div className="text-[13px] text-bone-muted/70 italic">
           None today in this basket.
@@ -235,12 +225,12 @@ export default function DashboardPage() {
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 kairos-stagger"
           key={activeTab}
         >
-          {visibleCards.map((card) => (
+          {visibleCards.map((f) => (
             <PatientCard
-              key={card.id}
-              patient={adaptPatient(card)}
-              isSelected={selectedId === card.id}
-              onSelect={() => toggleSelect(card.id)}
+              key={f.id}
+              patient={adaptPatient(f)}
+              label={f.card && f.card.kicker}
+              fromTab={activeTab}
             />
           ))}
         </section>

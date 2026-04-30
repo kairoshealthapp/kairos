@@ -1,0 +1,45 @@
+{
+  "id": "enc-008",
+  "patternId": 8,
+  "patternName": "CONTRADICTION",
+  "urgency": "calm",
+  "sourceChannel": "mychart",
+  "sourceBox": "pt-advice",
+  "mychartStatus": "active",
+  "tab": "advice",
+  "receivedAt": "2026-04-29T13:52:00Z",
+  "investigationState": "HOLD",
+  "patient": {
+    "name": "Maundrell, Reginald",
+    "displayName": "Reginald Maundrell",
+    "age": 74,
+    "sex": "M",
+    "dob": "1951-12-04",
+    "mrn": "82110649",
+    "proxyName": null
+  },
+  "source": {
+    "title": "Pt Advice Reply (re: INR overdue template sent 4/24)",
+    "sender": "Patient (via MyChart)",
+    "receivedAt": "2026-04-29 08:52",
+    "body": "\"Dr. M told me to be taking only the other two medications and also said I don't have to take the blood test anymore.\""
+  },
+  "nurseNote": "Patient replied to outbound INR overdue MyChart template (sent 4/24). Patient states Dr. M (Marchetti) told him to discontinue warfarin and INR monitoring. CHART CONTRADICTION: med list still shows active warfarin, no recent provider note documenting discontinuation. Cannot resolve from chart alone.\n\nForwarded to Marchetti for verification. NO autonomous action. Patient response on hold pending provider confirmation.",
+  "output": {
+    "channel": "mychart",
+    "mychart": {
+      "recipient": "Reginald Maundrell",
+      "proxyName": null,
+      "subject": null,
+      "notifyBy": null,
+      "repliesAllowed": null,
+      "greeting": null,
+      "body": "[OUTBOUND PATIENT REPLY HELD until provider confirms warfarin discontinuation. Card surfaces verify-upstream stub only — no autonomous resolution. See ActionBar → Forward to Provider.]"
+    }
+  },
+  "orderPad": {
+    "orders": [],
+    "hasUnansweredQuestions": false,
+    "note": "Pattern 8 CONTRADICTION — clinical safety hold. No orders fire from this card; only Forward-to-Provider action."
+  }
+}

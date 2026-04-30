@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local-only name-scrub mapping references — never commit
+docs/.name-scrub-mapping-*.md
