@@ -1972,6 +1972,102 @@ Stop interpreting kairoshealth.app and start copying it. Brandon owns the source
 
 ## [2026-04-29] kairos | Tour Mode polish pass — 8-fix bundle: (1) 1x speed slowed ~50% via durationMultiplier(speed) — 1x=1.5x duration, 2x=1.0x; typing animation in EncounterDetail also reads kairos-tour-speed from sessionStorage and scales intervalMs in lockstep. (2) all "Mr. {provider}" → "Dr. {provider}" — 78 total replacements (43 active fixtures + tour, 2 legacy cards.json, 33 legacy mock-encounters JSONs) across 32 files; patient prefixes (Mr Aldington, Ms Calderwood, Mrs. Underwell, Ms Brexley, Ms Vanstone, etc.) preserved; HVC fork app/api/hvc/* untouched per scope. (3) SpotlightOverlay scrollIntoView({behavior:smooth, block:center}) before measuring; 450ms scroll-settle delay; 250ms re-measure no longer re-scrolls; pickPosition() edge-flips right→left, top→bottom etc. when bubble would clip viewport. (4) PhoneScriptPane.js → ExplanationPane.js rename; pane title "PHONE SCRIPT" → "HOW TO EXPLAIN THIS"; action button labels "Generate Phone Script" → "Generate Note + Explanation", "Generate Voicemail Variant" → "Voicemail Talking Points" (Patterns 7 + 14 in lib/patterns.js); OutputPane.js mounts ExplanationPane in lieu of PhoneScriptPane when channel=phone. (5) framing subtitle "Example explanation — adapt in your own words." rendered under pane title in italic bone-muted. (6) ephemeral chip "Not part of patient record" rendered as uppercase pill below subtitle. (7) auto-clear: handleAuthorize sets paneState.phoneScript="" before fly-off; explicit Dismiss button (top-right of ExplanationPane) wired through dismissExplanation→OutputPane→onDismiss prop, clears only the explanation pane, leaves Nurse Note + MyChart untouched. (8) Wexbury (Card 5) tour narration reframed in lib/tourScript.js: bubble titles "An example, not a script" / "Voicemail talking points" / "Channel-aware example."; bodies use "talking points" / "your own words" / "use what fits, edit what doesnt, skip what is not relevant" / "the words are yours" — zero "spoken register" / "phone script" / "read aloud" wording remains in Wexbury entry. Build clean, all 24 encounter routes SSG.
 
+## [2026-04-29] kairos | Tour expanded to 9-fixture deck with full 6-category coverage. Promoted norreys/quennell/maundrell from skeleton to fully scripted and wired into the tour route between Calderwood and Underwell.
+
+Builds on the demo-blocker patch (commit 58245a7 — P1–P4 audit fixes). This commit adds three fixtures and re-orders the tail of the tour. P1–P4 already in HEAD before this commit; nothing in this commit re-touches them.
+
+### What landed in this commit
+
+**Three skeleton fixtures promoted to fully scripted** (each was `actionScripts: {}` before):
+| Fixture | Pattern | Action | Lines before → after |
+|---|---|---|---|
+| `norreys-transactional` | P9 TRANSACTIONAL REPLY | `generate-reply` | 53 → 99 |
+| `quennell-scope` | P12 SCOPE-CONSTRAINED | `generate-scope-respecting-reply` | 56 → 84 |
+| `maundrell-contradiction` | P8 CONTRADICTION | `forward-to-provider` | 54 → 76 |
+
+Each fixture follows the aldington-tte / calderwood-crestor template: `state-transition` → `banner` → `pane-update` (typing animation, ~70-80 cps) → `state-transition`. Clinical content is design-stage — accuracy is plausible-clinical-pattern, not production-prescriptive.
+
+- **Norreys (P9 — REFILL):** Rx Request rule check (last visit + future appointment + active dx) → standard nurse-note documentation + brief MyChart confirmation + refill order pre-staged (90 days, 3 refills, Marchetti cosign). Demonstrates the "boring case" — protocol, not synthesis.
+- **Quennell (P12 — ADVICE/SCOPE):** Vague-reference classifier already triggered on prior round; this card draws the scope-respecting reply. Cardiology RN scope is the cardiology workup; H&H↔BP belongs to hematology. Reply redirects to existing hematology referral. No order-pad output.
+- **Maundrell (P8 — CONTRADICTION):** Patient says Dr. M discontinued warfarin; chart still shows it active. Red banner → contradiction documented in nurse-note → forwarded to Marchetti. **No autonomous MyChart reply** (Pattern 8 holds patient-facing output until provider confirms).
+
+**Tour route expanded to 9 fixtures.** New order (in `lib/tourScript.js`):
+
+| Slot | Fixture | Pattern | Category |
+|---|---|---|---|
+| 1 | aldington-tte | P2 | NOTIFY |
+| 2 | wood-lipid | P1 | NOTIFY |
+| 3 | calderwood-crestor | P4 | NOTIFY |
+| 4 | norreys-transactional | P9 | **REFILL** *(NEW slot)* |
+| 5 | quennell-scope | P12 | **ADVICE** *(NEW slot)* |
+| 6 | maundrell-contradiction | P8 | **INR** *(NEW slot)* |
+| 7 | underwell-full-lifecycle | P7b | TRIAGE |
+| 8 | wexbury-phone | P14 | NOTIFY phone variant |
+| 9 | vanstone-denial-cascade | P13 | OTHER |
+
+All 18 "Card N of N" strings (9 progressLabels + 9 preArrivalNarrator titles) renumbered to "of 9." Header comment updated `9 fixtures, scripted in order`. `TOUR_SCRIPT.length` is the source of truth for total count, so NarratorCorner / TourEndModal pick up the change automatically.
+
+**Transitions rewired to match new neighbor order:**
+- Calderwood → Norreys: `"Now a different gear. A refill request the system can resolve from a rule, not a synthesis. Some work is automatic."`
+- Norreys → Quennell: `"Now a patient asks something Kairos can't safely answer alone. Watch what it does instead."`
+- Quennell → Maundrell: `"Now a patient statement that contradicts the chart. Watch what gets drafted — and what doesn't."`
+- Maundrell → Underwell: `"Now multi-stage. A patient called with chest symptoms. This is a two-hour clinical investigation, condensed."` *(reused the prior post-Brexley-cut Wexbury→Underwell transition wording)*
+- Underwell → Wexbury: `"Now something different — a patient with no MyChart. Watch what changes."` *(reused prior Calderwood→Wexbury transition)*
+- Wexbury → Vanstone: `"One more. The closer."` *(moved from prior Underwell→Vanstone position)*
+- Vanstone → null *(last fixture, hands off to TourEndModal — closer "That's Kairos. You already do all of this. Kairos doesn't replace you — it stops making you the database." preserved)*
+
+**Per-fixture closer lines (per audit narrative anchor):**
+- Norreys onAuthorize: `"Some work is one-click. Some work is automatic. Kairos is designed to sort which is which — so the nurse only sees what actually needs a nurse."`
+- Quennell onAuthorize: `"Kairos doesn't pretend to know what it can't know. The system is designed to recognize scope and route accordingly."`
+- Maundrell onAuthorize: `"Same INR result. Different plan. Kairos noticed. The contradiction is the output — not the reply."`
+
+### Files touched (4 + this log entry)
+| File | Δ lines | Change |
+|---|---|---|
+| `data/fixtures/encounters/norreys-transactional.js` | +46 | Promoted from skeleton: `generate-reply` actionScript with 6-event sequence (state, banner, nurse-note typing, mychart typing, banner, order-pad instant). |
+| `data/fixtures/encounters/quennell-scope.js` | +28 | Promoted from skeleton: `generate-scope-respecting-reply` actionScript with 5-event sequence (state, banner, nurse-note typing, mychart typing, banner). |
+| `data/fixtures/encounters/maundrell-contradiction.js` | +22 | Promoted from skeleton: `forward-to-provider` actionScript with 4-event sequence (state, red banner, nurse-note typing, red banner). No mychart pane-update — Pattern 8 holds. |
+| `lib/tourScript.js` | +210/−4 (net +206) | 3 new fixture entries inserted between Calderwood and the (formerly-Wexbury, now-Underwell) slot. Underwell + Wexbury physically swapped in array order so Underwell precedes Wexbury. All 18 "Card N of N" strings renumbered to /9. 7 transitionNarrator bodies rewired. Header comment 6→9. |
+
+### Verification
+
+**Build:** `npm run build` ✓ Compiled successfully. 39/39 static pages, 24 encounter routes (24 unchanged — brexley-statin still SSG'd as a standalone dashboard fixture, just absent from the tour route).
+
+**Static-analysis checks:**
+- `grep "fixtureId:" lib/tourScript.js | wc -l` → **9**
+- `grep "Card .* of " lib/tourScript.js` → all 18 hits read "of 9". No "of 6" or "of 7" remnants.
+- Banned-phrase grep across `lib/tourScript.js` for `I used | this caught | saved me | in my clinic | Kairos caught | I clocked | I worked through` → **zero hits.**
+- `grep "brexley-statin" lib/tourScript.js` → **zero hits** in tour route.
+- Fixture-comment numbering in tourScript.js: FIXTURE 1 (Aldington) → FIXTURE 2 (Wood) → FIXTURE 3 (Calderwood) → FIXTURE 4 (Norreys) → FIXTURE 5 (Quennell) → FIXTURE 6 (Maundrell) → FIXTURE 7 (Underwell) → FIXTURE 8 (Wexbury) → FIXTURE 9 (Vanstone). Sequential, no gaps.
+- `pattern.actionButtons` for P8/P9/P12 confirmed in `lib/patterns.js`. `ActionBar.js` resolves buttons via `pattern.actionButtons` (pattern.js is the source of truth) so the new actionIds (`generate-reply`, `generate-scope-respecting-reply`, `forward-to-provider`) wire automatically into both the tour's `auto-action` event and the manual click path.
+- `simulationDataSource.runAction(cardId, actionId)` looks up `fixture.actionScripts[actionId]` generically — confirmed all three new fixtures have their respective actionId keys defined.
+
+**Estimated tour runtime at 1× (length-aware dwell from P2):**
+
+| Block | Narration | Per-fixture w/ overhead |
+|---|---|---|
+| Slots 1–3 (Aldington/Wood/Calderwood) — unchanged from prior commit | ~171s | ~237s |
+| Slot 4 Norreys (NEW) | ~78s | ~95s |
+| Slot 5 Quennell (NEW) | ~69s | ~91s |
+| Slot 6 Maundrell (NEW) | ~68s | ~90s |
+| Slots 7–9 (Underwell/Wexbury/Vanstone) — unchanged content | ~195s | ~256s |
+| **Total** | **~581s narration** | **~769s ≈ 12:30–13:00** |
+
+**Tour runtime estimate at 1× speed: ~12:30–13:00 end-to-end.** That's ~4:30 longer than the prior 6-fixture build. At 2× toggle (60% of base, length-aware): ~7:45–8:00. The "four to five minutes" copy in NURSE-DEMO-INTRO.md is now firmly stale; flagged again, not auto-edited.
+
+**What I could NOT verify without playing the tour:**
+- Whether the 3 new fixtures' typing animations land cleanly with the spotlight bubbles. EncounterDetail's `kairos-encounter:action-complete` event fires after the action stream drains; bubble dwell starts after typing finishes; opacity gate from P3 should keep the bubble invisible until anchor measures. Wired correctly per code path inspection but needs eyeball.
+- Whether Pattern 8 (Maundrell) renders the OutputPane area cleanly when no `mychart` pane-update fires — the bubble anchored to `output-pane` will appear over an empty/held MyChart panel. If the panel renders awkwardly empty, fall back: re-anchor that bubble to `nurse-note` and merge it into the prior beat (one-line edit).
+- Whether the Norreys order-pad pane renders for Pattern 9 (`pattern.panes` lists `["source", "nurseNote", "mychart"]` — no orderPad). If the order-pad doesn't render visually, the bubble narration ("90 days, 3 refills, standard dx, Marchetti cosign") still describes the order conceptually, but the spotlight has no orderPad anchor. If this is broken, easiest fix is to add `"orderPad"` to Pattern 9's panes in `lib/patterns.js` (1 line) — Pattern 9's morning-session description does include an auto-staged refill, so the rendered surface should include it.
+- Whether the new Maundrell red banner reads as "the system is being safe" rather than "the AI broke" — the audit-spec'd reframe avoided the Brexley failure-mode framing entirely; visual confirmation needed that the red banner copy reads as intentional safety hold, not error.
+
+### Out of scope
+- HVC fork (`app/api/hvc/*`) untouched.
+- `mock-encounters/brexley-statin.json` untouched — Brexley still loads on direct URL hit.
+- No Phase 3.4 work (live HVC wiring, edit telemetry).
+- No git push.
+- NURSE-DEMO-INTRO.md "four to five minutes" line — flagged stale, not auto-edited.
+
 ## [2026-04-29] kairos | Demo-blocker patch applied — framing reframes + Brexley cut + length-aware dwell + opacity gate + Aldington MyChart fix.
 
 Implements the fixes spec'd in the audit entry directly below. All four problems addressed in a single patch landing on `main` ahead of tomorrow's nurse demo at Phelps.
