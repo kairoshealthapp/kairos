@@ -190,13 +190,18 @@ export default function SpotlightOverlay({ anchor, position, title, body, onDism
         )}
       </svg>
 
-      {/* Bubble */}
+      {/* Bubble — held at opacity 0 until anchor rect resolves so the bubble
+          never flashes at the default (24,24) position before the page has
+          finished scrolling the anchor into view. */}
       <div
         className="absolute kairos-card p-4 shadow-2xl"
         style={{
           width: BUBBLE_W,
           left: bubbleStyle.left,
           top: bubbleStyle.top,
+          opacity: rect ? 1 : 0,
+          transition: "opacity 180ms ease-out",
+          pointerEvents: rect ? "auto" : "none",
           background: "var(--color-platinum)",
           borderColor: "var(--color-amber)",
           borderWidth: 1,

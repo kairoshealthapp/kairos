@@ -75,21 +75,33 @@ export default function TourMode() {
   const [paused, setPausedState] = useState(false);
   const [showEndModal, setShowEndModal] = useState(false);
 
-  // Speed multiplier:
-  //   1x (default) → 1.5× duration  (slower — for nurses to actually read bubbles)
-  //   2x           → 1.0× duration  (roughly the previous 1x feel)
-  function durationMultiplier(speed) {
-    return speed === 2 ? 1.0 : 1.5;
+  // Length-aware dwell:
+  //   base = max(authored durationMs, 1500 + chars × 50)
+  //   floor 3500ms, ceiling 16000ms
+  //   speed=2 trims to 60% of base for a faster pass that still scales with length
+  const READ_BASE_MS = 1500;
+  const READ_PER_CHAR_MS = 50;
+  const DWELL_FLOOR_MS = 3500;
+  const DWELL_CEILING_MS = 16000;
+
+  function computeDwell(data, speed) {
+    if (!data) return DWELL_FLOOR_MS;
+    const text = `${data.title || ""} ${data.body || ""}`.trim();
+    const chars = text.length;
+    const lengthAware = READ_BASE_MS + chars * READ_PER_CHAR_MS;
+    const authored = data.durationMs || 4000;
+    const base = Math.max(authored, lengthAware);
+    const adjusted = speed === 2 ? base * 0.6 : base;
+    return Math.max(DWELL_FLOOR_MS, Math.min(DWELL_CEILING_MS, adjusted));
   }
 
-  // pause-aware wait
+  // pause-aware wait — caller passes the already-computed dwell ms.
   const pwait = useCallback(async (ms) => {
-    const adjusted = ms * durationMultiplier(speedRef.current);
     let elapsed = 0;
-    while (elapsed < adjusted) {
+    while (elapsed < ms) {
       if (cancelledRef.current) return;
       if (!pausedRef.current) {
-        const slice = Math.min(40, adjusted - elapsed);
+        const slice = Math.min(40, ms - elapsed);
         await sleep(slice);
         elapsed += slice;
       } else {
@@ -102,7 +114,7 @@ export default function TourMode() {
     async (data, total) => {
       if (!data) return;
       setOverlay({ kind: "narrator", data, total });
-      await pwait(data.durationMs || 4000);
+      await pwait(computeDwell(data, speedRef.current));
       if (cancelledRef.current) return;
     },
     [pwait]
@@ -112,7 +124,7 @@ export default function TourMode() {
     async (data) => {
       if (!data) return;
       setOverlay({ kind: "spotlight", data });
-      await pwait(data.durationMs || 5000);
+      await pwait(computeDwell(data, speedRef.current));
       if (cancelledRef.current) return;
     },
     [pwait]
@@ -156,7 +168,7 @@ export default function TourMode() {
               if (cur && cur.data === ann) return null;
               return cur;
             });
-          }, (ann.durationMs || 5000) * durationMultiplier(speedRef.current));
+          }, computeDwell(ann, speedRef.current));
         }
       }
       window.addEventListener("kairos-encounter:banner", bannerHandler);
@@ -195,7 +207,7 @@ export default function TourMode() {
       runningRef.current = true;
       cancelledRef.current = false;
 
-      // Backup current authorized list and clear so all 7 cards present.
+      // Backup current authorized list and clear so all 6 cards present.
       const cur = sessionStorage.getItem(AUTH_KEY);
       sessionStorage.setItem(BACKUP_KEY, cur || "[]");
       sessionStorage.removeItem(AUTH_KEY);

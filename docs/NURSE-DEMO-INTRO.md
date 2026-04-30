@@ -16,7 +16,7 @@ And the counts lie. The sidebar says **27/31** in Results Follow-Up. Nine of tho
 
 ## What you're about to see
 
-Seven cards. Each one is a real pattern I worked through on shift this week — a results follow-up with a new TTE order, a statin dose change, a denial cascade across eight days, a phone-only echo result, a CPAP DME packet, a pre-call structured inquiry, a coordination thread that started in Secure Chat. Things you'll recognize.
+Six cards. Each one is a real pattern I observed on shift this week — a results follow-up with a new TTE order, a lipid-panel education message, a Crestor dose change, a phone-only echo result, a multi-stage callback investigation, and a denial cascade across eight days. Things you'll recognize.
 
 The tour auto-plays. You don't have to do anything but watch. End-to-end it runs about four to five minutes.
 
