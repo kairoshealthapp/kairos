@@ -529,6 +529,7 @@ export default function TourMode() {
       sessionStorage.setItem(AUTH_KEY, backup);
       sessionStorage.removeItem(BACKUP_KEY);
     }
+    window.dispatchEvent(new CustomEvent("kairos-tour:end"));
     router.push("/rn");
   }, [router, stopAudio]);
 
@@ -550,6 +551,7 @@ export default function TourMode() {
     sessionStorage.removeItem("kairos-tour-speed");
     // Do NOT restore the backup — leave all 9 fixtures unauthorized for play.
     sessionStorage.removeItem(BACKUP_KEY);
+    window.dispatchEvent(new CustomEvent("kairos-tour:end"));
     router.push("/rn");
   }, [router, stopAudio]);
 
