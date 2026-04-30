@@ -26,8 +26,69 @@ import TourEndModal from "./TourEndModal";
 const AUTH_KEY = "kairos.authorizedCards.v1";
 const BACKUP_KEY = "kairos.tour.authorizedBackup";
 const ACTIVE_KEY = "kairos-tour-active";
+const MUTED_KEY = "kairos.tour.muted";
+const AUDIO_BASE = "/tour-audio/";
+const AUDIO_TAIL_BUFFER_MS = 500;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Load an audio element and wait for its metadata so we know duration.
+// Resolves to the Audio element on success, or null on failure/timeout.
+function loadAudio(audioKey) {
+  if (!audioKey || typeof window === "undefined") return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const audio = new Audio(AUDIO_BASE + audioKey + ".mp3");
+    audio.preload = "auto";
+    let settled = false;
+    function done(value) {
+      if (settled) return;
+      settled = true;
+      audio.removeEventListener("loadedmetadata", onMeta);
+      audio.removeEventListener("canplaythrough", onMeta);
+      audio.removeEventListener("error", onErr);
+      resolve(value);
+    }
+    function onMeta() {
+      if (Number.isFinite(audio.duration) && audio.duration > 0) done(audio);
+    }
+    function onErr() {
+      done(null);
+    }
+    audio.addEventListener("loadedmetadata", onMeta);
+    audio.addEventListener("canplaythrough", onMeta);
+    audio.addEventListener("error", onErr);
+    audio.load();
+    setTimeout(() => done(null), 4000);
+  });
+}
+
+// Walk a fixture's bubble graph and yield every audioKey we'd need.
+function* walkFixtureAudioKeys(fx) {
+  if (!fx) return;
+  if (fx.preArrivalNarrator && fx.preArrivalNarrator.audioKey) yield fx.preArrivalNarrator.audioKey;
+  if (fx.onArrival && fx.onArrival.audioKey) yield fx.onArrival.audioKey;
+  for (const action of fx.actions || []) {
+    for (const ann of action.annotations || []) {
+      if (ann.audioKey) yield ann.audioKey;
+    }
+  }
+  if (fx.onAuthorize && fx.onAuthorize.audioKey) yield fx.onAuthorize.audioKey;
+  if (fx.transitionNarrator && fx.transitionNarrator.audioKey) yield fx.transitionNarrator.audioKey;
+}
+
+// Fire-and-forget preload of upcoming fixture audio so playback is gapless.
+function preloadFixtureAudio(fx) {
+  if (typeof window === "undefined" || !fx) return;
+  for (const key of walkFixtureAudioKeys(fx)) {
+    try {
+      const a = new Audio(AUDIO_BASE + key + ".mp3");
+      a.preload = "auto";
+      a.load();
+    } catch (e) {
+      // ignore
+    }
+  }
+}
 
 // Wait for a window CustomEvent. Optionally filter by detail predicate.
 function waitForEvent(name, predicate, cancelledRef) {
@@ -64,7 +125,9 @@ export default function TourMode() {
   const cancelledRef = useRef(false);
   const pausedRef = useRef(false);
   const speedRef = useRef(1);
+  const mutedRef = useRef(false);
   const runningRef = useRef(false);
+  const audioRef = useRef(null);
 
   // state (drives render)
   const [active, setActive] = useState(false);
@@ -73,6 +136,7 @@ export default function TourMode() {
   const [progressLabel, setProgressLabel] = useState("");
   const [speed, setSpeedState] = useState(1);
   const [paused, setPausedState] = useState(false);
+  const [muted, setMutedState] = useState(false);
   const [showEndModal, setShowEndModal] = useState(false);
 
   // Length-aware dwell:
@@ -110,24 +174,66 @@ export default function TourMode() {
     }
   }, []);
 
+  // Stop any playing bubble audio without resetting global state.
+  const stopAudio = useCallback(() => {
+    const a = audioRef.current;
+    if (a) {
+      try {
+        a.pause();
+      } catch (e) {
+        // ignore
+      }
+      audioRef.current = null;
+    }
+  }, []);
+
+  // Compute the dwell time for a bubble. Prefers audio.duration when an MP3
+  // exists for the bubble's audioKey; falls back to the length-aware
+  // computeDwell formula. Also kicks off audio playback (or muted load) as a
+  // side-effect, so the caller can simply pwait(returnedMs).
+  const beginBubble = useCallback(
+    async (data) => {
+      stopAudio();
+      if (!data) return DWELL_FLOOR_MS;
+      const audio = await loadAudio(data.audioKey);
+      if (audio) {
+        audioRef.current = audio;
+        audio.muted = mutedRef.current;
+        try {
+          await audio.play();
+        } catch (e) {
+          // Browsers can reject autoplay; we still know duration so dwell
+          // remains correct, just silent for this bubble.
+        }
+        return Math.round(audio.duration * 1000) + AUDIO_TAIL_BUFFER_MS;
+      }
+      return computeDwell(data, speedRef.current);
+    },
+    [stopAudio]
+  );
+
   const showNarrator = useCallback(
     async (data, total) => {
       if (!data) return;
+      const dwellMs = await beginBubble(data);
       setOverlay({ kind: "narrator", data, total });
-      await pwait(computeDwell(data, speedRef.current));
+      await pwait(dwellMs);
+      stopAudio();
       if (cancelledRef.current) return;
     },
-    [pwait]
+    [pwait, beginBubble, stopAudio]
   );
 
   const showSpotlight = useCallback(
     async (data) => {
       if (!data) return;
+      const dwellMs = await beginBubble(data);
       setOverlay({ kind: "spotlight", data });
-      await pwait(computeDwell(data, speedRef.current));
+      await pwait(dwellMs);
+      stopAudio();
       if (cancelledRef.current) return;
     },
-    [pwait]
+    [pwait, beginBubble, stopAudio]
   );
 
   const clearOverlay = useCallback(() => {
@@ -207,11 +313,14 @@ export default function TourMode() {
       runningRef.current = true;
       cancelledRef.current = false;
 
-      // Backup current authorized list and clear so all 6 cards present.
+      // Backup current authorized list and clear so all 9 cards present.
       const cur = sessionStorage.getItem(AUTH_KEY);
       sessionStorage.setItem(BACKUP_KEY, cur || "[]");
       sessionStorage.removeItem(AUTH_KEY);
       sessionStorage.setItem(ACTIVE_KEY, "1");
+
+      // Preload audio for the very first fixture before we begin.
+      preloadFixtureAudio(TOUR_SCRIPT[startStep]);
 
       try {
         for (let i = startStep; i < TOUR_SCRIPT.length; i++) {
@@ -219,6 +328,8 @@ export default function TourMode() {
           const fx = TOUR_SCRIPT[i];
           setStepIdx(i);
           setProgressLabel(fx.progressLabel);
+          // Preload the next fixture's audio so its bubbles play gaplessly.
+          if (i + 1 < TOUR_SCRIPT.length) preloadFixtureAudio(TOUR_SCRIPT[i + 1]);
 
           // 1. Pre-arrival narrator on dashboard
           if (window.location.pathname !== "/dashboard") {
@@ -298,9 +409,16 @@ export default function TourMode() {
       speedRef.current = 1;
       setPausedState(false);
       setSpeedState(1);
+      // Restore mute preference from sessionStorage; default unmuted (voice ON).
+      let savedMuted = false;
       try {
+        savedMuted = sessionStorage.getItem(MUTED_KEY) === "1";
         sessionStorage.setItem("kairos-tour-speed", "1");
-      } catch {}
+      } catch (e) {
+        // ignore storage errors
+      }
+      mutedRef.current = savedMuted;
+      setMutedState(savedMuted);
       runTour(0);
     }
     window.addEventListener("kairos-tour:start", onStart);
@@ -331,10 +449,27 @@ export default function TourMode() {
     } catch {}
   }, []);
 
+  // Mute toggle. Mutes the currently-playing bubble audio without restarting
+  // it; persists preference for subsequent tours.
+  const toggleMuted = useCallback(() => {
+    const next = !mutedRef.current;
+    mutedRef.current = next;
+    setMutedState(next);
+    try {
+      sessionStorage.setItem(MUTED_KEY, next ? "1" : "0");
+    } catch (e) {
+      // ignore storage errors
+    }
+    if (audioRef.current) {
+      audioRef.current.muted = next;
+    }
+  }, []);
+
   // Skip — cancel + restore.
   const skipTour = useCallback(() => {
     cancelledRef.current = true;
     runningRef.current = false;
+    stopAudio();
     setOverlay(null);
     setShowEndModal(false);
     setActive(false);
@@ -347,7 +482,7 @@ export default function TourMode() {
       sessionStorage.removeItem(BACKUP_KEY);
     }
     router.push("/dashboard");
-  }, [router]);
+  }, [router, stopAudio]);
 
   // End tour from modal.
   const endTour = useCallback(() => {
@@ -359,15 +494,16 @@ export default function TourMode() {
   const freeExplore = useCallback(() => {
     cancelledRef.current = true;
     runningRef.current = false;
+    stopAudio();
     setOverlay(null);
     setShowEndModal(false);
     setActive(false);
     sessionStorage.removeItem(ACTIVE_KEY);
     sessionStorage.removeItem("kairos-tour-speed");
-    // Do NOT restore the backup — leave all 7 fixtures unauthorized for play.
+    // Do NOT restore the backup — leave all 9 fixtures unauthorized for play.
     sessionStorage.removeItem(BACKUP_KEY);
     router.push("/dashboard");
-  }, [router]);
+  }, [router, stopAudio]);
 
   if (!active && !showEndModal) return null;
 
@@ -388,7 +524,7 @@ export default function TourMode() {
           anchor={overlay.data.anchor}
           position={overlay.data.position || "right"}
           title={overlay.data.title}
-          body={overlay.data.body}
+          body={overlay.data.displayText || overlay.data.body}
           onDismiss={null}
         />
       ) : null}
@@ -396,20 +532,22 @@ export default function TourMode() {
       {overlay && overlay.kind === "narrator" ? (
         <NarratorCorner
           title={overlay.data.title}
-          body={overlay.data.body}
+          body={overlay.data.displayText || overlay.data.body}
           progressLabel={progressLabel}
           step={stepIdx}
           total={TOUR_SCRIPT.length}
           speed={speed}
           paused={paused}
+          muted={muted}
           onToggleSpeed={toggleSpeed}
+          onToggleMuted={toggleMuted}
           onSkip={skipTour}
           onContinue={null}
         />
       ) : null}
 
-      {/* Always show tour HUD (skip + speed) when active, even if no overlay
-          is currently up (e.g. between steps during navigation). */}
+      {/* Always show tour HUD (skip + speed + mute) when active, even if no
+          overlay is currently up (e.g. between steps during navigation). */}
       {active && !overlay && !showEndModal ? (
         <NarratorCorner
           progressLabel={progressLabel || "Tour active"}
@@ -417,7 +555,9 @@ export default function TourMode() {
           total={TOUR_SCRIPT.length}
           speed={speed}
           paused={paused}
+          muted={muted}
           onToggleSpeed={toggleSpeed}
+          onToggleMuted={toggleMuted}
           onSkip={skipTour}
           onContinue={null}
         />
