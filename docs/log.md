@@ -1972,6 +1972,73 @@ Stop interpreting kairoshealth.app and start copying it. Brandon owns the source
 
 ## [2026-04-29] kairos | Tour Mode polish pass — 8-fix bundle: (1) 1x speed slowed ~50% via durationMultiplier(speed) — 1x=1.5x duration, 2x=1.0x; typing animation in EncounterDetail also reads kairos-tour-speed from sessionStorage and scales intervalMs in lockstep. (2) all "Mr. {provider}" → "Dr. {provider}" — 78 total replacements (43 active fixtures + tour, 2 legacy cards.json, 33 legacy mock-encounters JSONs) across 32 files; patient prefixes (Mr Aldington, Ms Calderwood, Mrs. Underwell, Ms Brexley, Ms Vanstone, etc.) preserved; HVC fork app/api/hvc/* untouched per scope. (3) SpotlightOverlay scrollIntoView({behavior:smooth, block:center}) before measuring; 450ms scroll-settle delay; 250ms re-measure no longer re-scrolls; pickPosition() edge-flips right→left, top→bottom etc. when bubble would clip viewport. (4) PhoneScriptPane.js → ExplanationPane.js rename; pane title "PHONE SCRIPT" → "HOW TO EXPLAIN THIS"; action button labels "Generate Phone Script" → "Generate Note + Explanation", "Generate Voicemail Variant" → "Voicemail Talking Points" (Patterns 7 + 14 in lib/patterns.js); OutputPane.js mounts ExplanationPane in lieu of PhoneScriptPane when channel=phone. (5) framing subtitle "Example explanation — adapt in your own words." rendered under pane title in italic bone-muted. (6) ephemeral chip "Not part of patient record" rendered as uppercase pill below subtitle. (7) auto-clear: handleAuthorize sets paneState.phoneScript="" before fly-off; explicit Dismiss button (top-right of ExplanationPane) wired through dismissExplanation→OutputPane→onDismiss prop, clears only the explanation pane, leaves Nurse Note + MyChart untouched. (8) Wexbury (Card 5) tour narration reframed in lib/tourScript.js: bubble titles "An example, not a script" / "Voicemail talking points" / "Channel-aware example."; bodies use "talking points" / "your own words" / "use what fits, edit what doesnt, skip what is not relevant" / "the words are yours" — zero "spoken register" / "phone script" / "read aloud" wording remains in Wexbury entry. Build clean, all 24 encounter routes SSG.
 
+## [2026-04-29] kairos | Three-surface platform scaffold — RN /rn, Scribe /scribe, Provider /provider. Migrated /dashboard → /rn with legacy redirect.
+
+Establishes folder ownership and URL routing for the three-role platform:
+- `kairos/rn/` → `/rn` (Brandon, current work — migrated from `/dashboard`)
+- `kairos/scribe/` → `/scribe` (Tristan, live encounter capture — stub)
+- `kairos/provider/` → `/provider` (future, morning prep — stub)
+
+All three surfaces share `lib/` for FHIR adapters, clinical primitives, components, and auth. Cross-surface coordination is folder-scoped: each surface owner can move freely inside their own folder; PRs touching multiple surface folders need Brandon's review.
+
+### Files created (line counts)
+- `kairos/rn/README.md` — 9 lines. Owner, route, scope, boundaries.
+- `kairos/scribe/README.md` — 18 lines. Adds the Tristan PR workflow (branch → push → preview URL → Brandon merges to main).
+- `kairos/provider/README.md` — 12 lines. Reserved-for-future-development note.
+- `app/scribe/page.js` — 33 lines. Placeholder page matching kairos visual language. "Back to RN dashboard" → /rn.
+- `app/provider/page.js` — 33 lines. Placeholder page. "Back to RN dashboard" → /rn.
+- `docs/ARCHITECTURE.md` — 31 lines. Surface table, legacy redirect note, shared layer, URL conventions, cross-surface coordination policy.
+
+### Files moved
+- `app/dashboard/page.js` → `app/rn/page.js` (1 file moved, full RN dashboard page intact, no content changes).
+
+### Files updated for /dashboard → /rn URL migration
+| File | Hits | Change |
+|---|---|---|
+| `app/page.js` | 1 | `redirect("/dashboard")` → `redirect("/rn")` |
+| `app/layout.js` | 1 | comment cosmetic update |
+| `components/ActionBar.js` | 1 | `router.push("/dashboard${q}")` → `/rn${q}` |
+| `components/AppChrome.js` | 1 | comment cosmetic update |
+| `components/EncounterDetail.js` | 2 | both `router.push("/dashboard${q}")` → `/rn${q}`. "Back to dashboard" link text preserved (URL changed). |
+| `components/TourMode.js` | 4 | pathname check `/dashboard` → `/rn`; three `router.push("/dashboard")` → `/rn`; comment update |
+| `kairos/rn/README.md` | 1 | route declaration `/dashboard` → `/rn` |
+
+### Legacy redirect
+`app/dashboard/page.js` rewritten as a client-side redirect: `useSearchParams` + `router.replace("/rn?" + qs)` on mount. Wrapped in `<Suspense>` to satisfy Next.js 14 prerender requirements. Tiny — 38 lines, ships at 548 B in production. Protects bookmarks, shared URLs, prior-art links from 404s.
+
+### Reference count audit
+- `/dashboard` URL hits in code (app/, components/, lib/, kairos/) **before** migration: 9 hits across 7 files (excluding doc/comment-only mentions).
+- After migration: **1 hit** — and it's the comment header `"// /dashboard was the original RN home before the three-surface scaffold."` inside the legacy redirect file itself. Zero functional `/dashboard` URLs remain in code.
+- ARCHITECTURE.md mentions `/dashboard` once intentionally (Legacy section).
+- `docs/log.md` has many historical `/dashboard` mentions in older entries — left as-is (historical truth).
+
+### Verification
+
+**Build:** `npm run build` ✓ Compiled successfully. **43 routes** generated (was 41 — added `/rn`, `/scribe`, `/provider`; renamed `/dashboard` to legacy redirect). All 24 encounter SSG routes intact. `/api/tts` + all HVC routes intact.
+
+Route table snapshot:
+- `/` → SSG, redirects to /rn server-side
+- `/rn` → static, 2.7 kB (the migrated RN dashboard, unchanged content)
+- `/scribe` → static, 757 B (placeholder)
+- `/provider` → static, 769 B (placeholder)
+- `/dashboard` → static, 548 B (legacy client-redirect to /rn)
+- `/encounter/[id]` → SSG × 24
+- `/api/tts` → dynamic
+- `/hvc` + `/api/hvc/*` → unchanged
+
+**What requires Brandon's eyeball:**
+- `/rn` loads the dashboard with all 9 tour fixtures visible.
+- `/dashboard` auto-redirects to `/rn` (preserving query string).
+- `/scribe` and `/provider` placeholder pages render with kairos visual language.
+- `/encounter/[id]` Back link routes to `/rn` (text still reads "Back to dashboard" — kept as nurse-friendly wording).
+- Tour launches from `/rn`, plays end-to-end with audio. Tour navigation between dashboard ↔ encounter still routes via `/rn`.
+- Pause/Mute/Skip all still work mid-tour.
+
+### Out of scope
+- HVC fork untouched. mock-encounters untouched.
+- No git push — Brandon visually verifies in the morning.
+- `kairos/rn/`, `kairos/scribe/`, `kairos/provider/` are folder shells with READMEs only. No code yet lives inside the folder structure — the existing components/, lib/, data/ directories continue to serve `/rn` for now. Migration of RN-specific code into `kairos/rn/` is a future refactor, not part of this scaffold.
+
 ## [2026-04-29] kairos | Pause button — visible in HUD, freezes dwell + audio + typing animations on tap.
 
 Builds on the audio commit `c97eaf9`. The infrastructure for paused dwells already existed (pausedRef + pwait honor it; backdrop click was the only trigger). This commit makes pause a real first-class HUD control with proper visibility, extends it to audio + typing, and adds the spacebar shortcut.
