@@ -2851,3 +2851,40 @@ Suggested apply order: 3 (visual snap, lowest risk) → 2 (timing model, foundat
 - HVC fork (`app/api/hvc/*`) untouched. Mock encounters JSON untouched.
 
 ## [2026-04-29] kairos | Production deploy attempt: firekraker1272/kairos main pushed (1c48107). Vercel auto-deploy fired (dpl_BrAFhFe6feHBHrgDsY8Vp2EvEhV3) and reported state=READY after 22s clean build (39/39 pages, 24 encounter routes, ✓ Compiled successfully). HOWEVER all edge paths return HTTP 404 NOT_FOUND including /, /dashboard, /api/hvc/health, /encounter/* on both per-deploy hostname (kairos-tour-g4bkufi06-...) and production aliases (kairos-tour.vercel.app, kairos-tour-firekrakerproductions-2999s-projects.vercel.app). Root cause: Vercel project config has framework=null — Framework Preset was not auto-detected as Next.js when GitHub repo was connected. Build artifact correct; edge router cannot resolve App Router routes without preset. Fix is dashboard-side: Settings → Build & Development Settings → Framework Preset → Next.js, then Redeploy. Vercel MCP toolset is read-only + deploy; cannot set env vars, ignored build step, or attach domain via MCP — those three settings (NEXT_PUBLIC_KAIROS_MODE=simulation, commandForIgnoringBuildStep, kairos-tour.firekraker.net) also pending dashboard work. kairoshealth.app isolation VERIFIED INTACT (still serving original "Cardiology Nurse Workstation" landing/prototype with original "Take the 60-second tour" CTA, no kairos-tour content bleed). 0/7 smoke string checks could be validated until preset fix lands.
+
+## [2026-04-29 11:35p CDT] kairos-tour | Deep narration rewrite — pure Epic-only baseline
+
+**Why:** The previous Deep Tour narration (commit fa23a43) described an unaugmented "Epic reality" beat in language that implied a copy-paste / chat-tool / drafting-helper workflow already exists. That language inadvertently broadcast "Brandon uses an AI tool today and Kairos replaces it." Other nurses don't do this; pre-tool, even Brandon didn't do this. The narration violated the cover story and undercut the design-stage framing.
+
+**What changed:**
+- Rewrote all 56 `deepVoiceText` fields across the nine fixtures in `lib/tourScript.js`. The new "before-state" beat now describes the unaugmented Epic-only nurse workflow: working from memory, writing notes from scratch, stumbling on patient questions, manually scrolling tabs to reconstruct trends, drafting MyChart and nurse note in different phrasings, fat-fingering the thirteen-field T-T-E order, dropping lifestyle counseling at hour eight, rebuilding investigation context across days because Epic has no persistent investigation object.
+- Reframe discipline applied throughout: the *system* failed nurses, not the other way around. Nurses do heroic work despite a broken system. Kairos = what nurses have always deserved. Floor-rises framing on every fixture closer.
+- Single observational credibility line placed in `aldington-tte-pre`: "These workflow observations come from over a year of studying the synthesis patterns directly in cardiology practice."
+- `quickVoiceText` and `displayText` fields untouched. Quick Tour audio (56 MP3s) untouched.
+
+**Forbidden-language guard:** ripgrep across `lib/tourScript.js` for `copy|paste|drafting tool|translation tool|chat tool` (case-insensitive) — zero hits.
+
+**Audio regen:**
+- Deleted 56 `*-deep.mp3` files from `public/tour-audio/`.
+- Ran `node scripts/generate-tour-audio.js` — 56 generated, 56 quick MP3s skipped (existed).
+- 24,094 chars billed at TTS-1 ($15/1M) → $0.36 incremental.
+- Total deep narration corpus now 24,153 chars (was ~22.5k pre-rewrite).
+- Voice: `onyx` (unchanged).
+
+**Verification:**
+- `npm run build` ✓ clean. All 43 routes generated. `/rn` 2.8 kB / 107 kB First Load JS.
+- 56/56 deep MP3s present in `public/tour-audio/`.
+- 56/56 quick MP3s untouched (file size + mtime preserved by skip-if-exists logic).
+
+**Spot-check — Aldington pre (first deep bubble):**
+> This is Charles Aldington — sixty-one. Dr. Loxley reviewed his C-T-A chest yesterday — mild aortic stenosis, mild aortic regurgitation, possibly a bicuspid aortic valve. The plan is a transthoracic echo to reassess. The Result Note dropped into your Results Follow-Up box overnight. And here's what mornings look like — twenty-seven unread items in this one box. Only nine are actually yours after you filter by provider. Most apps stop at the basket count. Kairos doesn't. These workflow observations come from over a year of studying the synthesis patterns directly in cardiology practice.
+
+**Spot-check — Maundrell arrival (living-record beat):**
+> Before we look at what Kairos does with the contradiction, look at the I-N-R note itself. In pure Epic, an I-N-R is a single discrete result. The current value is shown. Prior values can be pulled if the nurse manually clicks the trending tab and scrolls. The dose history lives in another tab. The supratherapeutic spikes that prompted the last hold live in a note from three months ago that nobody has time to find. Each I-N-R encounter is functionally treated as a one-off, not a continuous record. Warfarin clinics used to run this on paper flowsheets — the entire trajectory visible at a glance, the dose history, the hold history, the procedure interruptions. Epic broke that. The nurse has to reconstruct the trajectory mentally on every call. Kairos brings the paper-flowsheet discipline back into the chart automatically. Each note pulls forward — current value, prior values, dose history, hold history, supratherapeutic spikes. Every note becomes the next note's starting point.
+
+**Scope discipline:**
+- `firekraker-monorepo/` — untouched.
+- `app/api/hvc/*` — untouched.
+- `quickVoiceText` / `displayText` fields — untouched.
+- Quick Tour MP3s — untouched.
+- Local commit only. Not pushed.
