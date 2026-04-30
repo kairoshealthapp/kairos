@@ -32,12 +32,21 @@ const AUDIO_TAIL_BUFFER_MS = 500;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// Build the public/tour-audio/ filename for a bubble. Quick mode keeps the
+// existing un-suffixed filenames so previously-generated MP3s stay valid.
+// Deep mode appends "-deep" so the two tiers coexist on disk.
+function audioFileFor(audioKey, mode) {
+  if (!audioKey) return null;
+  return AUDIO_BASE + audioKey + (mode === "deep" ? "-deep" : "") + ".mp3";
+}
+
 // Load an audio element and wait for its metadata so we know duration.
 // Resolves to the Audio element on success, or null on failure/timeout.
-function loadAudio(audioKey) {
-  if (!audioKey || typeof window === "undefined") return Promise.resolve(null);
+function loadAudio(audioKey, mode) {
+  const src = audioFileFor(audioKey, mode);
+  if (!src || typeof window === "undefined") return Promise.resolve(null);
   return new Promise((resolve) => {
-    const audio = new Audio(AUDIO_BASE + audioKey + ".mp3");
+    const audio = new Audio(src);
     audio.preload = "auto";
     let settled = false;
     function done(value) {
@@ -77,11 +86,13 @@ function* walkFixtureAudioKeys(fx) {
 }
 
 // Fire-and-forget preload of upcoming fixture audio so playback is gapless.
-function preloadFixtureAudio(fx) {
+function preloadFixtureAudio(fx, mode) {
   if (typeof window === "undefined" || !fx) return;
   for (const key of walkFixtureAudioKeys(fx)) {
+    const src = audioFileFor(key, mode);
+    if (!src) continue;
     try {
-      const a = new Audio(AUDIO_BASE + key + ".mp3");
+      const a = new Audio(src);
       a.preload = "auto";
       a.load();
     } catch (e) {
@@ -126,6 +137,7 @@ export default function TourMode() {
   const pausedRef = useRef(false);
   const speedRef = useRef(1);
   const mutedRef = useRef(false);
+  const modeRef = useRef("quick");
   const runningRef = useRef(false);
   const audioRef = useRef(null);
 
@@ -195,7 +207,7 @@ export default function TourMode() {
     async (data) => {
       stopAudio();
       if (!data) return DWELL_FLOOR_MS;
-      const audio = await loadAudio(data.audioKey);
+      const audio = await loadAudio(data.audioKey, modeRef.current);
       if (audio) {
         audioRef.current = audio;
         audio.muted = mutedRef.current;
@@ -320,7 +332,7 @@ export default function TourMode() {
       sessionStorage.setItem(ACTIVE_KEY, "1");
 
       // Preload audio for the very first fixture before we begin.
-      preloadFixtureAudio(TOUR_SCRIPT[startStep]);
+      preloadFixtureAudio(TOUR_SCRIPT[startStep], modeRef.current);
 
       try {
         for (let i = startStep; i < TOUR_SCRIPT.length; i++) {
@@ -329,7 +341,7 @@ export default function TourMode() {
           setStepIdx(i);
           setProgressLabel(fx.progressLabel);
           // Preload the next fixture's audio so its bubbles play gaplessly.
-          if (i + 1 < TOUR_SCRIPT.length) preloadFixtureAudio(TOUR_SCRIPT[i + 1]);
+          if (i + 1 < TOUR_SCRIPT.length) preloadFixtureAudio(TOUR_SCRIPT[i + 1], modeRef.current);
 
           // 1. Pre-arrival narrator on the RN home (/rn)
           if (window.location.pathname !== "/rn") {
@@ -401,7 +413,9 @@ export default function TourMode() {
 
   // Start handler — exposed via window event.
   useEffect(() => {
-    function onStart() {
+    function onStart(e) {
+      const requestedMode = e && e.detail && e.detail.mode === "deep" ? "deep" : "quick";
+      modeRef.current = requestedMode;
       setActive(true);
       setShowEndModal(false);
       cancelledRef.current = false;
@@ -414,7 +428,7 @@ export default function TourMode() {
       try {
         savedMuted = sessionStorage.getItem(MUTED_KEY) === "1";
         sessionStorage.setItem("kairos-tour-speed", "1");
-      } catch (e) {
+      } catch (e2) {
         // ignore storage errors
       }
       mutedRef.current = savedMuted;

@@ -1,6 +1,9 @@
 // scripts/generate-tour-audio.js
-// Walks lib/tourScript.js, collects every bubble's voiceText + audioKey,
-// calls OpenAI TTS for each, writes public/tour-audio/{audioKey}.mp3.
+// Walks lib/tourScript.js, collects every bubble's audioKey + voiceText
+// for both Quick (quickVoiceText) and Deep (deepVoiceText) tiers, calls
+// OpenAI TTS for each, writes:
+//   public/tour-audio/{audioKey}.mp3       (Quick — un-suffixed)
+//   public/tour-audio/{audioKey}-deep.mp3  (Deep)
 // Skips files that already exist. Logs cost estimate at end.
 //
 // Run: node scripts/generate-tour-audio.js
@@ -35,44 +38,58 @@ const OUT_DIR = path.join(__dirname, "..", "public", "tour-audio");
 if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
 
 // Tour script is ESM; we read it as text and pull out the bubble entries by
-// regex rather than `require()`-ing the ESM module. Each bubble we care about
-// has both `audioKey:` and `voiceText:`.
+// regex rather than `require()`-ing the ESM module. For each `audioKey:` we
+// capture the *nearest following* `quickVoiceText:` and `deepVoiceText:`
+// string literals (each may span multiple lines via concatenation).
 const scriptPath = path.join(__dirname, "..", "lib", "tourScript.js");
 const scriptSrc = fs.readFileSync(scriptPath, "utf8");
 
+function extractStringLiteralAfter(src, fromIndex, fieldName) {
+  // Locate `fieldName:` starting at fromIndex; return the joined contents of
+  // the string literal (concatenated double-quoted segments) or null.
+  const re = new RegExp(fieldName + ":\\s*([\\s\\S]*?),\\s*\\n");
+  const tail = src.slice(fromIndex);
+  const m = tail.match(re);
+  if (!m) return null;
+  const literalSegment = m[1];
+  const stringPieces = [];
+  const strRe = /"((?:\\.|[^"\\])*)"/g;
+  let sm;
+  while ((sm = strRe.exec(literalSegment)) !== null) {
+    const piece = sm[1]
+      .replace(/\\n/g, "\n")
+      .replace(/\\"/g, '"')
+      .replace(/\\\\/g, "\\");
+    stringPieces.push(piece);
+  }
+  const joined = stringPieces.join("");
+  return joined.trim().length > 0 ? joined : null;
+}
+
 function collectBubbles(src) {
-  // Find every audioKey + voiceText pair in document order. Both fields can
-  // span multiple lines (string literals may use concatenation across lines).
-  // Strategy: tokenize by `audioKey:` occurrences, then for each, locate the
-  // nearest following `voiceText:` and capture its string literal.
+  // Find every audioKey + (quick/deep)VoiceText triple in document order.
   const bubbles = [];
   const audioKeyRe = /audioKey:\s*"([^"]+)"/g;
   let m;
   while ((m = audioKeyRe.exec(src)) !== null) {
     const key = m[1];
-    const tail = src.slice(m.index);
-    const vtMatch = tail.match(/voiceText:\s*([\s\S]*?),\s*\n/);
-    if (!vtMatch) continue;
-    // The voiceText literal is inside vtMatch[1]. It may be a single string,
-    // multi-line concat, etc. Pull all double-quoted segments and join.
-    const literalSegment = vtMatch[1];
-    const stringPieces = [];
-    const strRe = /"((?:\\.|[^"\\])*)"/g;
-    let sm;
-    while ((sm = strRe.exec(literalSegment)) !== null) {
-      // Unescape common sequences.
-      const piece = sm[1]
-        .replace(/\\n/g, "\n")
-        .replace(/\\"/g, '"')
-        .replace(/\\\\/g, "\\");
-      stringPieces.push(piece);
-    }
-    const voiceText = stringPieces.join("");
-    if (voiceText.trim().length > 0) {
-      bubbles.push({ key, voiceText });
-    }
+    const idx = m.index;
+    // Bound the search window to the next audioKey (or end-of-file) so we
+    // don't reach into the next bubble's voiceText fields.
+    const nextMatch = audioKeyRe.exec(src);
+    const windowEnd = nextMatch ? nextMatch.index : src.length;
+    audioKeyRe.lastIndex = nextMatch ? nextMatch.index : src.length;
+    const window = src.slice(idx, windowEnd);
+    const quick = extractStringLiteralAfter(window, 0, "quickVoiceText");
+    const deep = extractStringLiteralAfter(window, 0, "deepVoiceText");
+    if (quick) bubbles.push({ key: key, mode: "quick", voiceText: quick });
+    if (deep) bubbles.push({ key: key, mode: "deep", voiceText: deep });
   }
   return bubbles;
+}
+
+function outFileFor(key, mode) {
+  return path.join(OUT_DIR, key + (mode === "deep" ? "-deep" : "") + ".mp3");
 }
 
 async function synthesize(text, voice) {
@@ -99,31 +116,39 @@ async function synthesize(text, voice) {
 
 (async function main() {
   const bubbles = collectBubbles(scriptSrc);
-  console.log("Discovered " + bubbles.length + " bubbles with voiceText.");
+  const quickCount = bubbles.filter((b) => b.mode === "quick").length;
+  const deepCount = bubbles.filter((b) => b.mode === "deep").length;
+  console.log("Discovered " + bubbles.length + " bubbles total — " + quickCount + " quick, " + deepCount + " deep.");
   let totalChars = 0;
+  let generatedChars = 0;
   let generated = 0;
   let skipped = 0;
   for (const b of bubbles) {
     totalChars += b.voiceText.length;
-    const outPath = path.join(OUT_DIR, b.key + ".mp3");
+    const outPath = outFileFor(b.key, b.mode);
+    const tag = b.mode === "deep" ? "-deep" : "";
     if (fs.existsSync(outPath)) {
       skipped += 1;
-      console.log("[skip] " + b.key + ".mp3 (exists)");
+      console.log("[skip] " + b.key + tag + ".mp3 (exists)");
       continue;
     }
-    process.stdout.write("[gen ] " + b.key + ".mp3 — " + b.voiceText.length + " chars … ");
+    process.stdout.write("[gen ] " + b.key + tag + ".mp3 — " + b.voiceText.length + " chars … ");
     try {
       const mp3 = await synthesize(b.voiceText, VOICE);
       fs.writeFileSync(outPath, mp3);
       generated += 1;
+      generatedChars += b.voiceText.length;
       console.log("ok (" + mp3.length + " bytes)");
     } catch (e) {
       console.log("FAILED: " + e.message);
     }
   }
-  const cost = (totalChars * 15) / 1000000;
+  const billedCost = (generatedChars * 15) / 1000000;
+  const totalCost = (totalChars * 15) / 1000000;
   console.log("");
   console.log("Done. " + generated + " generated, " + skipped + " skipped.");
   console.log("Total chars across all bubbles: " + totalChars);
-  console.log("Estimated cost (TTS-1 at $15/1M chars): $" + cost.toFixed(4));
+  console.log("New chars billed this run: " + generatedChars);
+  console.log("Estimated cost this run (TTS-1 at $15/1M): $" + billedCost.toFixed(4));
+  console.log("Estimated total tour cost (if regenerated from scratch): $" + totalCost.toFixed(4));
 })();
