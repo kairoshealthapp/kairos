@@ -37,19 +37,57 @@ export default function TypingText({
 
     const intervalMs = Math.max(8, 1000 / Math.max(1, cps));
     let i = 0;
-    const id = setInterval(() => {
+    let intervalId = null;
+    let paused = false;
+
+    function tick() {
+      if (paused) return;
       i++;
       if (i >= content.length) {
-        clearInterval(id);
+        if (intervalId) clearInterval(intervalId);
+        intervalId = null;
         setShown(content);
         completedRef.current = true;
         if (typeof onComplete === "function") onComplete();
       } else {
         setShown(content.slice(0, i));
       }
-    }, intervalMs);
+    }
 
-    return () => clearInterval(id);
+    function start() {
+      if (intervalId || completedRef.current) return;
+      intervalId = setInterval(tick, intervalMs);
+    }
+
+    function stop() {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    }
+
+    function onPause() {
+      paused = true;
+      stop();
+    }
+    function onResume() {
+      paused = false;
+      start();
+    }
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("kairos-tour:pause", onPause);
+      window.addEventListener("kairos-tour:resume", onResume);
+    }
+    start();
+
+    return () => {
+      stop();
+      if (typeof window !== "undefined") {
+        window.removeEventListener("kairos-tour:pause", onPause);
+        window.removeEventListener("kairos-tour:resume", onResume);
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [content, cps]);
 

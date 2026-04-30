@@ -1972,6 +1972,70 @@ Stop interpreting kairoshealth.app and start copying it. Brandon owns the source
 
 ## [2026-04-29] kairos | Tour Mode polish pass — 8-fix bundle: (1) 1x speed slowed ~50% via durationMultiplier(speed) — 1x=1.5x duration, 2x=1.0x; typing animation in EncounterDetail also reads kairos-tour-speed from sessionStorage and scales intervalMs in lockstep. (2) all "Mr. {provider}" → "Dr. {provider}" — 78 total replacements (43 active fixtures + tour, 2 legacy cards.json, 33 legacy mock-encounters JSONs) across 32 files; patient prefixes (Mr Aldington, Ms Calderwood, Mrs. Underwell, Ms Brexley, Ms Vanstone, etc.) preserved; HVC fork app/api/hvc/* untouched per scope. (3) SpotlightOverlay scrollIntoView({behavior:smooth, block:center}) before measuring; 450ms scroll-settle delay; 250ms re-measure no longer re-scrolls; pickPosition() edge-flips right→left, top→bottom etc. when bubble would clip viewport. (4) PhoneScriptPane.js → ExplanationPane.js rename; pane title "PHONE SCRIPT" → "HOW TO EXPLAIN THIS"; action button labels "Generate Phone Script" → "Generate Note + Explanation", "Generate Voicemail Variant" → "Voicemail Talking Points" (Patterns 7 + 14 in lib/patterns.js); OutputPane.js mounts ExplanationPane in lieu of PhoneScriptPane when channel=phone. (5) framing subtitle "Example explanation — adapt in your own words." rendered under pane title in italic bone-muted. (6) ephemeral chip "Not part of patient record" rendered as uppercase pill below subtitle. (7) auto-clear: handleAuthorize sets paneState.phoneScript="" before fly-off; explicit Dismiss button (top-right of ExplanationPane) wired through dismissExplanation→OutputPane→onDismiss prop, clears only the explanation pane, leaves Nurse Note + MyChart untouched. (8) Wexbury (Card 5) tour narration reframed in lib/tourScript.js: bubble titles "An example, not a script" / "Voicemail talking points" / "Channel-aware example."; bodies use "talking points" / "your own words" / "use what fits, edit what doesnt, skip what is not relevant" / "the words are yours" — zero "spoken register" / "phone script" / "read aloud" wording remains in Wexbury entry. Build clean, all 24 encounter routes SSG.
 
+## [2026-04-29] kairos | Pause button — visible in HUD, freezes dwell + audio + typing animations on tap.
+
+Builds on the audio commit `c97eaf9`. The infrastructure for paused dwells already existed (pausedRef + pwait honor it; backdrop click was the only trigger). This commit makes pause a real first-class HUD control with proper visibility, extends it to audio + typing, and adds the spacebar shortcut.
+
+### What landed in this commit
+
+**Visible pause button in NarratorCorner HUD:**
+- New `<PauseIcon>` (two vertical bars) and `<PlayIcon>` (right-pointing triangle) inline SVGs.
+- Pause button positioned leftmost in the HUD button row — first thing the eye lands on. Same row as mute, speed, skip.
+- Two-state visual: when not paused, button is graphite/muted (matches mute button styling); when paused, button flips to solid amber background with graphite text — visually distinct so the paused state is obvious at a glance.
+- Icon + text label ("Pause" / "Resume") together — never icon-only. Tooltip mentions the spacebar shortcut.
+- 32px minimum hit target on every HUD button (was previously 22-24px). Bumped padding + min-h/min-w on every HUD pill so the row reads as bigger, tappable controls rather than micro-text.
+
+**Pause behavior wired across all three timing surfaces:**
+1. **Dwell timer** — already pause-aware via `pausedRef` checked inside `pwait`. Unchanged.
+2. **Audio** — `togglePause` now also calls `audioRef.current.pause()` on pause and `audioRef.current.play()` on resume. Audio resumes from the exact `currentTime` it was at; mute state is independent (audio.muted persists across pause/resume).
+3. **Typing animations** — `togglePause` dispatches `kairos-tour:pause` / `kairos-tour:resume` window events. `TypingText` listens to these in its effect: on pause it `clearInterval`s the typewriter; on resume it restarts the interval from the same character index it stopped at. No restart, no jump, no skip.
+
+**Spacebar shortcut** (industry-standard for any timeline player):
+- `keydown` listener on `window` while tour is `active`. `Space`/" " toggles pause.
+- Suppressed when focus is on `<input>`, `<textarea>`, or contenteditable — so accidental spaces in any future free-form field don't pause the tour.
+- `e.preventDefault()` to stop the page scroll that Space normally triggers.
+
+**Edge cases handled:**
+- Pre-arrival narrator pause: `pwait` honors pause regardless of bubble kind, so the inter-fixture transition bubble freezes the same as in-fixture bubbles.
+- Mute-during-pause: `audio.muted` is set on the live element; on resume `audio.play()` plays whatever the current muted value is. Pause + mute, then resume: silent resume. Pause + voice on, then resume: voiced resume. No interaction bug.
+- Skip-while-paused: Skip button still clickable (still in HUD, never disabled). `skipTour` calls `stopAudio()` before unmounting, which releases the paused audio cleanly.
+- Tour-end-while-paused (defensive): not reachable in practice — the only way to advance to the end is the dwell timer, which is what pause freezes. If pause is held through the last fixture's auto-authorize, the user manually skips, which still triggers the end modal.
+
+**NOT addressed (intentional scope):**
+- Card fly-off animation pause: per the user's note, "easier alternative: disable pause during fly-off, the animation is short anyway." The fly-off is ~600ms and is gated behind the `kairos-encounter:flown-off` event the orchestrator awaits — pausing during it would require pausing a CSS transition, which Chrome+Safari handle differently. Not worth the per-browser fix-up for a 600ms window.
+- `simulationEngine.runScript` event delays (the `delayMsBefore` between pane-update events): typically 100-800ms. Not paused. If the user pauses mid-action, the action stream finishes naturally and then the bubble holds. Acceptable: typing pauses (which IS the user-visible content), and dwell pauses (which gives them reading time).
+
+### Files touched
+| File | Δ | Change |
+|---|---|---|
+| `components/TourMode.js` | +~38 lines | `togglePause` extended to pause/resume audio + dispatch window events. New keyboard listener `useEffect` for Space. `onTogglePause` prop now passed to both NarratorCorner instances. |
+| `components/NarratorCorner.js` | +~30 lines | New `<PauseIcon>` / `<PlayIcon>` SVGs. New leftmost pause button in HUD row with two-state styling (amber when active). All HUD buttons bumped to 32px min hit target. `onTogglePause` + `paused` props consumed. |
+| `components/TypingText.js` | ~+30 lines | Effect refactored to expose `start()`/`stop()` + `onPause`/`onResume` window event handlers. Typewriter `setInterval` is restartable from current character index — pause/resume is seamless. |
+
+### Verification
+
+**Build:** `npm run build` ✓ Compiled successfully. 39/39 static pages, 24 encounter routes. No new errors.
+
+**Static-analysis checks:**
+- `togglePause` has all three side effects: pausedRef toggle, audio.pause/play, dispatch event. Verified.
+- TypingText listens to both `kairos-tour:pause` and `kairos-tour:resume`, removes listeners on cleanup. Verified.
+- NarratorCorner accepts `onTogglePause` + `paused`, renders the button with correct two-state styling. Verified.
+- Spacebar listener suppresses inside inputs/textareas/contenteditable. Verified.
+
+**What requires Brandon's eyeball (cannot statically verify):**
+- Whether 32px hit target feels right on touch — could go to 40-44px if needed for tablet finger taps. Single-class knob.
+- Whether amber-on-pause is visible enough to read across the room (demo context). If not, add a stronger drop shadow or animate a subtle pulse on the icon.
+- Whether the typing-pause feels natural mid-stream — the CSS cursor blink continues during pause (intentional, signals "here, frozen"); if it feels weird, hide the cursor on pause via a CSS class toggle.
+- Whether resume-after-pause re-plays the audio without a click/pop. Browsers normally handle pause/play seamlessly but some Safari builds glitch on partial-buffer playback.
+- Spacebar shortcut feel — if a nurse hits Space while looking at a bubble, does it pause too eagerly? Should be fine since active=true means tour is running.
+
+### Out of scope
+- HVC fork untouched. mock-encounters untouched.
+- No git push.
+- No card fly-off pause (acceptable per spec).
+- No simulationEngine inter-event delay pause (acceptable trade-off).
+- NURSE-DEMO-INTRO.md "four to five minutes" line — fourth time flagged stale, still not auto-edited (with audio + pauses, real runtime is 13:30+; with nurses pausing to read, indefinite).
+
 ## [2026-04-29] kairos | Voice narration + Apple-style text/voice split + mute control across the full 9-fixture tour. OpenAI TTS (onyx voice), 56 pre-generated MP3s in public/tour-audio/, $0.13 cost.
 
 Builds on commits 58245a7 (P1–P4 audit fixes) and 5ca4e8c (3-fixture promotion + 9-card deck). This commit adds voice narration end-to-end, splits every bubble into short on-screen `displayText` + full conversational `voiceText`, wires audio playback into the tour engine with audio-driven dwell timing, and adds a persistent mute toggle.
