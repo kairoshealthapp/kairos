@@ -1,7 +1,11 @@
 {
   "name": "kairos",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "private": true,
+  "kairos": {
+    "buildPhase": "3.3",
+    "displayName": "Kairos Tour"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

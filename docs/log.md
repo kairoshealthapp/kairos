@@ -2923,3 +2923,24 @@ Suggested apply order: 3 (visual snap, lowest risk) → 2 (timing model, foundat
 - `app/api/hvc/*` — untouched.
 - `deepVoiceText` / `displayText` fields — untouched.
 - Deep MP3s — untouched.
+
+## [2026-04-30 12:25a CDT] kairos | App version display + /about page
+
+**Why:** Establish a semantic-versioning baseline with on-screen version stamp so users can identify what build they're looking at. Companion `/about` surface for full version metadata.
+
+**Versioning scheme:** `0.3.0` reflects current state — Phase 3.3 (tour, voice, two-tier narration, three-surface scaffolding). `package.json` is the source of truth; a `kairos` config block holds `buildPhase` and `displayName`.
+
+**What changed:**
+
+- `package.json` — bumped `version` from `0.1.0` to `0.3.0`. Added top-level `kairos` block: `{ buildPhase: "3.3", displayName: "Kairos Tour" }`.
+- `lib/version.js` (new) — exports `APP_VERSION`, `BUILD_PHASE`, `APP_NAME`, `DISPLAY_NAME`, `BUILD_DATE`, `COMMIT_SHA`. Build date and SHA fall back to hardcoded values; future build pipeline can override via `NEXT_PUBLIC_BUILD_DATE` and `NEXT_PUBLIC_COMMIT_SHA`.
+- `components/VersionStamp.js` (new) — small client component, fixed bottom-right (`bottom-2 right-3`), JetBrains Mono via `--font-jetbrains`, 10px text, opacity 0.4 default, 0.8 on hover, tooltip `Phase 3.3`. Hides on `kairos-tour:start`, restores on `kairos-tour:end`. Reads `sessionStorage["kairos-tour-active"]` on mount so it stays hidden if the tour is mid-run when the component remounts after route change.
+- `components/TourMode.js` — added `window.dispatchEvent(new CustomEvent("kairos-tour:end"))` at the two tour-end sites: `skipTour()` and `freeExplore()`. The end event is the signal VersionStamp listens for to restore visibility. Tour internals otherwise unchanged.
+- `components/AppChrome.js` — imports and renders `<VersionStamp />` after `<TourMode />`. Stamp inherits the `if (pathname === "/") return <>{children}</>` early-return — landing page has no chrome, no stamp.
+- `app/about/page.js` (new) — full version info surface. Lists app name, version, build phase, build date, commit SHA. JetBrains Mono key-value layout. Back-link to `/rn`. Not linked from any nav — direct URL only.
+
+**Verification:**
+- `npm run build` ✓ clean. New route `/about` registered at 1.92 kB / 98 kB First Load JS. All other routes unchanged in size.
+- Browser smoke test NOT performed in this session (no dev server launched). Manual ear/eye verification on `/rn`, `/scribe`, `/provider`, `/encounter/aldington-tte`, and tour-hides-stamp behavior is recommended before relying on this.
+
+**Files:** `package.json`, `lib/version.js` (new), `components/VersionStamp.js` (new), `components/AppChrome.js`, `components/TourMode.js`, `app/about/page.js` (new).
