@@ -276,7 +276,7 @@ export default function EncounterDetail({ fixture, fromTab }) {
       );
     }
     const q = fromTab ? `?tab=${encodeURIComponent(fromTab)}` : "";
-    router.push(`/dashboard${q}`);
+    router.push(`/rn${q}`);
   }, [fixture.id, fromTab, isPlaying, router]);
 
   // Keep a stable ref for the auto-authorize event listener.
@@ -291,7 +291,7 @@ export default function EncounterDetail({ fixture, fromTab }) {
 
   function handleBack() {
     const q = fromTab ? `?tab=${encodeURIComponent(fromTab)}` : "";
-    router.push(`/dashboard${q}`);
+    router.push(`/rn${q}`);
   }
 
   const blockAuthorize = !!(paneState.orderPad && paneState.orderPad.hasUnansweredQuestions);

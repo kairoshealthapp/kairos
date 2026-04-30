@@ -32,7 +32,7 @@ export default function ActionBar({
   }
   function backToDashboard() {
     const q = fromTab ? `?tab=${encodeURIComponent(fromTab)}` : "";
-    router.push(`/dashboard${q}`);
+    router.push(`/rn${q}`);
   }
 
   return (

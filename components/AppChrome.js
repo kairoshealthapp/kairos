@@ -1,6 +1,6 @@
 // Phase 3.2-fix5 + Phase 3.3 — adapted from firekraker-monorepo/kairos.
 // Phase 3.3 addition: mount TourMode at this level so it persists across
-// route navigations between /dashboard and /encounter/[id]. TourMode
+// route navigations between /rn and /encounter/[id]. TourMode
 // renders nothing unless tour is active.
 
 "use client";

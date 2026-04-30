@@ -1,6 +1,6 @@
 // Phase 3.3 Tour Mode — orchestrator.
 // Mounts inside AppChrome so it persists across route navigations between
-// /dashboard and /encounter/[id]. Reacts to a window 'kairos-tour:start'
+// /rn and /encounter/[id]. Reacts to a window 'kairos-tour:start'
 // event and runs the scripted 7-fixture tour.
 //
 // Coordination protocol with EncounterDetail:
@@ -331,9 +331,9 @@ export default function TourMode() {
           // Preload the next fixture's audio so its bubbles play gaplessly.
           if (i + 1 < TOUR_SCRIPT.length) preloadFixtureAudio(TOUR_SCRIPT[i + 1]);
 
-          // 1. Pre-arrival narrator on dashboard
-          if (window.location.pathname !== "/dashboard") {
-            router.push("/dashboard");
+          // 1. Pre-arrival narrator on the RN home (/rn)
+          if (window.location.pathname !== "/rn") {
+            router.push("/rn");
             await pwait(700);
           }
           await showNarrator(fx.preArrivalNarrator, TOUR_SCRIPT.length);
@@ -515,7 +515,7 @@ export default function TourMode() {
       sessionStorage.setItem(AUTH_KEY, backup);
       sessionStorage.removeItem(BACKUP_KEY);
     }
-    router.push("/dashboard");
+    router.push("/rn");
   }, [router, stopAudio]);
 
   // End tour from modal.
@@ -536,7 +536,7 @@ export default function TourMode() {
     sessionStorage.removeItem("kairos-tour-speed");
     // Do NOT restore the backup — leave all 9 fixtures unauthorized for play.
     sessionStorage.removeItem(BACKUP_KEY);
-    router.push("/dashboard");
+    router.push("/rn");
   }, [router, stopAudio]);
 
   if (!active && !showEndModal) return null;

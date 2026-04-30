@@ -1,7 +1,7 @@
 // Phase 3.2-fix5 — adapted from firekraker-monorepo/kairos/app/layout.js.
 // Differences vs source:
 //   • Title/description tuned for this repo build.
-//   • AppChrome no longer wraps a Nav (the nav lives inside /dashboard now).
+//   • AppChrome no longer wraps a Nav (the nav lives inside /rn now).
 //
 // Otherwise font setup (Fraunces + JetBrains_Mono via next/font/google,
 // GeistSans via the geist npm package) and viewport theme color match source.
