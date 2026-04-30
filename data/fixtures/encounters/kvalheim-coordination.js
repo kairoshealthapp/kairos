@@ -6,7 +6,7 @@ const fixture = {
   slug: "kvalheim-coordination",
   patternId: 10,
   patternName: "COORDINATION",
-  tab: "triage",
+  tab: "other",
   urgency: "calm",
   sourceChannel: "phone",
   sourceBox: "patient-call",

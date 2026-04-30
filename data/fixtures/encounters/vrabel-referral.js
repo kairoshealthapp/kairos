@@ -6,7 +6,7 @@ const fixture = {
   slug: "vrabel-referral",
   patternId: 8,
   patternName: "COORDINATION THREAD (referral status)",
-  tab: "other",
+  tab: "advice",
   urgency: "calm",
   sourceChannel: "mychart",
   sourceBox: "pt-advice",
