@@ -7,7 +7,7 @@ const fixture = {
   slug: "maundrell-contradiction",
   patternId: 8,
   patternName: "CONTRADICTION",
-  tab: "advice",
+  tab: "inr",
   urgency: "calm",
   sourceChannel: "mychart",
   sourceBox: "pt-advice",

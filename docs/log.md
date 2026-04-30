@@ -1972,6 +1972,55 @@ Stop interpreting kairoshealth.app and start copying it. Brandon owns the source
 
 ## [2026-04-29] kairos | Tour Mode polish pass — 8-fix bundle: (1) 1x speed slowed ~50% via durationMultiplier(speed) — 1x=1.5x duration, 2x=1.0x; typing animation in EncounterDetail also reads kairos-tour-speed from sessionStorage and scales intervalMs in lockstep. (2) all "Mr. {provider}" → "Dr. {provider}" — 78 total replacements (43 active fixtures + tour, 2 legacy cards.json, 33 legacy mock-encounters JSONs) across 32 files; patient prefixes (Mr Aldington, Ms Calderwood, Mrs. Underwell, Ms Brexley, Ms Vanstone, etc.) preserved; HVC fork app/api/hvc/* untouched per scope. (3) SpotlightOverlay scrollIntoView({behavior:smooth, block:center}) before measuring; 450ms scroll-settle delay; 250ms re-measure no longer re-scrolls; pickPosition() edge-flips right→left, top→bottom etc. when bubble would clip viewport. (4) PhoneScriptPane.js → ExplanationPane.js rename; pane title "PHONE SCRIPT" → "HOW TO EXPLAIN THIS"; action button labels "Generate Phone Script" → "Generate Note + Explanation", "Generate Voicemail Variant" → "Voicemail Talking Points" (Patterns 7 + 14 in lib/patterns.js); OutputPane.js mounts ExplanationPane in lieu of PhoneScriptPane when channel=phone. (5) framing subtitle "Example explanation — adapt in your own words." rendered under pane title in italic bone-muted. (6) ephemeral chip "Not part of patient record" rendered as uppercase pill below subtitle. (7) auto-clear: handleAuthorize sets paneState.phoneScript="" before fly-off; explicit Dismiss button (top-right of ExplanationPane) wired through dismissExplanation→OutputPane→onDismiss prop, clears only the explanation pane, leaves Nurse Note + MyChart untouched. (8) Wexbury (Card 5) tour narration reframed in lib/tourScript.js: bubble titles "An example, not a script" / "Voicemail talking points" / "Channel-aware example."; bodies use "talking points" / "your own words" / "use what fits, edit what doesnt, skip what is not relevant" / "the words are yours" — zero "spoken register" / "phone script" / "read aloud" wording remains in Wexbury entry. Build clean, all 24 encounter routes SSG.
 
+## [2026-04-29] kairos | Dashboard category counts fixed — every category non-zero. 5 fixture `tab:` values re-mapped to match the 6-basket source-of-truth.
+
+### Source of truth
+Category derivation lives in `app/rn/page.js`:
+```js
+const PRIMARY_TYPES = new Set(["notify", "refill", "triage", "advice", "inr"]);
+function categoryFor(card) {
+  return PRIMARY_TYPES.has(card.tab) ? card.tab : "other";
+}
+```
+Each fixture carries a `tab:` field. Anything outside the primary five falls through to `other`. No category mapping in `lib/patterns.js` — it's purely fixture-level metadata.
+
+### Mismatches found and corrected
+| Fixture | tab before | tab after | Why |
+|---|---|---|---|
+| `norreys-transactional` | advice | **refill** | Pattern 9 transactional refill belongs in the Rx Request basket. |
+| `maundrell-contradiction` | advice | **inr** | Pattern 8 warfarin contradiction belongs in the Coumadin Clinic / INR basket. |
+| `lyttleton-coordination` | triage | **other** | Pattern 10 multi-party coordination is HANDOFF/OTHER, not a triage call. |
+| `ravensdale-cpap` | notify | **other** | DME plumbing — clinical reasoning is light, the work is form-fill + atomic commit. Belongs in OTHER. |
+| `vrabel-referral` | other | **advice** | Pattern 8 referral status thread belongs in Pt Advice Request. |
+
+### Resulting dashboard counts
+| Category | Count |
+|---|---|
+| NOTIFY | 12 |
+| REFILL | 1 |
+| TRIAGE | 3 |
+| ADVICE | 2 |
+| INR | 1 |
+| OTHER | 5 |
+| **Total** | **24** |
+
+Every primary category now non-zero — matches the Deep Tour narration which references all six baskets.
+
+### Files touched (5)
+- `data/fixtures/encounters/lyttleton-coordination.js` — tab triage → other
+- `data/fixtures/encounters/maundrell-contradiction.js` — tab advice → inr
+- `data/fixtures/encounters/norreys-transactional.js` — tab advice → refill
+- `data/fixtures/encounters/ravensdale-cpap.js` — tab notify → other
+- `data/fixtures/encounters/vrabel-referral.js` — tab other → advice
+
+### Verification
+- `npm run build` ✓ Compiled successfully. 43 routes, 24 encounter SSG.
+- `grep tab: data/fixtures/encounters/*.js | awk` per-tab counts match expected exactly.
+- No tour code touched. Quick + Deep tour audio + dwell + mute + pause all unaffected.
+
+### Out of scope
+- HVC fork untouched. No git push.
+
 ## [2026-04-29] kairos | Deep Tour mode — pitch-grade narration alongside Quick Tour. Two-tier audio system with 56 new Deep MP3s. ~22 minute end-to-end Deep Tour runtime.
 
 Builds on the voice commit `c97eaf9`. Quick Tour audio unchanged (already paid for). Adds a parallel Deep Tour tier with substantially longer, pitch-grade narration covering the Epic-vs-Kairos comparison, accuracy/standardization angle, and safety surface for each of the 9 fixtures.

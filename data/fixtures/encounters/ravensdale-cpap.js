@@ -8,7 +8,7 @@ const fixture = {
   slug: "ravensdale-cpap",
   patternId: 2,
   patternName: "SYNTHESIS + NEW ORDER (DME — most field-heavy)",
-  tab: "notify",
+  tab: "other",
   urgency: "calm",
   sourceChannel: "epic-result",
   sourceBox: "results-followup",

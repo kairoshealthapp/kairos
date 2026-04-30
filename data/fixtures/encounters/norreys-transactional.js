@@ -8,7 +8,7 @@ const fixture = {
   slug: "norreys-transactional",
   patternId: 9,
   patternName: "TRANSACTIONAL REPLY",
-  tab: "advice",
+  tab: "refill",
   urgency: "calm",
   sourceChannel: "mychart",
   sourceBox: "pt-advice",
