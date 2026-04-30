@@ -9,7 +9,7 @@ export default function TourLauncher({ onStart, hidden }) {
       type="button"
       onClick={onStart}
       className="text-[12px] font-semibold text-graphite bg-amber hover:bg-amber/90 px-3 py-1.5 rounded-full transition-colors whitespace-nowrap"
-      title="Guided 7-card tour, ~3 minutes"
+      title="Guided 6-card tour, ~3 minutes"
     >
       ✨ Take a tour
     </button>
