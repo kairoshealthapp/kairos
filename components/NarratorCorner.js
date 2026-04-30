@@ -25,6 +25,23 @@ function SpeakerOffIcon() {
   );
 }
 
+function PauseIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <rect x="6" y="5" width="4" height="14" rx="1" />
+      <rect x="14" y="5" width="4" height="14" rx="1" />
+    </svg>
+  );
+}
+
+function PlayIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <polygon points="6 4 20 12 6 20 6 4" />
+    </svg>
+  );
+}
+
 export default function NarratorCorner({
   title,
   body,
@@ -36,6 +53,7 @@ export default function NarratorCorner({
   onSkip,
   onContinue,
   paused,
+  onTogglePause,
   muted,
   onToggleMuted,
 }) {
@@ -54,12 +72,29 @@ export default function NarratorCorner({
         <span className="kairos-kicker text-amber/80 truncate">
           {progressLabel || "Tour"}
         </span>
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0">
+          {onTogglePause ? (
+            <button
+              type="button"
+              onClick={onTogglePause}
+              className={
+                "inline-flex items-center gap-1 text-[12px] font-semibold rounded-full border px-2.5 min-h-[32px] transition-colors " +
+                (paused
+                  ? "text-graphite bg-amber border-amber hover:bg-amber/90"
+                  : "text-bone hover:text-bone bg-graphite/50 border-mist/60 hover:bg-graphite/70")
+              }
+              title={paused ? "Resume tour (Space)" : "Pause tour (Space)"}
+              aria-label={paused ? "Resume tour" : "Pause tour"}
+            >
+              {paused ? <PlayIcon /> : <PauseIcon />}
+              <span>{paused ? "Resume" : "Pause"}</span>
+            </button>
+          ) : null}
           {onToggleMuted ? (
             <button
               type="button"
               onClick={onToggleMuted}
-              className="text-bone-muted hover:text-bone bg-graphite/40 border border-mist/60 rounded-pill p-1"
+              className="inline-flex items-center justify-center text-bone-muted hover:text-bone bg-graphite/40 border border-mist/60 rounded-full min-w-[32px] min-h-[32px] p-1.5"
               title={muted ? "Voice narration off — click to turn on" : "Voice narration on — click to mute"}
               aria-label={muted ? "Unmute voice narration" : "Mute voice narration"}
             >
@@ -69,7 +104,7 @@ export default function NarratorCorner({
           <button
             type="button"
             onClick={onToggleSpeed}
-            className="text-[11px] font-medium text-bone-muted hover:text-bone bg-graphite/40 border border-mist/60 rounded-pill px-2 py-0.5"
+            className="inline-flex items-center justify-center text-[11px] font-medium text-bone-muted hover:text-bone bg-graphite/40 border border-mist/60 rounded-full min-w-[32px] min-h-[32px] px-2"
             title="Toggle playback speed"
           >
             {speed}x
@@ -78,7 +113,7 @@ export default function NarratorCorner({
             <button
               type="button"
               onClick={onSkip}
-              className="text-[11px] font-medium text-bone-muted hover:text-oxblood bg-graphite/40 border border-mist/60 rounded-pill px-2 py-0.5"
+              className="text-[11px] font-medium text-bone-muted hover:text-oxblood bg-graphite/40 border border-mist/60 rounded-full px-2.5 min-h-[32px]"
               title="Skip tour"
             >
               Skip

@@ -432,11 +432,45 @@ export default function TourMode() {
     };
   }, []);
 
-  // Pause toggle (background click or pause button).
+  // Pause toggle. Freezes the dwell timer (via pausedRef checked in pwait),
+  // pauses bubble audio in place, and dispatches a window event so any
+  // in-progress typing animations on panes can freeze too.
   const togglePause = useCallback(() => {
-    pausedRef.current = !pausedRef.current;
-    setPausedState(pausedRef.current);
+    const next = !pausedRef.current;
+    pausedRef.current = next;
+    setPausedState(next);
+    const a = audioRef.current;
+    if (a) {
+      if (next) {
+        try { a.pause(); } catch (e) { /* ignore */ }
+      } else {
+        // Resume from current position. Stays muted if mute was toggled
+        // during the pause — audio.muted is independent of paused state.
+        a.play().catch(() => {});
+      }
+    }
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent(next ? "kairos-tour:pause" : "kairos-tour:resume")
+      );
+    }
   }, []);
+
+  // Spacebar keyboard shortcut for pause/resume — industry-standard for
+  // any timeline-based player. Ignored when focus is on an input/textarea.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    function onKey(e) {
+      if (e.code !== "Space" && e.key !== " ") return;
+      if (!active) return;
+      const tag = (e.target && e.target.tagName) || "";
+      if (tag === "INPUT" || tag === "TEXTAREA" || (e.target && e.target.isContentEditable)) return;
+      e.preventDefault();
+      togglePause();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [active, togglePause]);
 
   // Speed toggle. Persists to sessionStorage so EncounterDetail's typing
   // animation can scale itself in tandem with the tour cadence.
@@ -540,14 +574,15 @@ export default function TourMode() {
           paused={paused}
           muted={muted}
           onToggleSpeed={toggleSpeed}
+          onTogglePause={togglePause}
           onToggleMuted={toggleMuted}
           onSkip={skipTour}
           onContinue={null}
         />
       ) : null}
 
-      {/* Always show tour HUD (skip + speed + mute) when active, even if no
-          overlay is currently up (e.g. between steps during navigation). */}
+      {/* Always show tour HUD (skip + speed + mute + pause) when active, even
+          if no overlay is currently up (e.g. between steps during navigation). */}
       {active && !overlay && !showEndModal ? (
         <NarratorCorner
           progressLabel={progressLabel || "Tour active"}
@@ -557,6 +592,7 @@ export default function TourMode() {
           paused={paused}
           muted={muted}
           onToggleSpeed={toggleSpeed}
+          onTogglePause={togglePause}
           onToggleMuted={toggleMuted}
           onSkip={skipTour}
           onContinue={null}
