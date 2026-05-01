@@ -404,6 +404,29 @@ details[open] > summary .drawer-chev { transform: rotate(90deg); }
   margin: 0;
 }
 
+/* Dashboard nav wordmark — same gold serif treatment as the landing
+   page, scaled down to nav-bar height. Stays clickable as a link to
+   /rn root so the wordmark behaves like a brand mark. */
+.kairos-nav-wordmark {
+  font-family: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  font-weight: 500;
+  font-size: 22px;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  background: linear-gradient(180deg, #FCD681 0%, #F5B642 38%, #C0810E 70%, #8C5C08 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  padding: 0 0.05em;
+  margin: 0;
+  text-decoration: none;
+  display: inline-block;
+}
+.kairos-nav-wordmark:hover {
+  filter: brightness(1.1);
+}
+
 .kl-wordmark-rule {
   width: 64px;
   height: 1px;
