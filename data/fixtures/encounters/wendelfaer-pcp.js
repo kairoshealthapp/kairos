@@ -1,12 +1,12 @@
 // Pattern 6 — SYNTHESIS + HANDOFF (skeleton, actionScripts not yet written)
-// Source: docs/KAIROS-SESSION-2026-04-29.md Section 5 CASE 4 (McGuirk/Wendelfaer)
+// Source: docs/KAIROS-SESSION-2026-04-29.md Section 5 CASE 4 (McGuirk/Lindqvist)
 
 const fixture = {
   id: "wendelfaer-pcp",
   slug: "wendelfaer-pcp",
   patternId: 6,
   patternName: "SYNTHESIS + HANDOFF",
-  tab: "notify",
+  tab: "resultsfu",
   urgency: "calm",
   sourceChannel: "epic-result",
   sourceBox: "results-followup",
@@ -18,22 +18,22 @@ const fixture = {
     severity: "green",
   },
   patient: {
-    name: "Wendelfaer, Catriona",
-    displayName: "Catriona Wendelfaer",
+    name: "Lindqvist, Cassiel",
+    displayName: "Cassiel Lindqvist",
     age: 28,
     sex: "F",
     dob: "1998-07-14",
     mrn: "60017802",
     proxyName: null,
-    primary: "Beckweldon NP, Heart and Vascular Clinic",
+    primary: "Voronova NP, Heart and Vascular Clinic",
     coverage: "BCBS HMO",
   },
   sourceArtifact: {
     type: "Result Note",
-    author: "Beckweldon, Cardiology",
+    author: "Voronova, Cardiology",
     timestamp: "2026-04-29 08:01",
     body:
-      "CTA abdomen reviewed. Cardiac findings unremarkable. Incidental 1.4 cm simple-appearing pancreatic cyst noted; below standard threshold for cardiology workup. Please forward results to her PCP (Felicity Falkenrath MD) for further follow-up.",
+      "CTA abdomen reviewed. Cardiac findings unremarkable. Incidental 1.4 cm simple-appearing pancreatic cyst noted; below standard threshold for cardiology workup. Please forward results to her PCP (Fenella Bjornsen MD) for further follow-up.",
   },
   initialPaneContent: {
     nurseNote: "",
@@ -44,10 +44,10 @@ const fixture = {
   actionScripts: {},
   finalSignedState: {
     nurseNote:
-      "Dr. Beckweldon reviewed CTA abdomen. Cardiac findings unremarkable. Incidental 1.4 cm pancreatic cyst — forwarded to PCP (Felicity Falkenrath MD). Patient notified via MyChart.",
+      "Dr. Voronova reviewed CTA abdomen. Cardiac findings unremarkable. Incidental 1.4 cm pancreatic cyst — forwarded to PCP (Fenella Bjornsen MD). Patient notified via MyChart.",
     mychartMessage:
-      "Dr. Beckweldon reviewed your scan — heart side unremarkable. Incidental small pancreatic cyst forwarded to your PCP (Dr. Falkenrath).",
-    orders: ["Route imaging study to PCP — Felicity Falkenrath MD"],
+      "Dr. Voronova reviewed your scan — heart side unremarkable. Incidental small pancreatic cyst forwarded to your PCP (Dr. Bjornsen).",
+    orders: ["Route imaging study to PCP — Fenella Bjornsen MD"],
     dxAssociated: ["Other specified disorders of pancreas"],
   },
 };

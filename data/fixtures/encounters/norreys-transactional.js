@@ -1,5 +1,5 @@
 // Pattern 9 — TRANSACTIONAL REPLY
-// Source: docs/KAIROS-SESSION-2026-04-29.md Section 1 Surface 4 (Forshey/Norreys)
+// Source: docs/KAIROS-SESSION-2026-04-29.md Section 1 Surface 4 (Forshey/Fitzgerald-Ramos)
 // Refill confirmation round-trip — last visit + future appointment + active dx → Rx Request rule
 // pre-stages 90 days, 3 refills, standard documentation. The "boring case."
 
@@ -8,7 +8,7 @@ const fixture = {
   slug: "norreys-transactional",
   patternId: 9,
   patternName: "TRANSACTIONAL REPLY",
-  tab: "refill",
+  tab: "rxrequest",
   urgency: "calm",
   sourceChannel: "mychart",
   sourceBox: "pt-advice",
@@ -20,14 +20,14 @@ const fixture = {
     severity: "green",
   },
   patient: {
-    name: "Norreys, Wendell",
-    displayName: "Wendell Norreys",
+    name: "Fitzgerald-Ramos, Winslow",
+    displayName: "Winslow Fitzgerald-Ramos",
     age: 65,
     sex: "M",
     dob: "1961-07-22",
     mrn: "47281065",
     proxyName: null,
-    primary: "Skarsdale, Cardiology (Coumadin Clinic)",
+    primary: "Halloran, Cardiology (Coumadin Clinic)",
     coverage: "United HMO",
   },
   sourceArtifact: {
@@ -62,7 +62,7 @@ const fixture = {
         typingSpeedCps: 70,
         delayMsBefore: 400,
         content:
-          "Mr Norreys,\n\nGot it — your warfarin 6 mg refill has been sent to your pharmacy. Please continue taking 6 mg once daily as discussed on 4/21.\n\nYour next INR check is on the schedule. Reach out if anything changes.\n\nBrandon Sterne, RN BSN / Heart and Vascular Clinic (Coumadin Clinic)",
+          "Mr Fitzgerald-Ramos,\n\nGot it — your warfarin 6 mg refill has been sent to your pharmacy. Please continue taking 6 mg once daily as discussed on 4/21.\n\nYour next INR check is on the schedule. Reach out if anything changes.\n\nBrandon Sterne, RN BSN / Heart and Vascular Clinic (Coumadin Clinic)",
       },
       { type: "banner", kind: "green", text: "Rx Request rule satisfied — refill auto-staged", durationMs: 1000, delayMsBefore: 200 },
       {
@@ -85,7 +85,7 @@ const fixture = {
               clinicalQuestions: [],
               releaseToPatient: false,
               ccResults: [],
-              cosign: "Skarsdale",
+              cosign: "Halloran",
               auditTrail: "Rx Request rule auto-stage — 90 days, 3 refills",
             },
           ],
@@ -99,7 +99,7 @@ const fixture = {
     nurseNote:
       "Patient confirms new warfarin 6mg dose (decreased from 6.5mg on 4/21 for INR 3.9 hold). Refill placed per Rx Request rule. Encounter closed.",
     mychartMessage: "[As drafted above]",
-    orders: ["Warfarin 6mg daily — refill 90 days, 3 refills — Skarsdale cosign"],
+    orders: ["Warfarin 6mg daily — refill 90 days, 3 refills — Halloran cosign"],
     dxAssociated: ["Atrial fibrillation"],
   },
 };

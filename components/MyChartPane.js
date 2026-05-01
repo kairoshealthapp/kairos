@@ -1,12 +1,14 @@
 // Phase 3.3 — MyChart pane (bottom-left when channel = mychart). Displays
 // MyChart message fields (recipient, proxy, subject, notify-by, replies,
 // greeting, body). Body animates typing during simulation playback.
+//
+// Phase-3.4 quality fix: dropped the <TypingText/> wrapper; EncounterDetail
+// streams characters into `content` directly. See NurseNotePane.js for the
+// full rationale (double-typewriter strobe).
 
 "use client";
 
-import TypingText from "./TypingText";
-
-export default function MyChartPane({ fixture, content, typingSpeedCps, isTyping }) {
+export default function MyChartPane({ fixture, content, isTyping }) {
   const p = fixture.patient || {};
   // For Pattern 8 CONTRADICTION (no outbound MyChart drafted), surface the
   // verify-upstream stub. Otherwise show the standard MyChart envelope.
@@ -15,7 +17,7 @@ export default function MyChartPane({ fixture, content, typingSpeedCps, isTyping
   return (
     <section className="kairos-card p-4 h-full flex flex-col overflow-hidden">
       <header className="flex items-center justify-between mb-2">
-        <span className="kairos-kicker text-amber/80">MYCHART MESSAGE</span>
+        <span className="kairos-kicker kairos-kicker-strong text-amber/80">MYCHART MESSAGE</span>
         <span className="text-[11px] text-bone-muted">Written register</span>
       </header>
 
@@ -41,14 +43,19 @@ export default function MyChartPane({ fixture, content, typingSpeedCps, isTyping
           <span className="text-oxblood/80 italic">
             CONTRADICTION HOLD — no patient-facing reply drafted. Forward to provider for verification.
           </span>
+        ) : content ? (
+          <>
+            <span>{content}</span>
+            {isTyping && (
+              <span className="inline-block w-[1ch] -mb-[2px] kairos-typing-cursor">▍</span>
+            )}
+          </>
         ) : isTyping ? (
-          <TypingText content={content || ""} cps={typingSpeedCps || 70} />
+          <span className="inline-block w-[1ch] -mb-[2px] kairos-typing-cursor">▍</span>
         ) : (
-          content || (
-            <span className="text-bone-muted/60 italic">
-              — empty — click an action button to draft —
-            </span>
-          )
+          <span className="text-bone-muted/60 italic">
+            — empty — click an action button to draft —
+          </span>
         )}
       </div>
     </section>

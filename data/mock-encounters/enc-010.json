@@ -10,8 +10,8 @@
   "receivedAt": "2026-04-29T13:28:00Z",
   "investigationState": "IN_PROGRESS",
   "patient": {
-    "name": "Kvalheim, Augustus",
-    "displayName": "Augustus Kvalheim",
+    "name": "Iwasaki, Auberon",
+    "displayName": "Auberon Iwasaki",
     "age": 66,
     "sex": "M",
     "dob": "1960-01-15",
@@ -20,16 +20,16 @@
   },
   "source": {
     "title": "Patient Call: scheduling escalation + albuterol refill",
-    "sender": "Patient (via clinic phone, routed by front desk Adelaide Westkander)",
+    "sender": "Patient (via clinic phone, routed by front desk Aldonza Naranjo)",
     "receivedAt": "2026-04-29 08:28",
-    "body": "Two sub-tasks routed by front desk:\n1. Patient says EP referral to Tregarthen has scheduled out to September; he is asking for an earlier alternate.\n2. Albuterol refill requested.\n\nRecent Patient Communication panel shows 4 cardiology touchpoints yesterday + procedure instructions 2d ago = active investigation."
+    "body": "Two sub-tasks routed by front desk:\n1. Patient says EP referral to Onwuachi has scheduled out to September; he is asking for an earlier alternate.\n2. Albuterol refill requested.\n\nRecent Patient Communication panel shows 4 cardiology touchpoints yesterday + procedure instructions 2d ago = active investigation."
   },
-  "nurseNote": "Patient called regarding (1) earlier EP appointment alternative — current Tregarthen booking September; (2) albuterol refill.\n\nHVC referral directory consulted — alternates at same group available with similar timeframe; Dr. Beckweldon to choose preferred re-route. Albuterol refill auto-eligible (last appt within 12mo, Beckweldon follow-up scheduled, asthma dx active).\n\nForwarded scheduling preferences to Dr. Beckweldon with directory options.",
+  "nurseNote": "Patient called regarding (1) earlier EP appointment alternative — current Onwuachi booking September; (2) albuterol refill.\n\nHVC referral directory consulted — alternates at same group available with similar timeframe; Dr. Voronova to choose preferred re-route. Albuterol refill auto-eligible (last appt within 12mo, Voronova follow-up scheduled, asthma dx active).\n\nForwarded scheduling preferences to Dr. Voronova with directory options.",
   "output": {
     "channel": "phone",
     "phone": {
-      "script": "Mr. Kvalheim, this is Brandon from the Heart and Vascular Clinic, returning your call.\n\nI have two updates for you:\n\nFirst, on the EP referral. We can route you to two alternates at the same Wash U group as Tregarthen — Vellacott or Birchington — both with similar specialty and likely a sooner appointment. Or we can stay with Tregarthen in September. Dr. Beckweldon will pick which route makes sense; I will follow up by end of day with the answer.\n\nSecond, on the albuterol refill. We have sent the refill to your usual pharmacy.\n\nDo you have any questions for me before we hang up?",
-      "voicemail": "Hi Mr. Kvalheim, this is Brandon from the Heart and Vascular Clinic, returning your call about the EP appointment and the albuterol refill. The refill has been sent. We are working on the appointment options now and I will call you back today. Thank you.",
+      "script": "Mr. Iwasaki, this is Brandon from the Heart and Vascular Clinic, returning your call.\n\nI have two updates for you:\n\nFirst, on the EP referral. We can route you to two alternates at the same Wash U group as Onwuachi — Inwarden-Linder or Yagami — both with similar specialty and likely a sooner appointment. Or we can stay with Onwuachi in September. Dr. Voronova will pick which route makes sense; I will follow up by end of day with the answer.\n\nSecond, on the albuterol refill. We have sent the refill to your usual pharmacy.\n\nDo you have any questions for me before we hang up?",
+      "voicemail": "Hi Mr. Iwasaki, this is Brandon from the Heart and Vascular Clinic, returning your call about the EP appointment and the albuterol refill. The refill has been sent. We are working on the appointment options now and I will call you back today. Thank you.",
       "callbackState": "AWAITING_CALL",
       "callbackTimestamp": null
     }
@@ -48,8 +48,8 @@
         "expires": "2026-07-29",
         "clinicalQuestions": [],
         "releaseToPatient": true,
-        "ccResults": ["Beckweldon"],
-        "cosign": "Beckweldon"
+        "ccResults": ["Voronova"],
+        "cosign": "Voronova"
       }
     ],
     "hasUnansweredQuestions": false,

@@ -10,36 +10,42 @@ import { listFixtures } from "@/data/fixtures/encounters";
 import PatientCard from "@/components/PatientCard";
 import TourLauncher from "@/components/TourLauncher";
 
+// Phase-3.5: nav restructure — six In Basket folders mirroring Epic
+// labels exactly. No invented categories.
 const TABS = [
-  { key: "notify", label: "NOTIFY" },
-  { key: "refill", label: "REFILL" },
-  { key: "triage", label: "TRIAGE" },
-  { key: "advice", label: "ADVICE" },
-  { key: "inr", label: "INR" },
-  { key: "other", label: "OTHER" },
+  { key: "results", label: "RESULTS" },
+  { key: "resultsfu", label: "RESULTS F/U" },
+  { key: "rxrequest", label: "RX REQUEST" },
+  { key: "patientcall", label: "PATIENT CALL" },
+  { key: "patientadvice", label: "PATIENT ADVICE REQUEST" },
+  { key: "securechat", label: "SECURE CHAT" },
 ];
 
-const PRIMARY_TYPES = new Set(["notify", "refill", "triage", "advice", "inr"]);
+const PRIMARY_TYPES = new Set([
+  "results",
+  "resultsfu",
+  "rxrequest",
+  "patientcall",
+  "patientadvice",
+  "securechat",
+]);
 const STORAGE_KEY = "kairos.authorizedCards.v1";
 
 function categoryFor(card) {
-  return PRIMARY_TYPES.has(card.tab) ? card.tab : "other";
+  return PRIMARY_TYPES.has(card.tab) ? card.tab : "resultsfu";
 }
 
 function adaptPatient(fixture) {
   const p = fixture.patient || {};
-  const sev =
-    fixture.urgency === "high"
-      ? "red"
-      : fixture.card && fixture.card.severity
-      ? fixture.card.severity
-      : "green";
+  // Phase-3.4 polish: dropped the green/amber/red severity dots in favour
+  // of a single boolean. Only fixtures with urgency: "high" surface a red
+  // urgent triangle on the card; everything else has no icon.
   return {
     id: fixture.id,
     name: p.displayName || p.name,
     age: p.age || "",
     sex: p.sex || "",
-    severity: sev,
+    urgent: fixture.urgency === "high",
     reasonForColumn: (fixture.card && fixture.card.subject) || "",
     issueLine: (fixture.card && fixture.card.subject) || "",
   };
@@ -81,7 +87,7 @@ function readAuthorized() {
 }
 
 export default function DashboardPage() {
-  const [activeTab, setActiveTab] = useState("notify");
+  const [activeTab, setActiveTab] = useState("resultsfu");
   const [authorized, setAuthorized] = useState(() => new Set());
   const mobileNavRef = useRef(null);
 
@@ -110,7 +116,14 @@ export default function DashboardPage() {
   }, [authorized]);
 
   const counts = useMemo(() => {
-    const c = { notify: 0, refill: 0, triage: 0, advice: 0, inr: 0, other: 0 };
+    const c = {
+      results: 0,
+      resultsfu: 0,
+      rxrequest: 0,
+      patientcall: 0,
+      patientadvice: 0,
+      securechat: 0,
+    };
     for (const f of visibleFixtures) c[categoryFor(f)]++;
     return c;
   }, [visibleFixtures]);

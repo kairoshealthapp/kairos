@@ -9,10 +9,11 @@
 //   • Dismiss button (top-right of pane) — clears pane content without
 //     touching other panes; useful after the call to clean up before signing
 //   • Callback-state chip (state machine transitions stubbed in 3.3)
+//
+// Phase-3.4 quality fix: dropped the <TypingText/> wrapper. See
+// NurseNotePane.js for rationale.
 
 "use client";
-
-import TypingText from "./TypingText";
 
 const CALLBACK_STATE_LABEL = {
   AWAITING_CALL: "Awaiting first attempt",
@@ -25,7 +26,6 @@ const CALLBACK_STATE_LABEL = {
 export default function ExplanationPane({
   fixture,
   content,
-  typingSpeedCps,
   isTyping,
   onDismiss,
 }) {
@@ -65,14 +65,19 @@ export default function ExplanationPane({
       </div>
 
       <div className="flex-1 overflow-auto text-[13px] text-bone leading-relaxed whitespace-pre-wrap">
-        {isTyping ? (
-          <TypingText content={content || ""} cps={typingSpeedCps || 70} />
+        {content ? (
+          <>
+            <span>{content}</span>
+            {isTyping && (
+              <span className="inline-block w-[1ch] -mb-[2px] kairos-typing-cursor">▍</span>
+            )}
+          </>
+        ) : isTyping ? (
+          <span className="inline-block w-[1ch] -mb-[2px] kairos-typing-cursor">▍</span>
         ) : (
-          content || (
-            <span className="text-bone-muted/60 italic">
-              — empty — click an action button to draft an example —
-            </span>
-          )
+          <span className="text-bone-muted/60 italic">
+            — empty — click an action button to draft an example —
+          </span>
         )}
       </div>
     </section>

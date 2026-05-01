@@ -16,6 +16,38 @@ import OutputPane from "./OutputPane";
 import OrderPadPane from "./OrderPadPane";
 import AddContextRow from "./AddContextRow";
 import ActionBar from "./ActionBar";
+// Phase-3.6 specialized panels — dispatched by fixture.pattern / id below.
+import TriageEncounter from "./TriageEncounter";
+import INRSourcePanel from "./INRSourcePanel";
+import ReferralPacketPanel from "./ReferralPacketPanel";
+import KairosFindingPanel from "./KairosFindingPanel";
+import SuggestedReplyPanel from "./SuggestedReplyPanel";
+import RoutingPanel from "./RoutingPanel";
+
+// Phase-3.5: breadcrumb labels (six Epic In Basket folders).
+const TAB_LABELS = {
+  results: "RESULTS",
+  resultsfu: "RESULTS F/U",
+  rxrequest: "RX REQUEST",
+  patientcall: "PATIENT CALL",
+  patientadvice: "PATIENT ADVICE REQUEST",
+  securechat: "SECURE CHAT",
+};
+
+// Triage pattern dispatch — fixtures whose entire encounter view is the
+// four-stage clinical reasoning workflow (TriageEncounter component).
+const TRIAGE_FIXTURE_IDS = new Set(["strathorne-doe", "underwell-full-lifecycle"]);
+
+// INR pattern dispatch — fixtures whose SOURCE panel is the trended INR
+// view (INRSourcePanel) instead of the standard SourcePane.
+function isInrPattern(fixture) {
+  if (!fixture) return false;
+  if (fixture.pattern === "inr-routine") return true;
+  if (fixture.contradictionHold === true) return true;
+  if (fixture.patternName === "INR ROUTINE") return true;
+  if (fixture.id === "crider-inr" || fixture.id === "maundrell-contradiction") return true;
+  return false;
+}
 
 const STORAGE_KEY = "kairos.authorizedCards.v1";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -297,6 +329,109 @@ export default function EncounterDetail({ fixture, fromTab }) {
   const blockAuthorize = !!(paneState.orderPad && paneState.orderPad.hasUnansweredQuestions);
   const flownOff = cardState === "flown-off" || cardState === "authorized";
 
+  const categoryLabel = fromTab ? TAB_LABELS[fromTab] || fromTab.toUpperCase() : null;
+
+  // Phase-3.6 — early dispatch for triage fixtures (whole-view replacement
+  // by TriageEncounter). Strathorne and Underwell render their own
+  // four-stage workflow rather than the standard 4-pane grid below.
+  if (TRIAGE_FIXTURE_IDS.has(fixture.id)) {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <nav aria-label="Breadcrumb" className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handleBack}
+              className="text-[12px] text-bone-muted hover:text-bone transition-colors"
+            >
+              ← Back to dashboard
+            </button>
+            {categoryLabel ? (
+              <>
+                <span className="text-[12px] text-bone-muted/60" aria-hidden="true">
+                  ›
+                </span>
+                <span className="kairos-kicker text-amber/80">{categoryLabel}</span>
+              </>
+            ) : null}
+          </nav>
+          <span className="kairos-kicker text-bone-muted">
+            PATTERN {String(fixture.patternId)} · {fixture.patternName || (pattern && pattern.name)}
+          </span>
+        </div>
+        <div data-tour-anchor="patient-header">
+          <PatientHeader fixture={fixture} route={route} />
+        </div>
+        <TriageEncounter fixture={fixture} />
+      </div>
+    );
+  }
+
+  // Phase-3.6 — early dispatch for the Pelc already-resolved fixture
+  // (Stream 5 moat). Custom three-panel layout: source / Kairos finding /
+  // suggested reply, plus the standard routing panel + action bar.
+  if (fixture.id === "pelc-va-rfs" || fixture.pattern === "already-resolved") {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <nav aria-label="Breadcrumb" className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handleBack}
+              className="text-[12px] text-bone-muted hover:text-bone transition-colors"
+            >
+              ← Back to dashboard
+            </button>
+            {categoryLabel ? (
+              <>
+                <span className="text-[12px] text-bone-muted/60" aria-hidden="true">
+                  ›
+                </span>
+                <span className="kairos-kicker text-amber/80">{categoryLabel}</span>
+              </>
+            ) : null}
+          </nav>
+          <span className="kairos-kicker text-bone-muted">
+            PATTERN {String(fixture.patternId)} · {fixture.patternName}
+          </span>
+        </div>
+        <div data-tour-anchor="patient-header">
+          <PatientHeader fixture={fixture} route={route} />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+          <SourcePane fixture={fixture} />
+          <KairosFindingPanel finding={fixture.kairosFinding} />
+          <div className="lg:col-span-2">
+            <SuggestedReplyPanel reply={fixture.suggestedReply} />
+          </div>
+        </div>
+        {fixture.routing ? (
+          <div className="mt-4">
+            <RoutingPanel routing={fixture.routing} />
+          </div>
+        ) : null}
+        <div className="mt-4">
+          <ActionBar
+            cardId={fixture.id}
+            pattern={pattern}
+            isPlaying={false}
+            blockAuthorize={false}
+            onRunAction={() => {}}
+            onAuthorize={handleAuthorize}
+            onEdit={handleEdit}
+            fromTab={fromTab}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Per-pattern flags for the default four-pane render path below.
+  const useInrSource = isInrPattern(fixture);
+  const isSellman =
+    fixture.id === "sellman-cpap-referral" ||
+    fixture.pattern === "synthesis-referral-dme";
+
   return (
     <div
       className={
@@ -306,15 +441,25 @@ export default function EncounterDetail({ fixture, fromTab }) {
       }
       style={{ pointerEvents: flownOff ? "none" : undefined }}
     >
-      {/* Top strip: back button + pattern label */}
+      {/* Top strip: back button + breadcrumb category + pattern label */}
       <div className="flex items-center justify-between mb-4">
-        <button
-          type="button"
-          onClick={handleBack}
-          className="text-[12px] text-bone-muted hover:text-bone transition-colors"
-        >
-          ← Back to dashboard
-        </button>
+        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={handleBack}
+            className="text-[12px] text-bone-muted hover:text-bone transition-colors"
+          >
+            ← Back to dashboard
+          </button>
+          {categoryLabel ? (
+            <>
+              <span className="text-[12px] text-bone-muted/60" aria-hidden="true">
+                ›
+              </span>
+              <span className="kairos-kicker text-amber/80">{categoryLabel}</span>
+            </>
+          ) : null}
+        </nav>
         <span className="kairos-kicker text-bone-muted">
           PATTERN {String(fixture.patternId)} · {fixture.patternName || (pattern && pattern.name)}
         </span>
@@ -343,7 +488,11 @@ export default function EncounterDetail({ fixture, fromTab }) {
       {/* 4-pane grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div data-tour-anchor="source-pane">
-          <SourcePane fixture={fixture} />
+          {useInrSource ? (
+            <INRSourcePanel fixture={fixture} />
+          ) : (
+            <SourcePane fixture={fixture} />
+          )}
         </div>
         <div data-tour-anchor="nurse-note">
           <NurseNotePane
@@ -367,7 +516,25 @@ export default function EncounterDetail({ fixture, fromTab }) {
         </div>
       </div>
 
+      {/* Phase-3.6 — Sellman moat: append the auto-assembled referral
+          packet preview below the four-pane grid. */}
+      {isSellman && fixture.referralPacket ? (
+        <div className="mt-4">
+          <ReferralPacketPanel packet={fixture.referralPacket} />
+        </div>
+      ) : null}
+
       <AddContextRow />
+
+      {/* Phase-3.6 — routing surface for any fixture whose primary action
+          is a forward (Lockner / Kvalheim / Strathorne / Maundrell / Sellman /
+          Pelc). Renders above the action bar so the nurse can review or
+          edit recipient/pool/comment/priority before clicking Authorize. */}
+      {fixture.routing ? (
+        <div className="mt-4">
+          <RoutingPanel routing={fixture.routing} />
+        </div>
+      ) : null}
 
       <div data-tour-anchor="action-bar">
         <ActionBar

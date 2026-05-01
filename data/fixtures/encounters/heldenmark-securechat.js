@@ -1,12 +1,12 @@
 // Pattern 10 — COORDINATION (Secure Chat origin — skeleton)
-// Source: docs/KAIROS-SESSION-2026-04-29-AFTERNOON.md CASE 20 (Bailey/Heldenmark)
+// Source: docs/KAIROS-SESSION-2026-04-29-AFTERNOON.md CASE 20 (Bailey/Drozdov)
 
 const fixture = {
   id: "heldenmark-securechat",
   slug: "heldenmark-securechat",
   patternId: 10,
   patternName: "COORDINATION (Secure Chat origin)",
-  tab: "other",
+  tab: "securechat",
   urgency: "calm",
   sourceChannel: "secure-chat",
   sourceBox: "secure-chat",
@@ -18,22 +18,22 @@ const fixture = {
     severity: "amber",
   },
   patient: {
-    name: "Heldenmark, Wendell",
-    displayName: "Wendell Heldenmark",
+    name: "Drozdov, Werner",
+    displayName: "Werner Drozdov",
     age: 69,
     sex: "M",
     dob: "1957-04-01",
     mrn: "73018241",
     proxyName: null,
-    primary: "Beckweldon NP, Heart and Vascular Clinic",
+    primary: "Voronova NP, Heart and Vascular Clinic",
     coverage: "Aetna Medicare Advantage",
   },
   sourceArtifact: {
     type: "Secure Chat (11-participant thread)",
-    author: "Phoebe Larkspur (PHS scheduling, 9:20 AM)",
+    author: "Pomona Kishimoto (PHS scheduling, 9:20 AM)",
     timestamp: "2026-04-29 08:24",
     body:
-      "Patient referral order placed 1/2026 still status=PEND with 2 missed appointments. Verify clinical relevance — should we cancel and re-place, or chase the patient?\n\n[Brandon first sees this 4h+ after the original message lands. No queue position, no ownership signal — Secure Chat \"silent failure\" surface.]",
+      "Patient referral order placed 1/2026 still status=PEND with 2 missed appointments. Verify clinical relevance — should we cancel and re-place, or chase the patient?",
   },
   initialPaneContent: {
     nurseNote: "",
@@ -44,7 +44,7 @@ const fixture = {
   actionScripts: {},
   finalSignedState: {
     nurseNote:
-      "Stale referral identified. Beckweldon confirms still clinically relevant. Patient outreach scheduled. Thread-state synchronization will close the originating Secure Chat thread automatically once patient acknowledges.",
+      "Stale referral identified. Voronova confirms still clinically relevant. Patient outreach scheduled. Thread-state synchronization will close the originating Secure Chat thread automatically once patient acknowledges.",
     mychartMessage: "Touching base on a referral that has been pending since January…",
     orders: [],
     dxAssociated: [],

@@ -10,8 +10,8 @@
   "receivedAt": "2026-04-29T13:14:00Z",
   "investigationState": "AWAITING_NURSE",
   "patient": {
-    "name": "Crestwood, Lavinia",
-    "displayName": "Lavinia Crestwood",
+    "name": "Stojanović, Liviana",
+    "displayName": "Liviana Stojanović",
     "age": 67,
     "sex": "F",
     "dob": "1959-03-15",
@@ -20,21 +20,21 @@
   },
   "source": {
     "title": "Result Note: BNP 142 — stable, no change",
-    "sender": "Beckweldon, Cardiology",
+    "sender": "Voronova, Cardiology",
     "receivedAt": "2026-04-29 08:14",
     "body": "BNP 142 today, mildly elevated from 118 in February but well below historical decompensated range. Weight stable per recent MyChart messages. No diuretic adjustment. Continue current torsemide dose and recheck BNP at June follow-up. No callback required."
   },
-  "nurseNote": "Dr. Beckweldon reviewed BNP today. Result 142 mildly elevated from prior 118 in 2/2026 but well below historical decompensated range. Weight stable per recent MyChart messages. No medication changes. Continue current torsemide; recheck BNP at June follow-up.\n\nPatient notified via MyChart.",
+  "nurseNote": "Dr. Voronova reviewed BNP today. Result 142 mildly elevated from prior 118 in 2/2026 but well below historical decompensated range. Weight stable per recent MyChart messages. No medication changes. Continue current torsemide; recheck BNP at June follow-up.\n\nPatient notified via MyChart.",
   "output": {
     "channel": "mychart",
     "mychart": {
-      "recipient": "Lavinia Crestwood",
+      "recipient": "Liviana Stojanović",
       "proxyName": null,
       "subject": "Test results",
       "notifyBy": "2026-05-02",
       "repliesAllowed": "Replies allowed; nurse on alert",
-      "greeting": "Ms Crestwood,",
-      "body": "Dr. Beckweldon has reviewed your recent BNP (a protein your heart releases when it is under stress). Your level today is 142, slightly higher than your result in February but still well within your usual range and well below where we would worry. Your weight has stayed stable, which is reassuring.\n\nNo changes to your medications. Continue your current torsemide as prescribed. We will recheck your BNP at your next routine follow-up in June.\n\nPlease let us know if you experience shortness of breath, swelling, or weight gain greater than 2-3 lbs in a single day.\n\nBrandon Sterne, RN BSN / Heart and Vascular Clinic"
+      "greeting": "Ms Stojanović,",
+      "body": "Dr. Voronova has reviewed your recent BNP (a protein your heart releases when it is under stress). Your level today is 142, slightly higher than your result in February but still well within your usual range and well below where we would worry. Your weight has stayed stable, which is reassuring.\n\nNo changes to your medications. Continue your current torsemide as prescribed. We will recheck your BNP at your next routine follow-up in June.\n\nPlease let us know if you experience shortness of breath, swelling, or weight gain greater than 2-3 lbs in a single day.\n\nBrandon Sterne, RN BSN / Heart and Vascular Clinic"
     }
   },
   "orderPad": {

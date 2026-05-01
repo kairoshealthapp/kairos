@@ -10,8 +10,8 @@
   "receivedAt": "2026-04-29T11:48:00Z",
   "investigationState": "AWAITING_NURSE",
   "patient": {
-    "name": "Esselbach, Mathilda",
-    "displayName": "Mathilda Esselbach",
+    "name": "Nascimento, Maja",
+    "displayName": "Maja Nascimento",
     "age": 87,
     "sex": "F",
     "dob": "1939-11-30",
@@ -20,16 +20,16 @@
   },
   "source": {
     "title": "Result Note: BNP 1024 — pre-op surgery 5/14, call patient",
-    "sender": "Beckweldon, Cardiology",
+    "sender": "Voronova, Cardiology",
     "receivedAt": "2026-04-29 06:48",
     "body": "BNP 1024 today, significantly elevated from baseline. Patient is scheduled for elective surgery 5/14. Please call patient to assess for symptoms (SOB, weight gain, edema, orthopnea), confirm current diuretic dose, and discuss whether pre-op cardiology clearance needs revisiting. MyChart status Pending — phone call only."
   },
-  "nurseNote": "Pending — Dr. Beckweldon flagged BNP 1024 (significantly elevated). Patient has elective surgery scheduled 5/14. Phone call to assess HF symptoms, diuretic compliance, and pre-op clearance status. MyChart Pending — phone-only contact.\n\n[Note will be completed after phone contact.]",
+  "nurseNote": "Pending — Dr. Voronova flagged BNP 1024 (significantly elevated). Patient has elective surgery scheduled 5/14. Phone call to assess HF symptoms, diuretic compliance, and pre-op clearance status. MyChart Pending — phone-only contact.\n\n[Note will be completed after phone contact.]",
   "output": {
     "channel": "phone",
     "phone": {
-      "script": "Mrs. Esselbach, this is Brandon from the Heart and Vascular Clinic. I am calling about a recent lab result Dr. Beckweldon reviewed today.\n\nYour BNP, which is a blood test that tells us how hard your heart is working, came back higher than usual. Dr. Beckweldon wanted me to check in with you in person before your surgery on May 14th.\n\nFirst, I would like to ask a few questions:\n\n1. Have you noticed any new shortness of breath, especially lying flat or walking around the house?\n2. Has your weight gone up by 2 to 3 pounds or more in a single day recently?\n3. Have you noticed any new swelling in your legs or ankles?\n4. Are you taking your water pill as prescribed every day?\n\nDepending on your answers, Dr. Beckweldon may want to see you before your surgery, or adjust your medication. We will not change anything without you knowing.\n\nDo you have any questions for me before we start?",
-      "voicemail": "Hi Mrs. Esselbach, this is Brandon from the Heart and Vascular Clinic, calling about a recent lab result. Dr. Beckweldon wanted me to check in with you in person before your surgery on May 14th. Please give us a call back at your earliest convenience at the clinic number. Thank you.",
+      "script": "Mrs. Nascimento, this is Brandon from the Heart and Vascular Clinic. I am calling about a recent lab result Dr. Voronova reviewed today.\n\nYour BNP, which is a blood test that tells us how hard your heart is working, came back higher than usual. Dr. Voronova wanted me to check in with you in person before your surgery on May 14th.\n\nFirst, I would like to ask a few questions:\n\n1. Have you noticed any new shortness of breath, especially lying flat or walking around the house?\n2. Has your weight gone up by 2 to 3 pounds or more in a single day recently?\n3. Have you noticed any new swelling in your legs or ankles?\n4. Are you taking your water pill as prescribed every day?\n\nDepending on your answers, Dr. Voronova may want to see you before your surgery, or adjust your medication. We will not change anything without you knowing.\n\nDo you have any questions for me before we start?",
+      "voicemail": "Hi Mrs. Nascimento, this is Brandon from the Heart and Vascular Clinic, calling about a recent lab result. Dr. Voronova wanted me to check in with you in person before your surgery on May 14th. Please give us a call back at your earliest convenience at the clinic number. Thank you.",
       "callbackState": "AWAITING_CALL",
       "callbackTimestamp": null
     }

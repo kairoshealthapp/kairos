@@ -10,8 +10,8 @@
   "receivedAt": "2026-04-29T13:52:00Z",
   "investigationState": "HOLD",
   "patient": {
-    "name": "Maundrell, Reginald",
-    "displayName": "Reginald Maundrell",
+    "name": "Solberg, Roderic",
+    "displayName": "Roderic Solberg",
     "age": 74,
     "sex": "M",
     "dob": "1951-12-04",
@@ -22,13 +22,13 @@
     "title": "Pt Advice Reply (re: INR overdue template sent 4/24)",
     "sender": "Patient (via MyChart)",
     "receivedAt": "2026-04-29 08:52",
-    "body": "\"Dr. M told me to be taking only the other two medications and also said I don't have to take the blood test anymore.\""
+    "body": "\"Dr. H told me to be taking only the other two medications and also said I don't have to take the blood test anymore.\""
   },
-  "nurseNote": "Patient replied to outbound INR overdue MyChart template (sent 4/24). Patient states Dr. M (Skarsdale) told him to discontinue warfarin and INR monitoring. CHART CONTRADICTION: med list still shows active warfarin, no recent provider note documenting discontinuation. Cannot resolve from chart alone.\n\nForwarded to Skarsdale for verification. NO autonomous action. Patient response on hold pending provider confirmation.",
+  "nurseNote": "Patient replied to outbound INR overdue MyChart template (sent 4/24). Patient states Dr. H (Halloran) told him to discontinue warfarin and INR monitoring. CHART CONTRADICTION: med list still shows active warfarin, no recent provider note documenting discontinuation. Cannot resolve from chart alone.\n\nForwarded to Halloran for verification. NO autonomous action. Patient response on hold pending provider confirmation.",
   "output": {
     "channel": "mychart",
     "mychart": {
-      "recipient": "Reginald Maundrell",
+      "recipient": "Roderic Solberg",
       "proxyName": null,
       "subject": null,
       "notifyBy": null,

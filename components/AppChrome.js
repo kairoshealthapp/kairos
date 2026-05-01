@@ -8,6 +8,7 @@
 import { usePathname } from "next/navigation";
 import Banner from "./Banner";
 import TourMode from "./TourMode";
+import CursorGhost from "./CursorGhost";
 import VersionStamp from "./VersionStamp";
 
 export default function AppChrome({ children }) {
@@ -18,6 +19,7 @@ export default function AppChrome({ children }) {
       <Banner />
       <main className="max-w-[1400px] mx-auto px-6 py-8">{children}</main>
       <TourMode />
+      <CursorGhost />
       <VersionStamp />
     </>
   );
