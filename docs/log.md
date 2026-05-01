@@ -5011,3 +5011,57 @@ The two modes diverge by 45+ seconds, so a single fixed `startTime` can't serve 
 - `lib/tourScript.js` (Card 1 `onArrival`): cursor now has Quick base (`startTime 11600 / arriveTime 13100 / clickTime 14500`) plus a `deep` override (`startTime 57200 / arriveTime 58700 / clickTime 60100`). Cursor arrival lands on the word "watch" in both modes; click ripple fires just before the narration ends; the auto-action then fires after the dwell as before.
 
 **Verify:** `npx next build` clean. Browser smoke test pending — dev server preview was unresponsive at end of session (concurrent build trampled `.next/`); user can refresh to manually verify Deep tour Card 1 timing.
+
+
+
+
+## 2026-05-01 18:05 CDT — Catalog of bugs from Brandon's full Deep tour walkthrough
+
+Four-part fix landed across content quality, demo-state behavior, dashboard branding, and audio. Each part committed separately so any single piece can be reverted without disturbing the others.
+
+### Part 1 — Clinical accuracy and clinical-register pollution (Cards 4, 5, 6)
+
+**Card 4 (Stewart / norreys-transactional) — refill rule was wrong.** `lib/tourScript.js` `onArrival` for Stewart described the rule as "seen by cardiology in the last month." Brandon's actual cardiology workflow: full refill requires patient seen within the last *year* AND a future appointment booked. Either condition missing → 30-day refill only. Updated:
+
+- `displayText` / `title`: "Three preconditions, all met." → "Two preconditions, both met."
+- `quickVoiceText`: rewrote algorithm summary to "seen by cardiology in the last year, future appointment booked. Both conditions, full refill. Either one missing, thirty days only."
+- `deepVoiceText`: rule walk-through now matches Brandon's protocol — "Has this patient been seen by cardiology in the last year? … three months ago. Future appointment? … in six weeks. Both conditions met — full refill, ninety days, three refills." Same `pa3` rule-failure description corrected ("not seen in the last year, or no future appointment on the books").
+
+**Card 5 (Nguyen / quennell-scope) — Nurse Note had Kairos-internal taxonomy bleeding into clinical text.** The fixture's `actionScripts.generate-scope-respecting-reply` typed phrases like "Vague-reference classifier triggered clarification subroutine," "Scope-of-practice rail flagged," "Reply drafted in scope," "No autonomous interpretation of H&H ↔ BP relationship" into the on-screen Nurse Note pane. A real CHCIO would read those as architecture leakage, not clinical prose. Rewrote both the live `actionScripts` Nurse Note and the `finalSignedState.nurseNote` fallback in proper clinical register — preserves the clinical content (vague follow-up resolved on clarification, hematology referral redirect, no autonomous interpretation of H&H or BP) but drops the taxonomy. Tour narration audio for this card was unaffected (the offending strings were never spoken).
+
+**Card 6 (Foster / maundrell-contradiction) — Coumadin Clinic workflow framing was off-base.** Card 6 narration implied the Coumadin Clinic RN normally escalates dose adjustments to providers. Brandon's actual workflow at this practice: Coumadin Clinic is RN-protocol-driven. RN runs the protocol, makes dose adjustments per established criteria, signs off without provider involvement. Provider is only pulled in for the rare on-or-off question. Foster's contradiction (chart says active, patient claims provider stopped it) is *exactly* that rare case — which actually strengthens the pitch when framed correctly. Rewrote `preArrivalNarrator`, `onArrival`, the `pa1` after-action annotation, and `onAuthorize` (both Quick and Deep tiers) to lead with the protocol-driven default ("Kairos drafts the protocol-appropriate dose adjustment, RN authorizes per protocol — provider only involved when clarification needed on on-or-off status") and frame this card as the rare exception that rules apply.
+
+### Part 2 — Demo state persistence (highest severity)
+
+**Bug:** Outside the tour, clicking Authorize on any card permanently dismissed it via `sessionStorage["kairos.authorizedCards.v1"]` — and the dismissal survived browser reloads. Anyone clicking around in `/rn` outside the tour would silently destroy the demo state for the next visitor.
+
+**Two-part fix:**
+
+- `components/EncounterDetail.js` `handleAuthorize` — gated the `writeAuthorized()` call on `sessionStorage["kairos-tour-active"] === "1"`. Outside the tour, the fly-off animation still plays (so the click feels real), but no state is persisted; routing back to `/rn` shows the card in its original position. Inside the tour, the engine still drives the persistence as before.
+- `app/rn/page.js` — added a `clearDemoState()` helper that clears `kairos.authorizedCards.v1` (plus its backup), tour flags (only when no tour is running), and any `kairos.triage.responses.v1.*` / `kairos-fixture-*` / `kairos-card-state-*` localStorage keys. Wired it two ways: (1) auto-runs on every `/rn` mount when no tour is active, so visitors always land on a fresh dashboard; (2) a "Reset demo" button in the top-nav (replaces the previous decorative cog) that runs the helper and reloads.
+
+### Part 3 — Dashboard wordmark brand consistency
+
+The dashboard top-nav was rendering "Kairos" as plain `kairos-display` serif text in `--color-bone`. The landing page uses a 22px-letterspacing gold gradient on Fraunces. Inconsistent enough that the dashboard didn't feel like the same product.
+
+Added a `.kairos-nav-wordmark` class to `app/globals.css` — same gradient, same Fraunces face, same 0.08em letter-spacing as `.kl-wordmark` on the landing page, sized down to 22px to fit a 56px-tall nav bar. Replaced the dashboard `<span>Kairos</span>` with a `<Link href="/rn">KAIROS</Link>` so the wordmark is also a brand-mark click target back to the dashboard root.
+
+### Part 4 — Audio quirks
+
+**Card 2 garble after "Mediterranean diet."** TTS render artifact in `henderson-lipid-arrival-deep.mp3` only (the word "Mediterranean" only appears in the Deep tier). Single MP3 deleted and regenerated.
+
+**Card 7 long silences between TRIAGE stages.** Diagnosed: `EncounterDetail.js` was running the action script (`dataSource.runAction(fixture.id, actionId)`) on every auto-action — banner + 80-CPS typing into invisible panes — even though `TriageEncounter` renders its own UI and the standard 4-pane grid is hidden. The ~15-25s the script took to type a 1500-char phone-script into nothing showed up in the tour as silence between Stage N narration and Stage N+1 narration, because TourMode awaits `kairos-encounter:action-complete` before moving on. Fix in two places:
+
+- `components/EncounterDetail.js` — auto-action listener now early-returns for `TRIAGE_FIXTURE_IDS` so the script doesn't run.
+- `components/TriageEncounter.js` — auto-action listener now dispatches `kairos-encounter:action-complete` on the next tick after the stage commit, so TourMode advances cleanly to the next narration.
+
+**Card 7 audio cutoff mid-sentence.** Couldn't pinpoint which clip Brandon was hearing without re-listening; regenerated all three Reed `pa1`/`pa2`/`pa3` files in both Quick and Deep tiers as the safest fix. New file sizes scale linearly with text length, suggesting clean renders.
+
+**Total audio regenerated this round (18 files, $0.14):**
+
+- Card 4 Stewart: `arrival` Q+D, `pa3-deep` (rule rewording).
+- Card 6 Foster: `pre`, `arrival`, `pa1`, `auth` (Q+D each — protocol-driven framing rewrite).
+- Card 2 Henderson: `arrival-deep` (Mediterranean garble).
+- Card 7 Reed: `pa1`, `pa2`, `pa3` (Q+D each — defensive regen for cutoff).
+
+**Verify:** `npm run build` clean. `/rn` smoke-tested via preview server: gold KAIROS wordmark renders on Fraunces, Reset demo button title shows correctly, clicking Authorize on a non-tour card no longer persists (`sessionStorage` stays null, card visible after route-back). Tour playback verification deferred to Brandon's manual smoke test.

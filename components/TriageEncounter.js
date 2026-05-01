@@ -167,6 +167,16 @@ export default function TriageEncounter({ fixture }) {
   // bubbles. Map each actionId to the matching stage transition so the
   // four-stage UI advances in sync with narration. The manual
   // ActionButton onClick handlers below remain wired for non-tour use.
+  //
+  // Tour timing: TourMode awaits kairos-encounter:auto-action-complete
+  // (via runAction → action-complete on standard fixtures, or this
+  // listener on triage fixtures). EncounterDetail no longer runs the
+  // action script for triage fixtures — its panes are hidden — so this
+  // listener is the only thing that closes the action loop.
+  // We dispatch action-complete immediately after the stage change
+  // commits, which keeps the tour cadence flowing into the next
+  // narration without the 15-25 second silences caused by typing into
+  // invisible panes.
   useEffect(() => {
     if (typeof window === "undefined") return;
     function onAutoAction(e) {
@@ -179,7 +189,18 @@ export default function TriageEncounter({ fixture }) {
         captureMockResponses();
       } else if (actionId === "synthesize-callback") {
         setStage(4);
+      } else {
+        return;
       }
+      // Close the action loop on the next tick so any pending state
+      // commits flush first.
+      setTimeout(() => {
+        window.dispatchEvent(
+          new CustomEvent("kairos-encounter:action-complete", {
+            detail: { actionId, fixtureId: fixture.id },
+          })
+        );
+      }, 0);
     }
     window.addEventListener("kairos-encounter:auto-action", onAutoAction);
     return () =>
