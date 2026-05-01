@@ -33,6 +33,20 @@ const AUDIO_TAIL_BUFFER_MS = 500;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// Cursor configs may carry per-mode overrides (cursor.deep / cursor.quick)
+// when the narration length differs sharply between Quick and Deep audio.
+// The override block only specifies the timing keys it wants to change.
+function resolveCursor(cursor, mode) {
+  if (!cursor) return null;
+  const override = mode === "deep" ? cursor.deep : cursor.quick;
+  if (!override) {
+    const { deep, quick, ...base } = cursor;
+    return base;
+  }
+  const { deep, quick, ...base } = cursor;
+  return { ...base, ...override };
+}
+
 // Build the public/tour-audio/ filename for a bubble. Quick mode keeps the
 // existing un-suffixed filenames so previously-generated MP3s stay valid.
 // Deep mode appends "-deep" so the two tiers coexist on disk.
@@ -259,7 +273,7 @@ export default function TourMode() {
             detail: {
               targetButton: data.targetButton || null,
               targetCard: data.targetCard || null,
-              cursor: data.cursor || null,
+              cursor: resolveCursor(data.cursor, modeRef.current),
             },
           })
         );
@@ -287,7 +301,7 @@ export default function TourMode() {
             detail: {
               targetButton: data.targetButton || null,
               targetCard: data.targetCard || null,
-              cursor: data.cursor || null,
+              cursor: resolveCursor(data.cursor, modeRef.current),
             },
           })
         );

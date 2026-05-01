@@ -43,5 +43,5 @@ next-env.d.ts
 # local-only name-scrub mapping references — never commit
 docs/.name-scrub-mapping-*.md
 
-# private session records (real-Phelps-Health context, ThinkPad-local only)
+# private session records (sensitive context, ThinkPad-local only)
 /.private/
