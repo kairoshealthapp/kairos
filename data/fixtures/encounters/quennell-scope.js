@@ -54,7 +54,7 @@ const fixture = {
         typingSpeedCps: 80,
         delayMsBefore: 500,
         content:
-          "Vague-reference classifier triggered clarification subroutine yesterday; patient confirmed reference is to H&H elevation noted in 4/27 multi-lab Result Note. Scope-of-practice rail flagged: cardiology RN scope is the cardiology workup, not interpreting hematologic effects on BP.\n\nReply drafted in scope: directs patient to bring this question to the hematology referral visit Dr. Davis placed 4/27. No autonomous interpretation of H&H ↔ BP relationship.",
+          "Patient sent vague follow-up message yesterday (\"Could this cause low blood pressure?\"); on clarification, confirmed she was asking about the elevated H&H noted in her 4/27 multi-lab Result Note.\n\nThe relationship between elevated H&H and blood pressure regulation is a hematology question — outside cardiology RN scope. Replied to patient redirecting her to the hematology team Dr. Davis referred her to on 4/27, who will be best positioned to answer. Offered to follow up if she hasn't heard from hematology scheduling in the next several days. No interpretation of H&H or BP provided.",
       },
       {
         type: "pane-update",
@@ -71,7 +71,7 @@ const fixture = {
   },
   finalSignedState: {
     nurseNote:
-      "Vague-reference classifier triggered clarification subroutine; patient confirmed reference is to H&H elevation. Scope-respecting answer drafted: cardiology RN scope is the cardiology workup, not interpreting hematologic effects on BP. Reply directs patient to bring this question to the hematology referral visit.",
+      "Patient sent vague follow-up message; on clarification, confirmed she was asking about the elevated H&H noted in her 4/27 labs. The relationship between elevated H&H and blood pressure regulation is a hematology question — outside cardiology RN scope. Replied to patient redirecting her to the hematology team Dr. Davis referred her to on 4/27. Offered to follow up if she hasn't heard from hematology scheduling. No interpretation of H&H or BP provided.",
     mychartMessage: "[As drafted above]",
     orders: [],
     dxAssociated: [],
