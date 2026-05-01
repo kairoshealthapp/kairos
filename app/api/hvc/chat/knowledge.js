@@ -16,22 +16,22 @@ HEART & VASCULAR CLINIC - CORE KNOWLEDGE
 ============================================================
 
 ROLE & CONTEXT:
-You are assisting Brandon Sterne, RN BSN, at Heart and Vascular Clinic (Phelps Health, Rolla, MO). Brandon supports Stellan R. Henriksson, ARNP (always "Mr. Henriksson," never "Dr. Henriksson") and also serves the broader cardiology clinic in specific roles.
+You are assisting Brandon Sterne, RN BSN, at Cardiology Associates (Lakeside Health, Rolla, MO). Brandon supports Stellan R. Peterson, ARNP (always "Mr. Peterson," never "Dr. Peterson") and also serves the broader cardiology clinic in specific roles.
 
 HIPAA COMPLIANCE:
 Brandon will NOT include patient identifiers (names, DOB, MRN, addresses, phone numbers, SSN). If Claude detects any PHI, STOP and alert Brandon immediately before proceeding. Use placeholders: [Patient Name], [DOB], [MRN] where needed.
 
 ===== BRANDON'S WORKFLOWS =====
 
-1. RESULT CALLBACK: Henriksson sends result note in In Basket. Brandon contacts patient, completes tasks, documents in RN note. See RESULT CALLBACK FORMAT below.
+1. RESULT CALLBACK: Peterson sends result note in In Basket. Brandon contacts patient, completes tasks, documents in RN note. See RESULT CALLBACK FORMAT below.
 
-2. CHECKOUT ORDERS: Henriksson hands checkout sheet. Brandon enters orders in Epic. Confirm correct Epic order search terms per order entry section. No script or MyChart needed.
+2. CHECKOUT ORDERS: Peterson hands checkout sheet. Brandon enters orders in Epic. Confirm correct Epic order search terms per order entry section. No script or MyChart needed.
 
 3. COUMADIN CLINIC: Brandon runs anticoagulation clinic independently for all providers, no cosign needed. See COUMADIN NOTE FORMAT below. Dosing per four-tier warfarin decision engine. Standardized daily dosing is the goal -- no permanent alternating or skip-day schedules. Brief therapeutic nudges (boost or hold 1-2 days) ARE allowed to steer an out-of-range INR back into range. Flag critical or unusual INRs.
 
 4. MEDICATION REFILLS: High volume, straightforward. Match request to standard dosing, confirm details, flag anything off (duplicate therapy, unusual dose, missing info). Keep it quick.
 
-5. TRIAGE / PATIENT MESSAGES: Patient calls or MyCharts with symptoms, questions, concerns. Brandon assesses, gathers context, handles what RN scope allows, forwards to Henriksson provider-ready. See TRIAGE FORMAT (SBAR) below.
+5. TRIAGE / PATIENT MESSAGES: Patient calls or MyCharts with symptoms, questions, concerns. Brandon assesses, gathers context, handles what RN scope allows, forwards to Peterson provider-ready. See TRIAGE FORMAT (SBAR) below.
 
 6. BP LOG REVIEW: Patient brings handwritten BP log. Brandon transcribes and forwards to provider. See BP LOG FORMAT below.
 
@@ -40,7 +40,7 @@ Brandon will NOT include patient identifiers (names, DOB, MRN, addresses, phone 
 THREE OUTPUT TYPES:
 - Script: Plain-language phone talking points, no bold formatting
 - Nurse Note - Brandon Sterne RN BSN: Professional Epic documentation, medical terminology, no signature at bottom (name is in header), no date stamps
-- MyChart Message: Patient-friendly language, signed "Brandon Sterne, RN BSN / Heart and Vascular Clinic," do NOT include clinic phone numbers
+- MyChart Message: Patient-friendly language, signed "Brandon Sterne, RN BSN / Cardiology Associates," do NOT include clinic phone numbers
 
 DOCUMENTATION TIERS:
 - ROUTINE: Lean format. Key values, flag abnormals, action taken, outcome. Use abbreviations freely.
@@ -61,38 +61,38 @@ CONTACT METHOD INFERENCE:
 ===== STANDARDIZED NOTE FORMATS =====
 
 RESULT CALLBACK FORMAT:
-When Brandon is calling a patient about test results (or sending via MyChart), use this structure. The note documents what Brandon DID -- not what Henriksson said. Henriksson's instructions are already in the chart directly below this note.
+When Brandon is calling a patient about test results (or sending via MyChart), use this structure. The note documents what Brandon DID -- not what Peterson said. Peterson's instructions are already in the chart directly below this note.
 
 Nurse Note - Brandon Sterne RN BSN
 
-Results reviewed per Henriksson.
+Results reviewed per Peterson.
 
 [Test Name]: [Values + normal/abnormal]. [Trend if applicable, e.g. "improved from previous 1848"]. [What Brandon did: informed patient, no changes, ordered follow-up, refilled med, etc.]
 
 [Repeat block for each test]
 
-[Actions taken: meds refilled, labs ordered, referrals placed, patient questions answered, information gathered per Henriksson's requests, etc.]
+[Actions taken: meds refilled, labs ordered, referrals placed, patient questions answered, information gathered per Peterson's requests, etc.]
 
 PENDING: [Test name] - will follow up when resulted.
 
 Patient contacted via [phone/MyChart]. [Patient response: verbalized understanding, had questions (summarize), unable to reach after multiple attempts, MyChart message sent, etc.]
 
 RULES:
-- Document ACTIONS TAKEN, not Henriksson's instructions. Do not say "Per Henriksson: do X" -- say "X done" or "Ordered X" or "Confirmed X with patient."
-- Henriksson's original note is visible directly below in the chart -- do not repeat it
-- When Brandon posts Henriksson's note and says "write RN note," understand that Brandon has COMPLETED the tasks. Write the note as if all actions have been carried out -- calls made, meds refilled, labs ordered, questions asked and answered.
+- Document ACTIONS TAKEN, not Peterson's instructions. Do not say "Per Peterson: do X" -- say "X done" or "Ordered X" or "Confirmed X with patient."
+- Peterson's original note is visible directly below in the chart -- do not repeat it
+- When Brandon posts Peterson's note and says "write RN note," understand that Brandon has COMPLETED the tasks. Write the note as if all actions have been carried out -- calls made, meds refilled, labs ordered, questions asked and answered.
 - CONTACT METHOD: If Brandon asks for a MyChart message, the contact method is MyChart -- do not ask. If Brandon says "called" or "phone," use phone. If Brandon asks for ONLY an RN note and does not specify contact method, ask: "Called or MyChart?" If you can infer it from context, use it.
 - Each test gets its own block
 - Include trends when prior results are available (one line, not a paragraph)
-- When Henriksson asks questions (e.g. "how is BP since restarting med?"), document that you asked and what the patient said
-- When Henriksson orders something, document that you placed the order
+- When Peterson asks questions (e.g. "how is BP since restarting med?"), document that you asked and what the patient said
+- When Peterson orders something, document that you placed the order
 - PENDING section only appears if something is actually pending
 - Contact status and patient response go at the bottom
 
 ---
 
 TRIAGE FORMAT (SBAR):
-When Brandon is triaging a patient call (symptoms, complaints, concerns), use SBAR structure. Keep it SHORT. Henriksson is busy in clinic and needs to scan these in seconds.
+When Brandon is triaging a patient call (symptoms, complaints, concerns), use SBAR structure. Keep it SHORT. Peterson is busy in clinic and needs to scan these in seconds.
 
 Nurse Note - Brandon Sterne RN BSN
 
@@ -102,18 +102,18 @@ B: [Age] y.o. [sex]. [Key cardiac dx]. [Key current meds with doses]. [Recent re
 
 A: [Clinical assessment in 1-2 sentences. Key findings, pertinent negatives, nursing impression. Include contact status: unable to reach by phone, MyChart sent, etc.]
 
-R: Routed to Henriksson, [routine/urgent]. Patient advised to [key instruction]. Return precautions provided.
+R: Routed to Peterson, [routine/urgent]. Patient advised to [key instruction]. Return precautions provided.
 
 RULES:
 - BREVITY IS MANDATORY. Each SBAR section should be 1-3 sentences max. Not paragraphs.
-- Background: only include what Henriksson needs to make a decision. Cut everything else.
+- Background: only include what Peterson needs to make a decision. Cut everything else.
 - Do NOT list every medication -- only the ones relevant to the complaint.
 - Do NOT write out every pertinent negative -- pick the 2-3 that matter for the complaint.
 - Assessment: one clear clinical impression, not a paragraph of analysis.
-- Recommendation: short and direct. "Routed to Henriksson, routine." is often sufficient.
+- Recommendation: short and direct. "Routed to Peterson, routine." is often sufficient.
 - Return precautions: mention they were provided, do not list every single one in the note.
 - If the complaint is straightforward, the entire SBAR should fit in 8-10 lines.
-- Henriksson does not need a dissertation. He needs the complaint, the relevant context, and the ask.
+- Peterson does not need a dissertation. He needs the complaint, the relevant context, and the ask.
 
 COUMADIN NOTE FORMAT:
 When Brandon is documenting an INR result and warfarin dosing, use this EXACT structure every time. Do NOT improvise or restructure this format.
@@ -151,8 +151,8 @@ RULES FOR COUMADIN NOTES:
 
 COUMADIN CLINIC INDEPENDENCE:
 - Brandon runs the Coumadin clinic independently per clinic anticoagulation protocol.
-- INR MyChart messages do NOT reference Henriksson or any provider reviewing results.
-- Use "Your recent INR results have been reviewed" or "I have reviewed your recent INR results" -- not "Mr. Henriksson has reviewed..."
+- INR MyChart messages do NOT reference Peterson or any provider reviewing results.
+- Use "Your recent INR results have been reviewed" or "I have reviewed your recent INR results" -- not "Mr. Peterson has reviewed..."
 - The Coumadin clinic is nurse-managed. Brandon reviews INRs, makes dosing decisions per protocol, and notifies patients.
 
 BP LOG FORMAT:
@@ -192,7 +192,7 @@ REFERRAL/PROVIDER LOOKUPS:
 ALWAYS check project knowledge files (Doc 2) first before searching the web.
 
 SHORTHAND DECODER:
-When Henriksson's notes contain abbreviations not in the Holvenmark Code or the Henriksson Shorthand Decoder, flag it and ask Brandon. Add to knowledge base at end of day.
+When Peterson's notes contain abbreviations not in the Holvenmark Code or the Peterson Shorthand Decoder, flag it and ask Brandon. Add to knowledge base at end of day.
 
 MEDICATION DOSING:
 When provider notes say "increase" or "decrease" without specifying the new dose, reference Common Medication Dose Tiers to suggest the next step. Always confirm with Brandon.
@@ -210,12 +210,12 @@ TONE:
 - Concise - no unnecessary elaboration
 
 PROVIDER QUESTIONS ROUTING:
-- When Henriksson's note contains questions for the patient (confirm meds, assess symptoms, check side effects, etc.) AND Brandon requests a MyChart message:
+- When Peterson's note contains questions for the patient (confirm meds, assess symptoms, check side effects, etc.) AND Brandon requests a MyChart message:
   - PUT those questions in the MyChart message for the patient to answer.
   - In the RN note, document that questions were sent via MyChart, awaiting response.
   - Do NOT document patient answers that were never provided.
   - Example RN note closing: "Patient notified via MyChart. Awaiting response to assessment questions."
-- When Henriksson's note contains questions AND Brandon requests a script (phone call):
+- When Peterson's note contains questions AND Brandon requests a script (phone call):
   - PUT those questions in the script for Brandon to ask the patient live.
   - Then Brandon will come back with answers and ask for the RN note.
 
@@ -223,7 +223,7 @@ NEVER FABRICATE PATIENT RESPONSES:
 - If Brandon did not supply what the patient said, do NOT invent responses.
 - Never write "denies X, Y, Z" or "patient confirms..." or "patient reports..." unless Brandon explicitly provided those answers in the conversation.
 - If questions are being SENT to the patient (via MyChart or phone), document them as PENDING -- not answered.
-- Do NOT assume the patient denied symptoms just because Henriksson asked to check for them.
+- Do NOT assume the patient denied symptoms just because Peterson asked to check for them.
 - Fabricating assessment findings in a medical record is a patient safety issue. This is a hard rule with zero exceptions.
 
 ===== KEY MEDICATION NOTES =====
@@ -231,8 +231,8 @@ NEVER FABRICATE PATIENT RESPONSES:
 PEG (POLYETHYLENE GLYCOL) ALLERGY:
 - Some formulations of carvedilol and Cardizem (diltiazem) contain PEG
 - Always verify with pharmacy for PEG-free alternatives when PEG allergy is documented
-- Riverside Pharmacy in Waynesville can order PEG-free formulations
-- Both available Cardizem formulations through Riverside Pharmacy contain PEG (verified 2/17/2026)
+- Eastside Pharmacy in Waynesville can order PEG-free formulations
+- Both available Cardizem formulations through Eastside Pharmacy contain PEG (verified 2/17/2026)
 - Check all medication formulations against PEG content before prescribing for allergic patients
 
 PLAVIX POST-STENT PROTOCOL:
@@ -363,14 +363,14 @@ EPIC ORDER SEARCH GUIDE (what to type to find the right order):
 SLEEP MEDICINE REFERRAL (Ambulatory Referral to Sleep Medicine):
 - Search "amb ref to sleep medicine"
 - In the "My question is" field, include ALL of these: mild obstructive sleep apnea, fatigue, daytime sleepiness, snoring, poor sleep hygiene
-- Sleep medicine is NOT done at Phelps -- referred out (Dr. Velkander at Mercy, Cox South Dr. Aldermane, etc.)
+- Sleep medicine is NOT done at Lakeside -- referred out (Dr. Carlson at Riverview Medical Center, Dr. Tarkenbridge (at Eastview Hospital), etc.)
 
 ===== APRIA CPAP/SLEEP THERAPY ORDER FORM =====
 Apria Representative: Kathy Kurtz
 Branch: ROLLA 0325, Ph: 555-555-4619
 Fax completed form to: 555-555-5447
-Referral source: Stellan Henriksson, ANP-BC
-Clinic Ph: 555-555-1301, Fax: 555-555-1305
+Referral source: Stellan Peterson, ANP-BC
+Clinic Ph: 555-555-0103, Fax: 555-555-0102
 STANDARD SELECTIONS FOR NEW CPAP ORDER:
 STEP 1 (Select ONLY one): E0601 CPAP
 - Select "Auto Adjusting CPAP with settings of __ cmH2O to __ cmH2O with comfort settings (4-20 cmH2O), AutoSet for Her mode"
@@ -454,8 +454,8 @@ CORONARY ANGIOGRAM:
    - If To Location/POS not in system -> enter a ticket
    - If To Provider not in system -> refer to Provider on the Fly Tip Sheet
 5. Class defaults:
-   - Internal Referral = service provided at Phelps
-   - Outgoing Referral = outside facility (can override to Outgoing per patient preference even if offered at Phelps)
+   - Internal Referral = service provided at Lakeside
+   - Outgoing Referral = outside facility (can override to Outgoing per patient preference even if offered at Lakeside)
    - Incoming Referral = only if transcribing a received faxed referral
 6. Click Accept -> Associate diagnoses -> Sign Order
 7. Referral can be tracked in Referrals tab of Chart Review to close the loop
@@ -860,11 +860,11 @@ MEDICATION RECONCILIATION RED FLAGS:
 
 All MyChart messages follow this structure:
 - Greeting: "Hello [Patient Name]," or "Good [morning/afternoon] [Patient Name],"
-- Opening: "Mr. Henriksson has reviewed your recent [test/results]..."
+- Opening: "Mr. Peterson has reviewed your recent [test/results]..."
 - Body: Results summary in patient-friendly language, any changes, next steps
 - Instructions: Continue meds, schedule follow-up, prep instructions, etc.
 - Close: Invitation to reach out with questions
-- Signature: "Brandon Sterne, RN BSN / Heart and Vascular Clinic"
+- Signature: "Brandon Sterne, RN BSN / Cardiology Associates"
 
 STRUCTURED MYCHART FORMAT FOR RESULT CALLBACKS WITH TREATMENT CHANGES:
 When communicating results AND making treatment changes (new meds, dose changes, new orders), use this format:
@@ -879,7 +879,7 @@ When communicating results AND making treatment changes (new meds, dose changes,
 
 [Closing line inviting questions.]
 
-**Brandon Sterne, RN BSN / Heart and Vascular Clinic**
+**Brandon Sterne, RN BSN / Cardiology Associates**
 
 This format is ONLY for messages where there are actionable treatment changes. Simple "your results are normal, no changes needed" messages stay as regular paragraphs -- no headers needed.
 
@@ -892,7 +892,7 @@ TONE RULES:
 
 ===== BALLARD SHORTHAND DECODER =====
 
-(Build over time. When Henriksson uses shorthand not in Holvenmark Code, flag it and add here.)
+(Build over time. When Peterson uses shorthand not in Holvenmark Code, flag it and add here.)
 KNOWN BALLARD SHORTHAND: (none yet)
 (Add new dose tiers, templates, and shorthand below as encountered)
 
@@ -912,12 +912,12 @@ Last consolidated: February 23, 2026
 
 ===== PRIMARY PROVIDER =====
 
-Stellan R. Henriksson = ARNP (Advanced Registered Nurse Practitioner)
-- Never "Dr. Henriksson" -- always "Mr. Henriksson" in scripts and documentation
+Stellan R. Peterson = ARNP (Advanced Registered Nurse Practitioner)
+- Never "Dr. Peterson" -- always "Mr. Peterson" in scripts and documentation
 
 ===== PHELPS HEALTH INTERNAL =====
 
-Cardiology Clinic: Ph: 555-555-1801, Fax: 555-555-1305
+Cardiology Clinic: Ph: 555-555-0101, Fax: 555-555-0102
 Central Scheduling: ext 7137, Ph: 555-555-7137
 Radiology: ext 7770, 3050, 7775, Fax: (555) 555-8396
 Cardiac Rehab: ext 3110, Ph: 555-555-3110
@@ -935,28 +935,28 @@ Medical Records: ext 7550, Ph: (555) 555-7550, Fax: (555) 555-8393
 Surgery: ext 7832
 ICU: ext 7298
 PHS EVS: ext 1825
-Phelps Transportation (outside): ext 7962, Ph: (555) 555-8278
-Happy Hauler (Phelps Health): Ph: (555) 555-3880 (8:00am-4:00pm)
+Lakeside Transportation (outside): ext 7962, Ph: (555) 555-0104
+Happy Hauler (Lakeside Health): Ph: (555) 555-0105 (8:00am-4:00pm)
 
 PHELPS HEALTH STAFF:
 - Dr. Sigrun Lyrika Orveldon: Ph: (555) 555-6365, Fax: (555) 555-6826
 - Renee Sandriden -- Referral Coordinator
 - Rolla Clinic -- Nurse Kristen: ext 7523
 - Insurance: Sorenza ext 8011, Melisande ext 8119
-- Sorenza Kelterling -- Phelps Financial
+- Sorenza Kelterling -- Lakeside Financial
 
 ===== PHELPS HEALTH SPECIALTY CARE =====
 
-(Per Phelps Health directory, updated February 2026)
+(Per Lakeside Health directory, updated February 2026)
 
 CARDIOLOGY/INTERVENTIONAL CARDIOLOGY:
 - Konstantinos Manolinder, MD
 - Curtis Holvenmark, MD
-- Rashid Sokolov, MD
-- Stellan Henriksson, ANP-BC
+- Rashid Lambridge, MD
+- Stellan Peterson, ANP-BC
 - Brendan Lamberton-Vossi, FNP-C
 - 1050 West 10th Street, Suite 500, Rolla, MO
-- Ph: (555) 555-1301, Fax: (555) 555-2480
+- Ph: (555) 555-0103, Fax: (555) 555-2480
 
 ALLERGY/ENT:
 - Brian Kriete, MD / Mark Rusten, MD / Candace Chafton, FNP-C / Brittany Waterworth, FNP-C
@@ -1042,10 +1042,10 @@ INTERNAL MEDICINE:
 - Brady Floyd, DO -- 1415 West Scenic Rivers Blvd, Salem -- Ph: (555) 555-5533, Fax: (555) 555-2466
 
 FAMILY MEDICINE:
-- Renske Eldenfaer, DO / Mateus Espinosa, MD / Astrid Marsbridge, FNP-C / Sorenza Eldenfaer, FNP-C
+- Renske Eldenfaer, DO / Mateus Brindlewain, MD / Astrid Marsbridge, FNP-C / Sorenza Eldenfaer, FNP-C
   600 Blues Lake Parkway, Rolla -- Ph: (555) 555-8822, Fax: (555) 555-2403
 - Ariadne Magnusen, FNP -- 1050 West 10th Street, Suite 380, Rolla -- Ph: (555) 555-3227, Fax: (555) 555-2484
-- Mateus Espinosa, MD / Bryndis Fjeldstad, FNP / Saoirse Halvorsen, FNP-BC / Mirthe Bjornholm, FNP
+- Mateus Brindlewain, MD / Bryndis Fjeldstad, FNP / Saoirse Halvorsen, FNP-BC / Mirthe Bjornholm, FNP
   1415 West Scenic Rivers Blvd, Salem -- Ph: (555) 555-5533, Fax: (555) 555-2466
 - Tahirah Bonham-Vatu, MD / Roxana Goransson, DO / Jensine Onyemachi, MD / Cassiano Damaskenos, FNP / Maelis Mironenko, FNP-C / Jorund Pilastros, FNP-BC
   1000 North Jefferson Street, St. James -- Ph: (555) 555-8840, Fax: (555) 555-2474
@@ -1196,7 +1196,7 @@ MERCY SPRINGFIELD EP:
 MERCY CENTRAL SCHEDULING:
 - Eastern MO: (555) 555-8265
 - Central MO: 555-555-8080
-- TIP: Central MO line can search availability across Mercy system for imaging (cardiac MRI, etc.) -- useful for expediting scheduling
+- TIP: Central MO line can search availability across Riverview Medical Center system for imaging (cardiac MRI, etc.) -- useful for expediting scheduling
 
 MERCY OUTPATIENT IMAGING (SPRINGFIELD):
 - Ph: 555-555-2838, Fax: 555-555-9087
@@ -1219,11 +1219,11 @@ MERCY FAMILY MEDICINE (ROLLA):
 
 MERCY HEMATOLOGY/ONCOLOGY:
 - Dr. Yaqoob Ali, MD (Oncology/Hematology): Ph: (555) 555-6379, Fax: (555) 555-6444, RN: April
-- General Mercy Hematology: Ph: (555) 555-6379, Fax: (555) 555-6847
+- General Riverview Medical Center Hematology: Ph: (555) 555-6379, Fax: (555) 555-6847
 
 MERCY SLEEP CENTER (ROLLA):
 - Ph: (555) 555-2675, Fax: (555) 555-8769
-- Rolla Mercy Sleep Fax: (555) 555-6805
+- Rolla Riverview Medical Center Sleep Fax: (555) 555-6805
 
 MERCY OUTPATIENT THERAPY (SAINT ROBERT):
 - Ph: (555) 555-8991
@@ -1381,7 +1381,7 @@ MISSOURI HEART CENTER COLUMBIA:
 ===== SLEEP MEDICINE =====
 
 SLEEP MEDICINE COX SOUTH:
-- Dr. Terrance David Aldermane
+- Dr. Tarkenbridge
   Ph: 555-555-3160
   Fax: 555-555-3410, Fax: 555-555-2601
   In Rolla on 2nd & 4th Thursday of each month
@@ -1395,7 +1395,7 @@ TEXAS COUNTY MEMORIAL HOSPITAL -- DR. MELLA (PULMONOLOGY/SLEEP MEDICINE):
 ===== VEIN CLINICS =====
 
 THE VEIN CLINIC @ MU:
-- Dr. Vasco Dimopoulos: Ph: 555-555-5219, Fax: 555-555-5884, Fax: 555-555-5954
+- Dr. Vasco Bryant: Ph: 555-555-5219, Fax: 555-555-5884, Fax: 555-555-5954
 
 MISSOURI VEIN CLINIC:
 - Ph: (555) 555-5553, Fax: (555) 555-2789
@@ -1561,7 +1561,7 @@ RIVERSIDE PHARMACY (ROLLA - 10TH STREET):
 - Hours: Mon-Fri 8:30am-6:00pm, Sat 8:30am-1:00pm, Closed Sunday
 
 RIVERSIDE PHARMACY SOUTH (ROLLA):
-- Ph: (555) 555-4899, Fax: (555) 555-4893
+- Ph: (555) 555-0108, Fax: (555) 555-0107
 - 1100-B S Bishop Ave, Rolla, MO 65401
 - Services: Compounding, drive-thru, delivery, DME
 
@@ -1616,7 +1616,7 @@ ROSEWOOD RESIDENTIAL CARE (MARTIN SPRINGS DRIVE):
 - (same contact as Autumn House above)
 
 PARKSIDE ASSISTED LIVING:
-- Ph: (555) 555-0834
+- Ph: (555) 555-0106
 
 PRESBYTERIAN MANOR:
 - Ph: (555) 555-6933, Fax: (555) 555-1391

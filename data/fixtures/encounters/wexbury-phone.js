@@ -1,5 +1,5 @@
 // Pattern 14 — PHONE-CHANNEL SYNTHESIS
-// Source: docs/KAIROS-SESSION-2026-04-29-EVENING.md CASE 27 (Ramey/Tikhonova)
+// Source: docs/KAIROS-SESSION-2026-04-29-EVENING.md CASE 27 (Ramey/Greene)
 
 const fixture = {
   id: "wexbury-phone",
@@ -18,22 +18,22 @@ const fixture = {
     severity: "green",
   },
   patient: {
-    name: "Tikhonova, Hesper",
-    displayName: "Hesper Tikhonova",
+    name: "Greene, Eleanor",
+    displayName: "Eleanor Greene",
     age: 83,
     sex: "F",
     dob: "1943-04-02",
     mrn: "30816401",
     proxyName: null,
-    primary: "Voronova NP, Heart and Vascular Clinic",
+    primary: "Pendrelle NP, Cardiology Associates",
     coverage: "Humana Medicare Advantage",
   },
   sourceArtifact: {
     type: "Result Note",
-    author: "Voronova, Cardiology",
+    author: "Pendrelle, Cardiology",
     timestamp: "2026-04-29 11:18",
     body:
-      "TTE Complete read by Donovan Holvenmark MD on 4/29:\n  1. Echocardiogram\n  2. Ejection fraction normal at 55-60%\n  3. Normal right ventricular size and function\n  4. Normal left and right atrial size\n  5. Trivial aortic insufficiency\n  6. Mild mitral insufficiency\n  7. No change in treatment based on echocardiogram\n\nMyChart Pending — phone-only contact.",
+      "TTE Complete read by David Curtis MD on 4/29:\n  1. Echocardiogram\n  2. Ejection fraction normal at 55-60%\n  3. Normal right ventricular size and function\n  4. Normal left and right atrial size\n  5. Trivial aortic insufficiency\n  6. Mild mitral insufficiency\n  7. No change in treatment based on echocardiogram\n\nMyChart Pending — phone-only contact.",
   },
   initialPaneContent: {
     nurseNote: "",
@@ -61,7 +61,7 @@ const fixture = {
         typingSpeedCps: 70,
         delayMsBefore: 400,
         content:
-          "We're calling with the results of your recent echocardiogram, which is an ultrasound of your heart.\n\nThe good news is that your heart's pumping function is normal. Your ejection fraction, which measures how well your heart squeezes with each beat, is 55 to 60 percent, which is within normal range.\n\nThe size of your heart chambers on both the right and left sides also looks normal.\n\nWe did see two minor valve findings. There is a trivial, meaning very slight, amount of leakage through your aortic valve, and a mild amount of leakage through your mitral valve. Dr. Voronova has reviewed these findings and is not making any changes to your current treatment based on this echo.\n\nDo you have any questions about these results?",
+          "We're calling with the results of your recent echocardiogram, which is an ultrasound of your heart.\n\nThe good news is that your heart's pumping function is normal. Your ejection fraction, which measures how well your heart squeezes with each beat, is 55 to 60 percent, which is within normal range.\n\nThe size of your heart chambers on both the right and left sides also looks normal.\n\nWe did see two minor valve findings. There is a trivial, meaning very slight, amount of leakage through your aortic valve, and a mild amount of leakage through your mitral valve. Dr. Pendrelle has reviewed these findings and is not making any changes to your current treatment based on this echo.\n\nDo you have any questions about these results?",
       },
       { type: "state-transition", target: "card", newState: "drafted", delayMsBefore: 200 },
     ],
@@ -74,7 +74,7 @@ const fixture = {
         typingSpeedCps: 70,
         delayMsBefore: 400,
         content:
-          "\n\n— VOICEMAIL VARIANT —\n\nHi Mrs. Tikhonova, this is Brandon from the Heart and Vascular Clinic, calling about the results of your recent echocardiogram. Dr. Voronova has reviewed the test and the news is reassuring — your heart's pumping function is normal and there are no medication changes. Please give us a call back at the clinic number when you have a moment so we can review the details with you. Thank you.",
+          "\n\n— VOICEMAIL VARIANT —\n\nHi Mrs. Greene, this is Brandon from the Cardiology Associates, calling about the results of your recent echocardiogram. Dr. Pendrelle has reviewed the test and the news is reassuring — your heart's pumping function is normal and there are no medication changes. Please give us a call back at the clinic number when you have a moment so we can review the details with you. Thank you.",
       },
     ],
   },

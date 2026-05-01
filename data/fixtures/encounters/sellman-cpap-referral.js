@@ -1,4 +1,4 @@
-// Phase-3.6 — Bellomo CPAP referral. Pattern: SYNTHESIS + NEW ORDER +
+// Phase-3.6 — Morris CPAP referral. Pattern: SYNTHESIS + NEW ORDER +
 // HANDOFF + DME. Most field-heavy variant of any encounter — collapses
 // 20+ Epic actions across 5 surfaces into single Authorize. The moat
 // fixture for the May 5 demo.
@@ -21,26 +21,26 @@ const fixture = {
     severity: "green",
   },
   patient: {
-    name: "Bellomo, Caspian",
-    displayName: "Caspian Bellomo",
+    name: "Morris, Kevin",
+    displayName: "Kevin Morris",
     age: 68,
     sex: "M",
     dob: "1958-05-30",
     mrn: "70019384",
     proxyName: null,
-    primary: "Voronova NP, Heart and Vascular Clinic",
+    primary: "Pendrelle NP, Cardiology Associates",
     coverage: "Medicare A+B + Mutual of Omaha Supplement",
   },
   sourceArtifact: {
     type: "Result Note",
-    author: "Voronova, Cardiology",
+    author: "Pendrelle, Cardiology",
     timestamp: "2026-04-29 11:34",
     body: "Sleep study reviewed. AHI 28.6 — moderate-to-severe OSA. Order CPAP via Apria. Refer to sleep medicine for ongoing management. Forward sleep study report + reg face sheet + insurance card front/back + photo ID to Apria.",
   },
   // Pre-staged after the user clicks Generate. The orchestrator may render
   // these directly if pattern === "synthesis-referral-dme".
-  generatedNurseNote: "Voronova reviewed Mr. Bellomo's recent sleep study (AHI 28.6, moderate-to-severe OSA). Plan communicated to patient via MyChart: CPAP therapy initiated via Apria; referral to sleep medicine placed for ongoing management. Sleep study report + face sheet + insurance card (front and back) + photo ID forwarded to Apria with cover letter. Patient will be contacted by Apria within 3-5 business days for setup. Sleep medicine appointment will be scheduled by referral coordinator.",
-  generatedMyChart: "Mr Bellomo,\n\nDr. Voronova has reviewed your recent sleep study. The findings show moderate-to-severe sleep apnea (AHI 28.6 — this measures how often your breathing pauses during sleep, with 28.6 meaning moderate-to-severe).\n\nNext steps:\n• A CPAP machine has been ordered through Apria. They will contact you in 3-5 business days to set up delivery and a fitting.\n• You have been referred to sleep medicine for ongoing management. The referral coordinator will call to schedule.\n• Continue your other medications as prescribed.\n\nIf you have any questions before Apria reaches out, please reply to this message.\n\nBrandon Sterne, RN BSN / Heart and Vascular Clinic",
+  generatedNurseNote: "Pendrelle reviewed Mr. Morris's recent sleep study (AHI 28.6, moderate-to-severe OSA). Plan communicated to patient via MyChart: CPAP therapy initiated via Apria; referral to sleep medicine placed for ongoing management. Sleep study report + face sheet + insurance card (front and back) + photo ID forwarded to Apria with cover letter. Patient will be contacted by Apria within 3-5 business days for setup. Sleep medicine appointment will be scheduled by referral coordinator.",
+  generatedMyChart: "Mr Morris,\n\nDr. Pendrelle has reviewed your recent sleep study. The findings show moderate-to-severe sleep apnea (AHI 28.6 — this measures how often your breathing pauses during sleep, with 28.6 meaning moderate-to-severe).\n\nNext steps:\n• A CPAP machine has been ordered through Apria. They will contact you in 3-5 business days to set up delivery and a fitting.\n• You have been referred to sleep medicine for ongoing management. The referral coordinator will call to schedule.\n• Continue your other medications as prescribed.\n\nIf you have any questions before Apria reaches out, please reply to this message.\n\nBrandon Sterne, RN BSN / Cardiology Associates",
   pendedOrders: [
     {
       id: "cpap-dme-order",
@@ -73,12 +73,12 @@ const fixture = {
     coverLetter: {
       template: "HVC SmartPhrase: CPAP-DME-Referral",
       generatedAt: "2026-04-30 14:12",
-      preview: "Re: Caspian Bellomo, DOB 5/30/1958, MRN 70019384. Sleep study performed [date], AHI 28.6 consistent with moderate-to-severe OSA. CPAP therapy ordered. See attached: face sheet, insurance card, photo ID, sleep study report, recent cardiology note. Please confirm receipt and contact patient within 3-5 business days. — R. P. Voronova, NP",
+      preview: "Re: Kevin Morris, DOB 5/30/1958, MRN 70019384. Sleep study performed [date], AHI 28.6 consistent with moderate-to-severe OSA. CPAP therapy ordered. See attached: face sheet, insurance card, photo ID, sleep study report, recent cardiology note. Please confirm receipt and contact patient within 3-5 business days. — R. P. Pendrelle, NP",
     },
     items: {
       faceSheet: { included: true, source: "Patient demographics + insurance + MRN", auto: true },
       clinicalDocumentation: [
-        { name: "Voronova result note 4/29/2026", source: "Notes → Office Visit", included: true, auto: true, rationale: "Referring encounter — required" },
+        { name: "Pendrelle result note 4/29/2026", source: "Notes → Office Visit", included: true, auto: true, rationale: "Referring encounter — required" },
         { name: "Sleep study report 4/22/2026", source: "Results → Studies", included: true, auto: true, rationale: "Required clinical documentation for CPAP DME" },
         { name: "Cardiology consult note 2/12/2026", source: "Notes → Office Visit", included: true, auto: true, rationale: "Most recent cardiology — supports clinical context" },
       ],
@@ -106,7 +106,7 @@ const fixture = {
   },
   routing: {
     recipient: "Apria Healthcare (DME) + Sleep Medicine (referral coordinator)",
-    pool: "P Phs Mob Cardiology Support Staff Pool",
+    pool: "Lakeside Cardiology Support Pool",
     comment: "Referral packet auto-assembled and faxed; Sleep Med referral pending coordinator scheduling.",
     priority: "Routine",
   },

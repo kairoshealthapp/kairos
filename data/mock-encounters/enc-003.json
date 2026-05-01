@@ -10,8 +10,8 @@
   "receivedAt": "2026-04-29T13:04:00Z",
   "investigationState": "AWAITING_NURSE",
   "patient": {
-    "name": "Vassiliou, Theron",
-    "displayName": "Theron Vassiliou",
+    "name": "Hopkins, Brian",
+    "displayName": "Brian Hopkins",
     "age": 58,
     "sex": "M",
     "dob": "1968-06-22",
@@ -20,21 +20,21 @@
   },
   "source": {
     "title": "Result Note: BP log review — increase Toprol-XL",
-    "sender": "Voronova, Cardiology",
+    "sender": "Pendrelle, Cardiology",
     "receivedAt": "2026-04-29 09:04",
     "body": "Reviewed home BP log. Average SBP 152, DBP 91 over the last 14 days, on Toprol-XL 50mg daily and lisinopril 20mg daily. Heart rate well-controlled at 64. Recommend increasing Toprol-XL to 100mg daily. Continue lisinopril. Recheck home BP log in 2 weeks. No labs needed at this dose."
   },
-  "nurseNote": "Dr. Voronova reviewed home BP log over the last 14 days. Average SBP 152, DBP 91 on Toprol-XL 50mg daily and lisinopril 20mg daily. HR well-controlled at 64. Plan: increase Toprol-XL to 100mg daily, continue lisinopril, recheck home BP log in 2 weeks. No labs needed at this dose.\n\nPatient notified via MyChart.",
+  "nurseNote": "Dr. Pendrelle reviewed home BP log over the last 14 days. Average SBP 152, DBP 91 on Toprol-XL 50mg daily and lisinopril 20mg daily. HR well-controlled at 64. Plan: increase Toprol-XL to 100mg daily, continue lisinopril, recheck home BP log in 2 weeks. No labs needed at this dose.\n\nPatient notified via MyChart.",
   "output": {
     "channel": "mychart",
     "mychart": {
-      "recipient": "Theron Vassiliou",
+      "recipient": "Brian Hopkins",
       "proxyName": null,
       "subject": "Test results",
       "notifyBy": "2026-05-02",
       "repliesAllowed": "Replies allowed; nurse on alert",
-      "greeting": "Mr Vassiliou,",
-      "body": "Dr. Voronova has reviewed your home blood pressure log. Your readings have averaged about 152 over 91, which is higher than where we would like, although your heart rate is well controlled.\n\nWe are increasing your Toprol-XL from 50 mg to 100 mg once daily. Continue your lisinopril 20 mg as before. Please keep tracking your blood pressure at home and send us another two-week log so we can recheck.\n\nLet us know right away if you have any dizziness, fainting, or extreme fatigue.\n\nBrandon Sterne, RN BSN / Heart and Vascular Clinic"
+      "greeting": "Mr Hopkins,",
+      "body": "Dr. Pendrelle has reviewed your home blood pressure log. Your readings have averaged about 152 over 91, which is higher than where we would like, although your heart rate is well controlled.\n\nWe are increasing your Toprol-XL from 50 mg to 100 mg once daily. Continue your lisinopril 20 mg as before. Please keep tracking your blood pressure at home and send us another two-week log so we can recheck.\n\nLet us know right away if you have any dizziness, fainting, or extreme fatigue.\n\nBrandon Sterne, RN BSN / Cardiology Associates"
     }
   },
   "orderPad": {
@@ -51,9 +51,9 @@
         "expires": null,
         "clinicalQuestions": [],
         "releaseToPatient": true,
-        "ccResults": ["Voronova"],
-        "cosign": "Voronova",
-        "auditTrail": "decreasing to 0mg from 50mg daily per Voronova (replaced by 100mg daily)"
+        "ccResults": ["Pendrelle"],
+        "cosign": "Pendrelle",
+        "auditTrail": "decreasing to 0mg from 50mg daily per Pendrelle (replaced by 100mg daily)"
       },
       {
         "type": "Toprol-XL 100mg daily (PO)",
@@ -67,9 +67,9 @@
         "expires": "2027-04-29",
         "clinicalQuestions": [],
         "releaseToPatient": true,
-        "ccResults": ["Voronova"],
-        "cosign": "Voronova",
-        "auditTrail": "increasing to 100mg daily from 50mg daily per Voronova"
+        "ccResults": ["Pendrelle"],
+        "cosign": "Pendrelle",
+        "auditTrail": "increasing to 100mg daily from 50mg daily per Pendrelle"
       }
     ],
     "hasUnansweredQuestions": false

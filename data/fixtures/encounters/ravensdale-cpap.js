@@ -1,5 +1,5 @@
 // Pattern 2 — SYNTHESIS + NEW ORDER (CPAP DME with referral + DME forms + atomic commit)
-// Source: docs/KAIROS-SESSION-2026-04-29-AFTERNOON.md CASE 18 (Bellomo/Höglund)
+// Source: docs/KAIROS-SESSION-2026-04-29-AFTERNOON.md CASE 18 (Morris/Norhelden)
 // "20+ discrete UI actions across 5 Epic surfaces + paper fax form" — most
 // field-heavy variant. Demonstrates Document Packet Auto-Assembly + DME Forms.
 
@@ -20,19 +20,19 @@ const fixture = {
     severity: "green",
   },
   patient: {
-    name: "Höglund, Cyriac",
-    displayName: "Cyriac Höglund",
+    name: "Norhelden, Edward",
+    displayName: "Edward Norhelden",
     age: 68,
     sex: "M",
     dob: "1958-05-30",
     mrn: "70019384",
     proxyName: null,
-    primary: "Voronova NP, Heart and Vascular Clinic",
+    primary: "Pendrelle NP, Cardiology Associates",
     coverage: "Medicare A+B + Mutual of Omaha supplement",
   },
   sourceArtifact: {
     type: "Result Note",
-    author: "Voronova, Cardiology",
+    author: "Pendrelle, Cardiology",
     timestamp: "2026-04-29 11:34",
     body:
       "Sleep study reviewed. AHI 28.6 — moderate-to-severe OSA. Order CPAP via Apria. Refer to sleep medicine for ongoing management. Forward sleep study report + reg face sheet + insurance card front/back + photo ID to Apria.",
@@ -54,7 +54,7 @@ const fixture = {
         typingSpeedCps: 80,
         delayMsBefore: 500,
         content:
-          "Dr. Voronova reviewed sleep study. AHI 28.6 — moderate-to-severe OSA. Plan: CPAP order placed (Apria), sleep medicine referral placed, document packet (reg face sheet + last 3 cardiology encounters + insurance card front/back + photo ID) auto-assembled and faxed to Apria. DME order form auto-populated and e-signed with Voronova delegation stamp.\n\nPatient notified via MyChart.",
+          "Dr. Pendrelle reviewed sleep study. AHI 28.6 — moderate-to-severe OSA. Plan: CPAP order placed (Apria), sleep medicine referral placed, document packet (reg face sheet + last 3 cardiology encounters + insurance card front/back + photo ID) auto-assembled and faxed to Apria. DME order form auto-populated and e-signed with Pendrelle delegation stamp.\n\nPatient notified via MyChart.",
       },
       {
         type: "pane-update",
@@ -63,7 +63,7 @@ const fixture = {
         typingSpeedCps: 70,
         delayMsBefore: 400,
         content:
-          "Mr Höglund,\n\nDr. Voronova has reviewed your sleep study. The results show moderate-to-severe sleep apnea, which is treatable with a CPAP machine.\n\nWe have placed the CPAP order with Apria (the supplier). They will reach out to schedule a setup. Dr. Voronova has also referred you to sleep medicine for ongoing management of the apnea — they will contact you to schedule.\n\nPlease let us know if you have not heard from Apria within 7-10 business days.\n\nBrandon Sterne, RN BSN / Heart and Vascular Clinic",
+          "Mr Norhelden,\n\nDr. Pendrelle has reviewed your sleep study. The results show moderate-to-severe sleep apnea, which is treatable with a CPAP machine.\n\nWe have placed the CPAP order with Apria (the supplier). They will reach out to schedule a setup. Dr. Pendrelle has also referred you to sleep medicine for ongoing management of the apnea — they will contact you to schedule.\n\nPlease let us know if you have not heard from Apria within 7-10 business days.\n\nBrandon Sterne, RN BSN / Cardiology Associates",
       },
       { type: "banner", kind: "yellow", text: "Document Packet Auto-Assembly: 5 documents (face sheet, encounters x3, ins card, photo ID) → fax 2 transmissions queued", durationMs: 1600, delayMsBefore: 200 },
       {
@@ -86,7 +86,7 @@ const fixture = {
                 { q: "AHI documented?", answered: true, answer: "Yes — 28.6" },
                 { q: "Sleep study report attached?", answered: true, answer: "Yes" },
               ],
-              cosign: "Voronova",
+              cosign: "Pendrelle",
             },
             {
               type: "Referral to Sleep Medicine",
@@ -97,7 +97,7 @@ const fixture = {
               status: "Future",
               expectedDate: "2026-04-29",
               clinicalQuestions: [],
-              cosign: "Voronova",
+              cosign: "Pendrelle",
             },
             {
               type: "Document Packet (auto-assembled) — fax to Apria",
@@ -116,7 +116,7 @@ const fixture = {
                 "Insurance card front + back",
                 "Photo ID",
               ],
-              cosign: "Voronova",
+              cosign: "Pendrelle",
             },
           ],
           hasUnansweredQuestions: false,

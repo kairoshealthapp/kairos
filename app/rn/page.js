@@ -96,18 +96,45 @@ export default function DashboardPage() {
   // window.location avoids the Suspense boundary required for useSearchParams
   // during static export.
   useEffect(() => {
-    setAuthorized(readAuthorized());
+    const auth = readAuthorized();
+    setAuthorized(auth);
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const t = params.get("tab");
-      if (t) setActiveTab(t);
+      if (t) {
+        // Race guard: when EncounterDetail navigates back to /rn after a
+        // tour auto-authorize, the URL ?tab= reflects the just-authorized
+        // fixture's basket. If that basket is now empty (because all of
+        // its fixtures are authorized), committing to it would flash
+        // "None today in this basket" until the tour's
+        // kairos-tour:set-tab event switches us to the next card's
+        // basket ~250ms later. Skip the URL commit when the tour is
+        // active and the URL tab has zero unauthorized fixtures — stay
+        // on the default tab until the tour dispatches the right one.
+        const tourActive =
+          typeof sessionStorage !== "undefined" &&
+          sessionStorage.getItem("kairos-tour-active") === "1";
+        const tabHasCards = listFixtures().some(
+          (f) => categoryFor(f) === t && !auth.has(f.id)
+        );
+        if (!tourActive || tabHasCards) setActiveTab(t);
+      }
     }
     const onFocus = () => setAuthorized(readAuthorized());
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onFocus);
+    // Tour drives the active tab mid-run (PatientCard can only pulse on a
+    // card that's actually rendered, which requires the fixture's basket
+    // to be the active tab when its pre-arrival beat fires).
+    const onTourSetTab = (e) => {
+      const t = e && e.detail && e.detail.tab;
+      if (t) setActiveTab(t);
+    };
+    window.addEventListener("kairos-tour:set-tab", onTourSetTab);
     return () => {
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onFocus);
+      window.removeEventListener("kairos-tour:set-tab", onTourSetTab);
     };
   }, []);
 

@@ -1,5 +1,5 @@
 // Pattern 12 — SCOPE-CONSTRAINED PATIENT QUESTION
-// Source: docs/KAIROS-SESSION-2026-04-29-AFTERNOON.md CASE 23+24 (Reiner-redux/Skarsgård)
+// Source: docs/KAIROS-SESSION-2026-04-29-AFTERNOON.md CASE 23+24 (Reiner-redux/Nguyen)
 // Vague reference → clarification subroutine → scope-respecting reply.
 // Same patient as reiner-multilab — follow-up on the H&H elevation.
 
@@ -20,14 +20,14 @@ const fixture = {
     severity: "green",
   },
   patient: {
-    name: "Skarsgård, Coralie",
-    displayName: "Coralie Skarsgård",
+    name: "Nguyen, Karen",
+    displayName: "Karen Nguyen",
     age: 64,
     sex: "F",
     dob: "1962-09-10",
     mrn: "55738201",
     proxyName: null,
-    primary: "Voronova NP, Heart and Vascular Clinic",
+    primary: "Pendrelle NP, Cardiology Associates",
     coverage: "BCBS PPO",
   },
   sourceArtifact: {
@@ -54,7 +54,7 @@ const fixture = {
         typingSpeedCps: 80,
         delayMsBefore: 500,
         content:
-          "Vague-reference classifier triggered clarification subroutine yesterday; patient confirmed reference is to H&H elevation noted in 4/27 multi-lab Result Note. Scope-of-practice rail flagged: cardiology RN scope is the cardiology workup, not interpreting hematologic effects on BP.\n\nReply drafted in scope: directs patient to bring this question to the hematology referral visit Dr. Voronova placed 4/27. No autonomous interpretation of H&H ↔ BP relationship.",
+          "Vague-reference classifier triggered clarification subroutine yesterday; patient confirmed reference is to H&H elevation noted in 4/27 multi-lab Result Note. Scope-of-practice rail flagged: cardiology RN scope is the cardiology workup, not interpreting hematologic effects on BP.\n\nReply drafted in scope: directs patient to bring this question to the hematology referral visit Dr. Pendrelle placed 4/27. No autonomous interpretation of H&H ↔ BP relationship.",
       },
       {
         type: "pane-update",
@@ -63,7 +63,7 @@ const fixture = {
         typingSpeedCps: 70,
         delayMsBefore: 400,
         content:
-          "Ms Skarsgård,\n\nThanks for clarifying — that's a great question, and the best person to answer it is the hematology team Dr. Voronova referred you to on 4/27. They'll have the full picture of why the H&H is elevated and what it means for things like blood pressure.\n\nIf you haven't heard from their scheduling team in the next few days, let us know and we'll follow up on the referral.\n\nBrandon Sterne, RN BSN / Heart and Vascular Clinic",
+          "Ms Nguyen,\n\nThanks for clarifying — that's a great question, and the best person to answer it is the hematology team Dr. Pendrelle referred you to on 4/27. They'll have the full picture of why the H&H is elevated and what it means for things like blood pressure.\n\nIf you haven't heard from their scheduling team in the next few days, let us know and we'll follow up on the referral.\n\nBrandon Sterne, RN BSN / Cardiology Associates",
       },
       { type: "banner", kind: "green", text: "Scope-respecting reply drafted — no out-of-scope interpretation", durationMs: 1000, delayMsBefore: 200 },
       { type: "state-transition", target: "card", newState: "drafted", delayMsBefore: 200 },

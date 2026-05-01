@@ -98,6 +98,11 @@ export default function EncounterDetail({ fixture, fromTab }) {
   const [banner, setBanner] = useState(null);
   const [editable, setEditable] = useState(false);
   const cancelRef = useRef(false);
+  // Skip-beat signal: TourMode fires kairos-tour:skip-beat when the user
+  // hits Skip mid-action. The typing loop, banner hold, and pause events
+  // all check this ref so they fast-forward to a finished state instead of
+  // running to completion at normal speed and missing the tour's next beat.
+  const skipBeatRef = useRef(false);
 
   // Set per-pane content. mode: 'replace' | 'append' | 'instant'.
   const applyPaneContent = useCallback((target, content, mode) => {
@@ -137,37 +142,48 @@ export default function EncounterDetail({ fixture, fromTab }) {
             return;
           }
           // Animated typing: stream characters into pane state.
-          // When tour is active at 1x, scale typing intervals by 1.5 so the
-          // typing animation feels slower in tandem with the tour cadence.
-          // 2x scales by 1.0 (roughly the previous 1x feel). Reading
-          // sessionStorage on each event so a mid-action speed toggle takes
-          // effect for the next event.
-          let tourScale = 1.0;
+          // Tour @ 1x reads slower than realtime for narration legibility
+          // (1.5× slowdown). Tour @ 2x literally halves what's left, so
+          // the toggle observably doubles playback speed across audio,
+          // bubble dwell, and pane-typing in lockstep. Reading
+          // sessionStorage on each event so a mid-action speed toggle
+          // takes effect on the next event.
+          let intervalMs = Math.max(8, 1000 / typingSpeedCps);
           if (typeof window !== "undefined" && sessionStorage.getItem("kairos-tour-active") === "1") {
             const ts = sessionStorage.getItem("kairos-tour-speed");
-            tourScale = ts === "2" ? 1.0 : 1.5;
+            const speedMul = ts === "2" ? 2 : 1;
+            intervalMs = Math.max(4, (intervalMs * 1.5) / speedMul);
           }
-          const intervalMs = Math.max(8, (1000 / typingSpeedCps) * tourScale);
           const chars = String(content);
           let acc = mode === "append" ? null : "";
+          // Capture the prior content up front when in append mode so the
+          // skip-fast-forward path below has the correct base string and
+          // doesn't end up writing only the appended chunk.
+          if (mode === "append") {
+            setPaneState((prev) => {
+              acc =
+                target === "nurse-note"
+                  ? prev.nurseNote || ""
+                  : target === "mychart"
+                  ? prev.mychartMessage || ""
+                  : target === "phone-script"
+                  ? prev.phoneScript || ""
+                  : "";
+              return prev;
+            });
+            await sleep(0);
+          }
           for (let i = 0; i <= chars.length; i++) {
             if (cancelRef.current) return;
-            const partial = chars.slice(0, i);
-            if (mode === "append" && acc === null) {
-              // capture the existing content the first iteration
-              setPaneState((prev) => {
-                acc =
-                  target === "nurse-note"
-                    ? prev.nurseNote || ""
-                    : target === "mychart"
-                    ? prev.mychartMessage || ""
-                    : target === "phone-script"
-                    ? prev.phoneScript || ""
-                    : "";
-                return prev;
-              });
-              await sleep(0);
+            // Fast-forward path — Skip pressed while we were typing. Jump
+            // straight to the final string and resolve so action-complete
+            // can fire and the tour can advance.
+            if (skipBeatRef.current) {
+              const finalText = mode === "append" ? (acc || "") + chars : chars;
+              applyPaneContent(target, finalText, "replace");
+              return;
             }
+            const partial = chars.slice(0, i);
             const next = mode === "append" ? (acc || "") + partial : partial;
             applyPaneContent(target, next, "replace");
             await sleep(intervalMs);
@@ -184,7 +200,17 @@ export default function EncounterDetail({ fixture, fromTab }) {
               })
             );
           }
-          await sleep(event.durationMs || 1200);
+          // Skip-aware sleep: poll in 40ms slices so a mid-banner Skip
+          // collapses the banner instantly instead of holding the full
+          // 1200ms and stalling the next auto-action.
+          const bannerDur = event.durationMs || 1200;
+          let elapsed = 0;
+          while (elapsed < bannerDur) {
+            if (cancelRef.current || skipBeatRef.current) break;
+            const slice = Math.min(40, bannerDur - elapsed);
+            await sleep(slice);
+            elapsed += slice;
+          }
           if (cancelRef.current) return;
           setBanner(null);
           return;
@@ -194,7 +220,15 @@ export default function EncounterDetail({ fixture, fromTab }) {
           return;
         }
         case "pause": {
-          await sleep(event.durationMs || 200);
+          // Skip-aware pause for the same reason as banner above.
+          const pauseDur = event.durationMs || 200;
+          let elapsed = 0;
+          while (elapsed < pauseDur) {
+            if (cancelRef.current || skipBeatRef.current) break;
+            const slice = Math.min(40, pauseDur - elapsed);
+            await sleep(slice);
+            elapsed += slice;
+          }
           return;
         }
         default:
@@ -208,6 +242,7 @@ export default function EncounterDetail({ fixture, fromTab }) {
     async (actionId) => {
       if (isPlaying) return;
       cancelRef.current = false;
+      skipBeatRef.current = false; // fresh action starts un-skipped
       setIsPlaying(true);
       setEditable(false);
       if (typeof window !== "undefined") {
@@ -221,6 +256,21 @@ export default function EncounterDetail({ fixture, fromTab }) {
         const stream = dataSource.runAction(fixture.id, actionId);
         for await (const event of stream) {
           if (cancelRef.current) break;
+          // Fast-forward path — Skip pressed at any point in the action.
+          // Apply each remaining event instantly: pane-updates write final
+          // content with no typing, state-transitions snap, banners and
+          // pauses are dropped. The iterator continues to drain without
+          // animation overhead so action-complete fires promptly and the
+          // tour advances to the next beat.
+          if (skipBeatRef.current) {
+            if (event.type === "pane-update") {
+              applyPaneContent(event.target, event.content, "instant");
+            } else if (event.type === "state-transition" && event.target === "card") {
+              setCardState(event.newState);
+            }
+            // banner / pause are intentionally dropped during fast-forward
+            continue;
+          }
           await applyEvent(event);
         }
       } catch (err) {
@@ -266,11 +316,18 @@ export default function EncounterDetail({ fixture, fromTab }) {
     function onAutoAuthorize() {
       handleAuthorizeRef.current && handleAuthorizeRef.current();
     }
+    function onSkipBeat() {
+      // Tour Skip pressed — flip the ref so the typing/banner/pause loops
+      // fast-forward. The next auto-action resets it inside runAction.
+      skipBeatRef.current = true;
+    }
     window.addEventListener("kairos-encounter:auto-action", onAutoAction);
     window.addEventListener("kairos-encounter:auto-authorize", onAutoAuthorize);
+    window.addEventListener("kairos-tour:skip-beat", onSkipBeat);
     return () => {
       window.removeEventListener("kairos-encounter:auto-action", onAutoAction);
       window.removeEventListener("kairos-encounter:auto-authorize", onAutoAuthorize);
+      window.removeEventListener("kairos-tour:skip-beat", onSkipBeat);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fixture.id, runAction]);
@@ -355,9 +412,6 @@ export default function EncounterDetail({ fixture, fromTab }) {
               </>
             ) : null}
           </nav>
-          <span className="kairos-kicker text-bone-muted">
-            PATTERN {String(fixture.patternId)} · {fixture.patternName || (pattern && pattern.name)}
-          </span>
         </div>
         <div data-tour-anchor="patient-header">
           <PatientHeader fixture={fixture} route={route} />
@@ -391,9 +445,6 @@ export default function EncounterDetail({ fixture, fromTab }) {
               </>
             ) : null}
           </nav>
-          <span className="kairos-kicker text-bone-muted">
-            PATTERN {String(fixture.patternId)} · {fixture.patternName}
-          </span>
         </div>
         <div data-tour-anchor="patient-header">
           <PatientHeader fixture={fixture} route={route} />
@@ -460,9 +511,6 @@ export default function EncounterDetail({ fixture, fromTab }) {
             </>
           ) : null}
         </nav>
-        <span className="kairos-kicker text-bone-muted">
-          PATTERN {String(fixture.patternId)} · {fixture.patternName || (pattern && pattern.name)}
-        </span>
       </div>
 
       {/* Banner row (transient) */}

@@ -1,5 +1,5 @@
 // Pattern 1 — SYNTHESIS only (skeleton; BP log review, no change)
-// Source: docs/KAIROS-CONTEXT-ADDENDUM-2026-04-28.md Pattern 1 (Faroldi)
+// Source: docs/KAIROS-CONTEXT-ADDENDUM-2026-04-28.md Pattern 1 (Russo)
 
 const fixture = {
   id: "czeschin-bp",
@@ -18,19 +18,19 @@ const fixture = {
     severity: "green",
   },
   patient: {
-    name: "Faroldi, Faustin",
-    displayName: "Faustin Faroldi",
+    name: "Russo, Thomas",
+    displayName: "Thomas Russo",
     age: 73,
     sex: "M",
     dob: "1953-03-21",
     mrn: "60417239",
     proxyName: null,
-    primary: "Voronova NP, Heart and Vascular Clinic",
+    primary: "Pendrelle NP, Cardiology Associates",
     coverage: "Medicare A+B",
   },
   sourceArtifact: {
     type: "Result Note",
-    author: "Voronova, Cardiology",
+    author: "Pendrelle, Cardiology",
     timestamp: "2026-04-28 09:01",
     body:
       "Home BP log reviewed: avg SBP 128, DBP 78 over 14 days on losartan 50mg + amlodipine 5mg. HR 62-72. Good control, no change. Ensure continued lab follow-up at 6-month visit.",
@@ -44,7 +44,7 @@ const fixture = {
   actionScripts: {},
   finalSignedState: {
     nurseNote:
-      "Dr. Voronova reviewed home BP log over 14 days. Average 128/78, HR 62-72 on losartan 50mg + amlodipine 5mg. Good control, no medication change. Continue current regimen.",
+      "Dr. Pendrelle reviewed home BP log over 14 days. Average 128/78, HR 62-72 on losartan 50mg + amlodipine 5mg. Good control, no medication change. Continue current regimen.",
     mychartMessage:
       "Your home blood pressure readings look good — averaging 128 over 78. Continue your current losartan and amlodipine.",
     orders: [],

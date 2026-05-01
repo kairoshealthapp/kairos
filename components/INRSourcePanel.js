@@ -1,15 +1,15 @@
-// Phase-3.6 â€” Specialized SOURCE panel for INR ROUTINE pattern fixtures
+// Phase-3.6 — Specialized SOURCE panel for INR ROUTINE pattern fixtures
 // (Crider) and the Maundrell contradiction variant. Replaces the standard
 // SourcePane when fixture.pattern === "inr-routine" or
 // fixture.patternName === "INR ROUTINE" or fixture.contradictionHold === true.
 
 "use client";
 
-// Parse a target-range string like "2.0 â€“ 3.0" or "2.0 - 3.0 (conventional...)"
+// Parse a target-range string like "2.0 – 3.0" or "2.0 - 3.0 (conventional...)"
 // into [min, max] numbers. Returns null if it can't.
 function parseTargetRange(s) {
   if (!s || typeof s !== "string") return null;
-  const m = s.match(/(\d+(?:\.\d+)?)\s*[â€“\-â€”]\s*(\d+(?:\.\d+)?)/);
+  const m = s.match(/(\d+(?:\.\d+)?)\s*[–\-—]\s*(\d+(?:\.\d+)?)/);
   if (!m) return null;
   const lo = parseFloat(m[1]);
   const hi = parseFloat(m[2]);
@@ -151,7 +151,7 @@ export default function INRSourcePanel({ fixture }) {
                 className="text-[13px] text-bone italic leading-relaxed"
                 style={{ borderLeft: "none" }}
               >
-                â€œ{reply.patientText}â€
+                “{reply.patientText}”
               </blockquote>
             </div>
           ) : null}
@@ -215,7 +215,7 @@ export default function INRSourcePanel({ fixture }) {
           </div>
           <div className="text-[11px] text-bone-muted mt-1">
             {a.specimenCollected ? <span>Drawn {a.specimenCollected}</span> : null}
-            {a.specimenCollected && a.resultedAt ? <span> Â· </span> : null}
+            {a.specimenCollected && a.resultedAt ? <span> · </span> : null}
             {a.resultedAt ? <span>Resulted {a.resultedAt}</span> : null}
             {!a.specimenCollected && !a.resultedAt ? <span>{latest.date}</span> : null}
           </div>

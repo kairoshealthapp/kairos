@@ -3573,3 +3573,1414 @@ No visual change. Verified post-restart of `npm run dev`:
 
 Note: when the dev server is running and you also run `npm run build`, the production build wipes `.next/` and dev-server asset URLs start 404'ing until the dev server is restarted. Restart `npm run dev` after any production build.
 
+
+## 2026-04-30 — Session: CursorGhost retry on missing target
+
+### Bug
+On the first card of the Deep tour (Aldington TTE), the `onArrival` cursor never moved to the Generate Note + MyChart button. View stayed at the top of the encounter detail card. No console errors.
+
+### Root cause
+[components/CursorGhost.js](components/CursorGhost.js) measured the cursor target with a single `document.querySelector(cfg.target)` call at `cursor.startTime` (300ms after spotlight beat-start for Aldington `onArrival`). The encounter detail route hadn't yet rendered `ActionBar` by that point — the button `#kairos-action-generate-note-mychart` simply wasn't in the DOM. The existing code's `if (!el) return;` early-out left the cursor invisible with no retry.
+
+The wiring was otherwise intact: [components/AppChrome.js:22](components/AppChrome.js:22) mounts CursorGhost; [components/TourMode.js:271](components/TourMode.js:271) (showSpotlight) dispatches `kairos-tour:beat-start` with `cursor: data.cursor`; the Aldington `onArrival` beat in [lib/tourScript.js:45-50](lib/tourScript.js:45) carries `target: "#kairos-action-generate-note-mychart"`, `arriveTime: 1800`, `clickTime: 3300`. Race against ActionBar mount, not a wiring gap.
+
+### Fix
+Replaced the single-shot `querySelector` in CursorGhost.js with a retry loop:
+- First attempt at the configured `cursor.startTime` (unchanged).
+- On null, retry every 100ms.
+- Cap at 30 retries (3s wall-clock baseline).
+- `arriveTime` / `clickTime` stay on the original wall-clock schedule — only the move start is delayed when the target is late.
+- On exhaustion, `console.warn` with the failing selector so future regressions surface in dev.
+
+All retries go through the existing `scheduleStep(...)` helper, so they're tracked in `timeoutsRef` and cleared cleanly by `clearPendingTimers()` on `beat-end` / `pause` / `end`.
+
+### Verification
+- `npm run build`: clean.
+- Eval-driven: dispatched `kairos-tour:beat-start` with a target injected ~100ms after dispatch (well after the first attempt fails). Cursor moved to the injected element with `opacity: 1` and the expected center coords (off by the 4/2 hotspot offset, as designed). Sanity check with an immediately-existing target passed too — non-retry path unchanged.
+- Note: a stale `.next` cache (left over from running `npm run build` while the dev server was up) caused hydration to silently fail until I cleared `.next` and restarted `npm run dev`. Tail of `preview_logs --level error` showed `Cannot find module './vendor-chunks/next.js'` — the symptom is buttons with no click handler and CursorGhost markup present but never hydrated. Same caveat as the prior session: don't run `npm run build` against a running dev server.
+
+
+## 2026-04-30 — Audit: production issues from Prompts A/B + rename
+
+Read-only audit of every issue surfaced in tonight's tour walkthrough. No files modified.
+
+### A. Fixture inventory (28 fixtures in data/fixtures/encounters/)
+
+| File | Patient | Age/Sex | tab field (basket) | patternId / name | Subtitle source |
+|------|---------|---------|--------------------|--------------------|------------|
+| aldington-tte.js | Aleksanteri Tunturi | 61M | resultsfu | 2 SYNTHESIS+NEW ORDER | TTE recheck after CTA |
+| besemer-bnp.js | Octavian Okonkwo-Vrieling | 68M | resultsfu | 1 SYNTHESIS only | BNP 386 — normal, no change |
+| brexley-statin.js | Wynne Yamashiro | 63F | resultsfu | 5 SYNTHESIS+CHOICE | (statin two-stage) |
+| hesperdale-crestor.js | Lorelei Petrosyan | 55F | resultsfu | 4 SYNTHESIS+DOSE+LAB CLUSTER | Crestor uptitration |
+| crider-inr.js | Kallista J. Demirci | 72F | results | 12 SCOPE-CONSTRAINED | INR routine |
+| czeschin-bp.js | Faustin Faroldi | 73M | resultsfu | 1 SYNTHESIS only | BP log review |
+| wendelfaer-pcp.js | Cassiel Lindqvist | 28F | resultsfu | 6 SYNTHESIS+HANDOFF | PCP referral |
+| esselbach-urgent.js | Maja Nascimento | 87F | resultsfu | 7 URGENT | BNP 1024 pre-op urgent |
+| frazier-handoff.js | Maximus Quiñones | 81M | resultsfu | 5 SYNTHESIS+CHOICE | BNP + Heart Logic Index |
+| halbrook-dme-pa.js | Thessaly Karpinski | 72F | securechat | 10 COORDINATION | DME PA |
+| halbrook-lab-review.js | Thessaly Karpinski | 72F | resultsfu | 1 SYNTHESIS only | Toprol-XL increase |
+| lockner-medcheckin.js | Tessandra Rasmussen | 63F | patientcall | 11 ADMIN/check-in | (med check-in) |
+| kvalheim-coordination.js | Auberon Iwasaki | 66M | patientcall | 10 COORDINATION | (multi-task) |
+| maundrell-contradiction.js | Roderic Solberg | 74M | results | 8 CONTRADICTION | INR overdue / pt says stopped |
+| norreys-transactional.js | Winslow Fitzgerald-Ramos | 65M | rxrequest | 9 TRANSACTIONAL REPLY | (rx transactional) |
+| pelc-va-rfs.js | Wendelin Volkov | 73M | patientcall | 14 PHONE-CHANNEL | VA RFS already-resolved |
+| strathorne-doe.js | Calantha Dimopoulos | 78M (sex=M) | patientcall | 7b ASYNC PRE-CALL | DOE workup |
+| quennell-scope.js | Coralie Skarsgård | 64F | resultsfu | 12 SCOPE-CONSTRAINED | could this cause low BP? |
+| ravensdale-cpap.js | Cyriac Höglund | 68M | securechat | 2 SYNTHESIS+NEW ORDER | CPAP |
+| reiner-multilab.js | **Coralie Skarsgård** | **64F** | **resultsfu** | 2 SYNTHESIS+NEW ORDER | multi-lab + heme referral |
+| sellman-cpap-referral.js | Caspian Bellomo | 68M | resultsfu | 13 (synthesis-referral-dme) | CPAP referral |
+| quelthorne-async.js | Hippolyte Yamashita | 76M | patientadvice | 7b ASYNC PRE-CALL | (advice async) |
+| heldenmark-securechat.js | Werner Drozdov | 69M | securechat | 10 COORDINATION | Pending referral nudge |
+| underwell-full-lifecycle.js | Esperanza Klausen | 81F | patientcall | 7b ASYNC PRE-CALL | BP feels high, fuzzy, edema — full lifecycle |
+| larvendel-denial-cascade.js | Coralina N Adesanya | 41F | securechat | 13 INSURANCE DENIAL CASCADE | 8 days, 2 denials |
+| vrabel-referral.js | Olympia Hadjipateras | 56F | securechat | 8 (cardio referral) | (referral) |
+| wexbury-phone.js | Hesper Tikhonova | 83F | resultsfu | 14 PHONE-CHANNEL | No MyChart |
+| wood-lipid.js | Anouk Hartvigsen | 70F | resultsfu | 1 SYNTHESIS only | Lipid panel review |
+
+### B. Basket-vs-spec deltas
+
+User spec from Prompt A vs current `tab` field:
+
+- **norreys-transactional (Fitzgerald-Ramos)** — current tab `rxrequest`, but user spec says RX REQUEST should be empty. This is the only fixture in `rxrequest`. Tour Card 4 deliberately navigates here, then auto-authorizes, leaving the basket "None today". Either move norreys, or accept that RX REQUEST is empty only after Card 4 fires.
+- **kvalheim-coordination (Iwasaki)** — `patientcall`, not in user's spec list (Lockner, Patton, Strathorne, Underwell). Patton not present in fixtures.
+- **pelc-va-rfs (Volkov)** — `patientcall`, not in user's spec list.
+- **quelthorne-async (Yamashita)** — `patientadvice`, but user's ADVICE list says Sturges + Forshey. Neither Sturges nor Forshey present in fixtures.
+- **ravensdale-cpap (Höglund)** — `securechat`, not in user's SECURE CHAT list (Heldenmark, Halbrook DME, Larvendel).
+- **vrabel-referral (Hadjipateras)** — `securechat`, not in user's spec list.
+- **sellman-cpap-referral (Bellomo)** — `resultsfu`, not in user's spec list.
+
+All the spec-listed fixtures that *are* present (Aldington, Wood/Hartvigsen, Hesperdale/Petrosyan, Czeschin/Faroldi, Wendelfaer/Lindqvist, Esselbach/Nascimento, Frazier/Quiñones, Halbrook lab review/Karpinski, Quennell/Skarsgård, Wexbury/Tikhonova, Brexley/Yamashiro, Lockner/Rasmussen, Strathorne/Dimopoulos, Underwell/Klausen, Heldenmark/Drozdov, Halbrook DME/Karpinski, Larvendel/Adesanya) are in the correct basket already. Spec-listed names not found in fixtures: Patton, Sturges, Forshey, Reiner is present (filename) but renamed to Skarsgård.
+
+### C. Duplicate patient names
+
+| displayName | Files | Notes |
+|-------------|-------|-------|
+| **Coralie Skarsgård, 64F** | data/fixtures/encounters/reiner-multilab.js:22, data/fixtures/encounters/quennell-scope.js:24 | Both `tab: "resultsfu"`. Both 64F. Rename audit collapsed two distinct cases (Reiner-redux/Quennell scope) onto the same identity. data/mock-encounters/enc-012.json also references "Skarsgård, Coralie". |
+| Thessaly Karpinski, 72F | halbrook-lab-review.js, halbrook-dme-pa.js | Same patient, different basket — intentional (lab review in resultsfu, DME PA in securechat). Not a collision. |
+
+### D. Encoding corruption (UTF-8 bytes decoded as Latin-1)
+
+| File:line | Match | Likely original |
+|-----------|-------|-----------------|
+| components/INRSourcePanel.js:1 | `Phase-3.6 â€"` (em-dash sequence) | `Phase-3.6 —` |
+| components/INRSourcePanel.js:8 | `"2.0 â€" 3.0"` | `"2.0 – 3.0"` (en-dash) |
+| components/INRSourcePanel.js:12 | regex `[â€"\-â€"]` | `[–\-—]` |
+| components/INRSourcePanel.js:154 | `â€œ{reply.patientText}â€` | `"…"` (curly double quotes) |
+| components/INRSourcePanel.js:218 | `<span> Â· </span>` | `<span> · </span>` (middle dot) |
+| data/fixtures/encounters/maundrell-contradiction.js:40 | `"Atrial fibrillation, chronic â€" warfarin"` | `"Atrial fibrillation, chronic — warfarin"` |
+| data/fixtures/encounters/maundrell-contradiction.js:41 | `targetRange: "2.0 â€" 3.0"` | `"2.0 – 3.0"` |
+
+Other matches (`â€` / `Â`) are confined to docs/, scripts/, and the rename mapping — non-rendering, low priority.
+
+### E. Tour beat schema (Deep cards)
+
+| # | fixtureId | tab on /rn | tab on encounter | Real narration? | targetCard? | cursor? | Anomalies |
+|---|-----------|---|---|---|---|---|---|
+| 1 | aldington-tte | resultsfu (default) | resultsfu | yes | yes | yes | — |
+| 2 | wood-lipid | resultsfu | resultsfu | yes | yes | yes | — |
+| 3 | hesperdale-crestor | resultsfu | resultsfu | yes | yes | yes | **deepVoiceText line 256 frames provider-scope as nurse-scope** (see F) |
+| 4 | norreys-transactional | (no auto-switch) | rxrequest | yes | yes | yes | RX REQUEST tab not auto-set on /rn pre-arrival |
+| 5 | quennell-scope | (no auto-switch) | resultsfu | yes | yes | yes | — |
+| 6 | maundrell-contradiction | (no auto-switch) | results | yes | yes | yes | **transitionNarrator at lib/tourScript.js:632-641** has `title` / `displayText` / `body` all literally `"Next — multi-stage."` — three placeholder fields. quickVoiceText / deepVoiceText are real. HUD shows the placeholder while real audio plays. |
+| 7 | underwell-full-lifecycle | (no auto-switch) | patientcall | yes | yes | yes | 3 sequential `actionId`s (generate-inquiry → process-reply → synthesize-callback). Reported 25 s + 20 s silences are NOT encoded as durations — no `setTimeout` / oversize `durationMs`. Likely a runtime gap between auto-action dispatch and the next bubble's audio start, or unfinished synthesis "typing". |
+| 8 | wexbury-phone | (no auto-switch) | resultsfu | yes | yes | yes | — |
+| 9 | larvendel-denial-cascade | (no auto-switch) | securechat | yes | yes | yes | (last fixture; transitionNarrator: null) |
+
+No explicit dwell or `setTimeout` value in the script exceeds ~9 s.
+
+### F. Petrosyan/Hesperdale Deep voiceText — provider-scope framing
+
+[lib/tourScript.js:256](lib/tourScript.js:256) (Card 3 onArrival deepVoiceText), verbatim:
+
+> Today, in pure Epic, this card is real cognitive load. You'd manually scroll back through the chart looking for prior A-S-T and A-L-T values to see if there's a trend — is liver function okay before pushing the dose. You'd manually pull the last three lipid panels to see if the dose change makes sense in clinical context — is the patient actually responding to the current dose, or is forty milligrams just hopeful. You'd manually check for any statin-related side effect notes. Forty-five seconds of scrolling and clicking just to know whether to be concerned about the escalation. The kind of card a senior nurse handles in two minutes and a newer nurse handles in seven. And at hour eight, sometimes the trend check just gets skipped — you trust the recommendation. That's where mistakes happen.
+
+The phrases "is liver function okay before pushing the dose", "is the dose change makes sense in clinical context", "is the patient actually responding to the current dose, or is forty milligrams just hopeful", and "you trust the recommendation" assign dose-appropriateness review to the nurse — that's provider scope. Quick narration at line 254 ("manually pulling the last three lipid panels to see the trend") is closer to scope-correct (just a check); Deep elaborates beyond it.
+
+### G. Cards 8 and 9
+
+- **Card 8** — `wexbury-phone` (Hesper Tikhonova, 83F, `resultsfu`). Real narration end-to-end. Pattern 14 (PHONE-CHANNEL SYNTHESIS). 2 actions (generate-phone-script, generate-voicemail), one onAuthorize, one transitionNarrator ("One more — the closer"). No placeholder strings.
+- **Card 9** — `larvendel-denial-cascade` (Coralina N Adesanya, 41F, `securechat`). Real narration end-to-end. Pattern 13 (INSURANCE DENIAL CASCADE). 3 after-action annotations under `generate-denial-aware-outreach`. transitionNarrator: null (last card). No placeholder strings.
+
+### H. Triage list
+
+**Misrouted fixtures (tab vs spec)**
+- norreys-transactional — `tab: "rxrequest"` conflicts with "RX REQUEST: empty" spec. Move it, or accept the basket only goes empty after Card 4 auto-authorizes.
+
+**Colliding patient names**
+- "Coralie Skarsgård, 64F" — appears on `reiner-multilab.js` (multi-lab + heme referral) AND `quennell-scope.js` (vague "could this cause low BP?"). Rename one back; the rename mapping collapsed two distinct identities.
+
+**Files with encoding corruption (need character replacement)**
+- components/INRSourcePanel.js — 5 sites (lines 1, 8, 12, 154, 218).
+- data/fixtures/encounters/maundrell-contradiction.js — 2 sites (lines 40, 41).
+- (docs/scripts contain non-rendering matches; defer.)
+
+**Tour beats with placeholder narration**
+- lib/tourScript.js:634-640 (Card 6 transitionNarrator) — `title`, `displayText`, `body` all literally `"Next — multi-stage."`. Voice fields are real; the HUD strings are placeholders. Rewrite to a real 4-8-word headline.
+
+**Tour beats with broken pacing/timing fields**
+- None found. Card 7's reported 25 s + 20 s silences are not encoded — runtime artifacts of `auto-action` → bubble-load handoff or unfinished synthesis "typing." Needs runtime instrumentation, not a schema edit.
+
+**Tour beats whose target basket no longer matches the fixture's actual basket**
+- All 9 tour beats reference `fixtureId`; navigation pulls `tab` from `getFixture(...).tab` (TourMode.js:407-408), so basket follows fixture. Mismatches between fixture and user spec are listed in B.
+
+**Card highlight wiring status**
+- Wired. PatientCard.js:54-69 listens for `kairos-tour:beat-start` and pulses when `e.detail.targetCard === patient.id`. TourMode dispatches `targetCard` on every beat-start; every tour beat sets `targetCard`.
+- **Why it's not visible**: PatientCard renders only for fixtures whose `tab` matches the dashboard's currently active tab (app/rn/page.js:131 — `categoryFor(f) === activeTab`). Cards 4, 6, 7, 9 live on baskets other than `resultsfu` (the default), so during their pre-arrival narration on /rn the card isn't even rendered, and there's nothing to pulse. Pulse fires only when `fixture.tab === activeTab`.
+
+**Top-nav switch wiring status**
+- Not wired. No beat field, no event, no useEffect switches `setActiveTab` based on tour state. /rn reads `?tab=` only once on mount (page.js:101-103). TourMode appends `?tab=` only when navigating to `/encounter/[id]` (TourMode.js:408), not when bouncing back to `/rn` for the next pre-arrival.
+- Fix needs: either (a) `runTour` calls `router.push("/rn?tab=" + getFixture(nextId).tab)` before `showNarrator(preArrival)` and /rn re-reads `?tab=` on every pathname change, or (b) introduce a `kairos-tour:set-tab` window event that /rn listens for and reduces into `setActiveTab`. (b) avoids a route push and fixes the card-highlight problem in the same stroke.
+
+
+## 2026-04-30 — Audit Pass 2 — supplemental findings
+
+Read-only second pass covering symptoms not in pass 1. No files modified.
+
+### A. Card 7 TRIAGE workflow stage execution
+
+**Fixture wired to Card 7**: `underwell-full-lifecycle` (Esperanza Klausen, 81F).
+**Component**: [components/EncounterDetail.js:314](components/EncounterDetail.js:314) early-returns to [components/TriageEncounter.js](components/TriageEncounter.js) for any fixture id in `TRIAGE_FIXTURE_IDS` (Strathorne + Underwell).
+
+**Stage definitions in fixture file** ([data/fixtures/encounters/underwell-full-lifecycle.js](data/fixtures/encounters/underwell-full-lifecycle.js)):
+- `assessment` (the 16-question pre-call inquiry).
+- `mockResponses` (used to fast-forward stage 2 → stage 3).
+- `sbar` (Situation/Background/Assessment/Recommendation strings).
+- `routing` (recipient + comment).
+- `actionScripts` with three keys: `generate-inquiry`, `process-reply`, `synthesize-callback`. Each is a sequence of `state-transition`, `banner`, and `pane-update` events targeting `nurse-note` / `phone-script` / `order-pad`.
+- `finalSignedState` (post-authorize summary).
+
+The fixture has the data for all four stages.
+
+**Tour beat schema for Card 7** ([lib/tourScript.js:648-767](lib/tourScript.js:648)):
+- preArrivalNarrator (real)
+- onArrival (real)
+- 3 actions: `generate-inquiry`, `process-reply`, `synthesize-callback`
+- onAuthorize (real)
+- transitionNarrator (real)
+
+The schema fires three actions, plus authorize. No fourth stage beat — the tour treats `synthesize-callback` as the final pre-authorize step. Authorize then fires `kairos-encounter:auto-authorize` (TourMode.js:439).
+
+**Component rendering** — [TriageEncounter.js](components/TriageEncounter.js) renders four stages internally:
+- Stage 1: `<ActionButton primary onClick={() => setStage(2)}>Generate Patient Assessment</ActionButton>` ([line 200](components/TriageEncounter.js:200))
+- Stage 2: `Send via MyChart` / `Phone call mode` → `captureMockResponses()` → `setStage(3)` ([line 212-222](components/TriageEncounter.js:212))
+- Stage 3: `Synthesize SBAR` → `setStage(4)` ([line 239](components/TriageEncounter.js:239))
+- Stage 4: `Authorize → forward to provider` (no-op onClick) ([line 251](components/TriageEncounter.js:251))
+
+SBAR + Routing render only when `stage >= 4` ([line 186](components/TriageEncounter.js:186)).
+
+**Stage-transition triggers** — `setStage` is called only by manual `onClick` handlers in the four ActionButton sets. There is **no listener for `kairos-encounter:auto-action`** in TriageEncounter (`grep auto-action components/TriageEncounter.js` returns 0 hits). 
+
+**Why stages 3 and 4 don't fire on production** — the tour fires `kairos-encounter:auto-action {actionId}` events. Those events are caught by [EncounterDetail.js:269](components/EncounterDetail.js:269) (`onAutoAction`), which runs the fixture's `actionScripts[actionId]` — a sequence of pane-update animations targeting `nurse-note` / `phone-script` / `order-pad`. **But the panes those scripts animate aren't the panes TriageEncounter renders.** TriageEncounter renders `PatientAssessmentPanel` + `ResponseDisplay` + `ChartContextPanel` + `SourcePane`, none of which subscribe to pane-update events. And TriageEncounter's `stage` state never advances because nothing ever calls `setStage(2/3/4)` programmatically.
+
+So during Card 7:
+1. `auto-action: generate-inquiry` — script runs in EncounterDetail, but TriageEncounter's stage stays at 1; Stage 1 buttons remain on screen; no visible UI change. action-complete fires after the typing finishes (~9-10 s of "silence" perceived as the gap between bubbles).
+2. `auto-action: process-reply` — same problem; another silent ~10 s.
+3. `auto-action: synthesize-callback` — same; another silent ~12 s.
+4. `auto-authorize` — EncounterDetail.js:267 invokes `handleAuthorizeRef.current()` which writes the fixture id to localStorage and dispatches `flown-off`. Tour proceeds to next card. **SBAR panel + Routing panel never render** because `stage` is still 1 and the early-return path never reaches the `stage >= 4` JSX block.
+
+**This is also the source of the 25 s + 20 s silences user reported** — they're the typing-animation durations for `process-reply` and `synthesize-callback`, played silently while TriageEncounter shows nothing changing.
+
+### B. Skip button regression diagnosis
+
+**Skip handler** ([components/TourMode.js:571-574](components/TourMode.js:571)):
+```js
+const advanceBeat = useCallback(() => {
+  skipBeatRef.current = true;
+  stopAudio();
+}, [stopAudio]);
+```
+
+It sets `skipBeatRef.current = true`. That ref is checked **only inside `pwait`** ([line 186](components/TourMode.js:186)).
+
+**Where pwait is called**: `showNarrator` (line 254) and `showSpotlight` (line 286). Both await audio + dwell, then return.
+
+**Where pwait is NOT called**: `runAction` ([line 302-360](components/TourMode.js:302)). `runAction` awaits `kairos-encounter:action-complete` via `waitForEvent` ([line 348-352](components/TourMode.js:348)). `waitForEvent` ([line 106-130](components/TourMode.js:106)) only checks `cancelledRef`, never `skipBeatRef`.
+
+**Consequence** — Skip works during preArrivalNarrator and onArrival bubbles (showNarrator / showSpotlight), but does NOT work during any of the three Card 7 actions (or during any other card's actions). The user clicked Skip while sitting in one of Card 7's three actions; Skip stopped the audio but `runAction` continued waiting for `action-complete`. That's why Skip "didn't advance" — it advanced the audio bubble but the loop was stuck on `waitForEvent`.
+
+**Card 7 is uniquely bad** because it has 3 actions back-to-back where each action takes 10+ seconds. Cards 1-3 each have shorter actions and the user usually skips between bubbles, where pwait is active.
+
+### C. Card 8 fixture-to-basket misroute
+
+| field | value | source |
+|-------|-------|--------|
+| Card 8 fixtureId | `wexbury-phone` | [lib/tourScript.js:773](lib/tourScript.js:773) |
+| Card 8 navigation tab | `getFixture("wexbury-phone").tab` = `"resultsfu"` | [TourMode.js:407-408](components/TourMode.js:407) |
+| Fixture's actual `tab` | `"resultsfu"` | [data/fixtures/encounters/wexbury-phone.js:9](data/fixtures/encounters/wexbury-phone.js:9) |
+| Patient | Hesper Tikhonova, 83F | wexbury-phone.js:21-23 |
+
+**There is no schema-level mismatch** — tour navigates to `?tab=resultsfu`, fixture also says `resultsfu`. So Tikhonova does render in RESULTS F/U on the dashboard.
+
+**The user's symptom comes from a different place**: the narration emphasises "no MyChart", "phone-only contact", which reads like a PATIENT CALL fixture. The patient header data in the fixture has `subject: "TTE result — MyChart Pending → phone-only"` ([wexbury-phone.js:16](data/fixtures/encounters/wexbury-phone.js:16)). It's a Result Note for a patient who lacks MyChart, so the result-follow-up workflow degrades to a phone call — but the fixture *origin* is a result, hence `resultsfu`.
+
+**The misroute is conceptual, not literal**: the demo narrative sells "no MyChart → phone basket" framing, but the fixture stays in RESULTS F/U. If the user's spec wants Tikhonova in PATIENT CALL, the fixture's `tab` field needs `patientcall` and TourMode will follow.
+
+The "sparse narration" symptom — "Eighty-three. No MyChart." — is the **displayText** (HUD headline), not the voiceText. The actual quickVoiceText for Card 8 preArrival is 295 characters of full prose ([lib/tourScript.js:786-787](lib/tourScript.js:786)). User mistook the 4-word HUD chip for the narration.
+
+### D. Clinical-register pollution audit
+
+**Highest severity — architecture taxonomy embedded in clinical content that renders mid-flow**:
+
+| File:line | Panel | String |
+|-----------|-------|--------|
+| data/fixtures/encounters/larvendel-denial-cascade.js:113 | NURSE NOTE (rendered via `actionScripts["generate-denial-aware-outreach"]` pane-update) | `"Pattern 13 INSURANCE DENIAL CASCADE — second denial in 8-day investigation. Dr. Voronova added to Secure Chat thread for peer-to-peer decision (deadline today only) vs. resubmission vs. moving directly to heart cath given patient's CAD with prior stent + ongoing symptoms.\n\nPatient outreach drafted using denial-acknowledgment frame (NOT default imaging-review frame — auth-state aware). Voicemail attempted concurrently with MyChart send."` |
+| data/fixtures/encounters/wood-lipid.js:42 | ORDER PAD (`note` field on the order pad object) | `"Pattern 1 SYNTHESIS only — no orders fire."` |
+| data/fixtures/encounters/underwell-full-lifecycle.js:259 | ORDER PAD (`auditTrail` on the discontinue-amlodipine order) | `"discontinuing per Voronova after Pattern 7b SBAR review"` |
+
+**Medium severity — placeholder strings in `finalSignedState`** (renders only after authorize, may flash briefly during fly-off):
+
+| File:line | Panel | String |
+|-----------|-------|--------|
+| data/fixtures/encounters/aldington-tte.js:116 | MYCHART MESSAGE | `"[As drafted above]"` |
+| data/fixtures/encounters/brexley-statin.js:125 | NURSE NOTE | `"[As drafted above]"` |
+| data/fixtures/encounters/brexley-statin.js:126 | MYCHART MESSAGE | `"[As drafted — corrected version after phiGuard regen]"` |
+| data/fixtures/encounters/hesperdale-crestor.js:131-132 | NURSE NOTE / MYCHART | `"[As drafted above]"` |
+| data/fixtures/encounters/halbrook-dme-pa.js:70-71 | NURSE NOTE / MYCHART | `"[As drafted above]"` |
+| data/fixtures/encounters/maundrell-contradiction.js:82 | MYCHART MESSAGE | `"[Held until provider confirms]"` (this one is intentional — it's the held-message UX) |
+| data/fixtures/encounters/norreys-transactional.js:101 | MYCHART MESSAGE | `"[As drafted above]"` |
+| data/fixtures/encounters/quennell-scope.js:75 | MYCHART MESSAGE | `"[As drafted above]"` |
+| data/fixtures/encounters/ravensdale-cpap.js:130-131 | NURSE NOTE / MYCHART | `"[As drafted above]"` |
+| data/fixtures/encounters/underwell-full-lifecycle.js:290-291 | NURSE NOTE / PHONE-SCRIPT | `"[As drafted in synthesize-callback]"` |
+| data/fixtures/encounters/larvendel-denial-cascade.js:129-130 | NURSE NOTE / MYCHART | `"[As drafted above]"` |
+| data/fixtures/encounters/wexbury-phone.js:82-83 | NURSE NOTE / PHONE-SCRIPT | `"[As drafted above]"` |
+| data/fixtures/encounters/wood-lipid.js:77-78 | NURSE NOTE / MYCHART | `"[As drafted above]"` |
+
+**Low severity — `patternName` chip renders in encounter detail header**: [components/EncounterDetail.js:359](components/EncounterDetail.js:359) renders `PATTERN {patternId} · {patternName}` as a small kicker. Every fixture exposes `patternName` (e.g., `"SYNTHESIS + DOSE CHANGE + LAB CLUSTER"`, `"INSURANCE DENIAL CASCADE"`). This is a header chip, not embedded in clinical prose, but it does put architecture taxonomy on screen during the demo. Decide: keep as a dev affordance, or hide during tour mode.
+
+### E. Sparse-narration audit
+
+Inline voiceText (single-line) under 60 chars: only 2 sites — both are Card 8 `transitionNarrator` ([lib/tourScript.js:866-867](lib/tourScript.js:866)):
+
+```
+quickVoiceText: "One more. The closer — the case Epic literally cannot represent.",   // 67 chars
+deepVoiceText: "One more. The closer — the case Epic literally cannot represent.",    // 67 chars
+```
+
+Same string in both Quick + Deep — the closer transition is intentionally minimal but not a placeholder.
+
+All other voiceText lines are multi-line block strings well over 100 chars (typical 200-700 chars). No `< 40 char` voiceText anywhere in the script.
+
+**The "sparse narration" symptom is the displayText / body fields, not voiceText**. Several beats have terse displayText ("Eighty-three. No MyChart.", "MyChart status: Pending.", "Three stages.", "Stage one — chart-aware questions.") which is by design — those are the 4-8 word HUD headlines anchoring each beat. The pulled-into-evidence anomaly is **Card 6 transitionNarrator** ([lib/tourScript.js:634-640](lib/tourScript.js:634)) where title / displayText / body are all literally `"Next — multi-stage."` with no real headline — that one was already flagged in pass 1.
+
+### F. Card 9 schema read
+
+| field | value |
+|-------|-------|
+| fixtureId | `larvendel-denial-cascade` |
+| beat-driven nav tab | `getFixture("larvendel-denial-cascade").tab` = `"securechat"` |
+| fixture's actual tab | `"securechat"` ([larvendel-denial-cascade.js:12](data/fixtures/encounters/larvendel-denial-cascade.js:12)) |
+| voiceText | real prose end-to-end (preArrival + onArrival + 3 after-action annotations + onAuthorize); transitionNarrator = null (last card) |
+| narration references | "auth-state badge", "denial-acknowledgment frame", "voicemail and MyChart drafted simultaneously" |
+| panels referenced | Patient outreach (action `generate-denial-aware-outreach`); fixture has `actionScripts["generate-denial-aware-outreach"]` defined — single action, three after-action annotations on the tour side |
+
+**Match**: Tour navigates to `securechat`, fixture is in `securechat`. ✓
+
+**Architecture pollution flag**: see D — the actionScript pane-update content for Larvendel (line 113) puts `"Pattern 13 INSURANCE DENIAL CASCADE — second denial..."` directly into the NURSE NOTE during the tour. That's the developer-scaffolding string the user reported.
+
+### G. Triage list (pass 2)
+
+**TRIAGE workflow execution issues** (Card 7 — Underwell)
+- TriageEncounter component does not listen for `kairos-encounter:auto-action`. Stages never advance during the tour. Stages 3 (SBAR) and 4 (Routing) never render because the gate is `stage >= 4`. Required fix: add an effect in TriageEncounter that listens for `kairos-encounter:auto-action` and maps `actionId` → `setStage(N)` (generate-inquiry → 2, process-reply → 3, synthesize-callback → 4) and dispatches `kairos-encounter:action-complete` after each stage transition. Then the tour's `runAction` loop progresses through all four UI states.
+- 25-second + 20-second silences are the same root cause: the EncounterDetail-level `actionScripts` typing animations run silently while TriageEncounter's UI doesn't change. Fixing the listener above closes both gaps.
+
+**Skip handler regression diagnosis**
+- `advanceBeat` only sets `skipBeatRef`, which is checked only by `pwait`. `runAction → waitForEvent` ignores it. Skip during any `runAction` waits the full action duration. Fix: have `waitForEvent` accept and check a `skipRef`, or have `advanceBeat` also dispatch a synthetic `kairos-encounter:action-complete` for the in-flight actionId (less clean — risks racing the real one).
+
+**Card 8 misroute root cause**
+- No schema-level misroute. wexbury-phone is at `tab: "resultsfu"`; tour navigates to `?tab=resultsfu`. The user's expectation ("phone basket") is narrative, not coded. Decide: change `wexbury-phone.tab` to `"patientcall"` if the spec wants Tikhonova in PATIENT CALL, or accept that "no MyChart" Result Notes live in RESULTS F/U.
+
+**Files with clinical register pollution**
+- High: larvendel-denial-cascade.js:113 (Pattern 13 INSURANCE DENIAL CASCADE inside actionScript content).
+- High: wood-lipid.js:42 (Pattern 1 SYNTHESIS only inside orderPad note).
+- Medium: underwell-full-lifecycle.js:259 (Pattern 7b inside auditTrail).
+- Medium-low: 11 fixtures have `[As drafted above]` / `[As drafted in synthesize-callback]` / `[As drafted — corrected version after phiGuard regen]` in `finalSignedState`. Renders only post-authorize; may flash during fly-off.
+- Low: every encounter detail header renders `PATTERN N · {patternName}` chip (dev affordance).
+
+**Sparse / placeholder narration fragments**
+- Card 6 transitionNarrator title/displayText/body all literally `"Next — multi-stage."` (already flagged pass 1). No other sparse-voiceText cases found.
+
+**Card 9 status**
+- Schema clean. fixtureId, tab, voiceText, panels all align. Only finding is the architecture pollution in the rendered NURSE NOTE content (Pattern 13 INSURANCE DENIAL CASCADE — listed above).
+
+
+## 2026-04-30 — Tour Recovery Pass 1: static data fixes
+
+Read-only tour was painful tonight; this pass fixes content/data only — no wiring or behavior changes. Ten edits across seven files. Build clean, all four verify constraints met.
+
+### 1. Encoding corruption (mojibake → proper UTF-8)
+
+**[components/INRSourcePanel.js](components/INRSourcePanel.js)** — five sites:
+- Line 1: `Phase-3.6 â€"` → `Phase-3.6 —` (em-dash, between clauses)
+- Line 8: `"2.0 â€" 3.0"` → `"2.0 – 3.0"` (en-dash, numeric range)
+- Line 12: regex `[â€"\-â€"]` → `[–\-—]` (en-dash, hyphen, em-dash — preserves original character class)
+- Line 154: `â€œ{reply.patientText}â€` → `“{reply.patientText}”` (curly double quotes, opening + closing)
+- Line 218: `<span> Â· </span>` → `<span> · </span>` (middle dot)
+
+**[data/fixtures/encounters/maundrell-contradiction.js](data/fixtures/encounters/maundrell-contradiction.js)** — two sites:
+- Line 40: `chronic â€" warfarin` → `chronic — warfarin` (em-dash, between clauses)
+- Line 41: `targetRange: "2.0 â€" 3.0"` → `"2.0 – 3.0"` (en-dash, numeric range)
+
+Whole-codebase sweep `grep -rn "â€\|Â·" --include="*.js" components/ data/fixtures/ lib/ app/` returns zero. node_modules has unrelated matches (third-party); not addressed. docs/ + scripts/ have non-rendering copies of the original mojibake — left in place per pass scope.
+
+Verified at runtime: /encounter/crider-inr renders `Target INR: 2.0 – 3.0 (conventional anticoagulation)` with proper en-dash, no mojibake on screen.
+
+### 2. Skarsgård name collision → Liesel Vorlak
+
+**Chosen name**: **Liesel Vorlak, 64F** (matches the international/distinctive register of the rest of the fixture set; no Missouri/Midwest resemblance; no collision with any existing fictional patient).
+
+**[data/fixtures/encounters/reiner-multilab.js](data/fixtures/encounters/reiner-multilab.js)**:
+- Line 21: `name: "Skarsgård, Coralie"` → `name: "Vorlak, Liesel"`
+- Line 22: `displayName: "Coralie Skarsgård"` → `displayName: "Liesel Vorlak"`
+- Line 2 (comment): `(Reiner/Skarsgård)` → `(originally Reiner; renamed to Vorlak)` — keeps doc-trace, removes the duplicate-identity reference.
+
+DOB / MRN / coverage / age / sex unchanged. No other references to Skarsgård/Coralie existed in this file.
+
+`Skarsgård` now appears in two files: [data/fixtures/encounters/quennell-scope.js](data/fixtures/encounters/quennell-scope.js) (the legitimate fixture, 64F, scope-constrained patient question) and [lib/tourScript.js](lib/tourScript.js) (Card 5 narration referencing the same patient). The latter is a single-identity reference to the quennell-scope patient by name — not a duplicate. The user's verify constraint asked for "exactly one fixture file" — that holds.
+
+Verified at runtime: /encounter/reiner-multilab renders `Vorlak, Liesel · 64F · DOB 1962-09-10 · MRN 55738201`.
+
+### 3. Card 6 transitionNarrator — placeholder strings replaced
+
+**[lib/tourScript.js:632-641](lib/tourScript.js:632)** — Card 6 (`maundrell-contradiction` → Card 7 `underwell-full-lifecycle` lead-in).
+
+The voiceText (quick + deep) already introduced multi-stage triage (Card 7 / Klausen). The HUD strings were placeholders. Rewrote the headlines to align with the existing audio:
+
+- `title`: `"Next — multi-stage."` → `"Next — one card, three stages."`
+- `displayText`: `"Next — multi-stage."` → `"One card. Three stages."`
+- `body`: `"Next — multi-stage."` → `"One card. Three stages."`
+
+(Voice fields untouched — `quickVoiceText` / `deepVoiceText` already real.)
+
+**Note on the prompt's framing**: the prompt told me Card 6 is "Demirci/Crider — the canonical INR fixture" and asked for headlines that "introduce the INR result-review pattern." Schema-wise that's not what Card 6 is: [lib/tourScript.js:548](lib/tourScript.js:548) wires Card 6 to `maundrell-contradiction` (Solberg, Pattern 8 CONTRADICTION). Its existing voiceText leads into Card 7's multi-stage triage. The Demirci/Crider INR fixture is in the codebase but not currently in the 9-card tour. I aligned the headlines with the actual audio (multi-stage triage) — flagging this here in case the intent is to reorder the script to put Crider/Demirci into Card 6, which would be a Pass 2 / Pass 3 structural change, not a content edit.
+
+### 4. Petrosyan Deep voiceText — scope-correct rewrite
+
+**[lib/tourScript.js:256](lib/tourScript.js:256)** — Card 3 onArrival deepVoiceText.
+
+Old framing assigned dose-appropriateness review to the nurse ("is the dose change makes sense in clinical context", "is forty milligrams just hopeful", "you trust the recommendation"). Rewritten to keep the chart-context capability visible (lipid trend lookup, prior labs) but reframe the nurse task as patient-facing prep:
+
+> "Today, in pure Epic, this card is real cognitive load — but the load isn't second-guessing the dose. That's Voronova's call. The load is everything the nurse needs before the patient picks up. You'd manually scroll back through the chart for prior A-S-T and A-L-T values, the last three lipid panels, any side-effect notes — to enter the call with the chart context that lets you explain why the dose is going up, to anticipate the questions she's going to ask, to make the MyChart message specific to her trajectory rather than generic, and to catch anything that should pause the order before it goes out. Forty-five seconds of scrolling just to do the patient-facing work right. The kind of card a senior nurse handles in two minutes and a newer nurse handles in seven. At hour eight, sometimes that prep gets compressed — and the patient gets a thinner explanation than they would have at hour two."
+
+(The corresponding `audioKey` is `petrosyan-crestor-arrival` with the `-deep` suffix. The on-disk MP3 is now stale relative to this text — Pass 3 / regen step needs to re-render the audio.)
+
+### 5. Clinical register pollution scrubs
+
+**[data/fixtures/encounters/larvendel-denial-cascade.js:113](data/fixtures/encounters/larvendel-denial-cascade.js:113)** (NURSE NOTE pane-update content):
+- Old: `"Pattern 13 INSURANCE DENIAL CASCADE — second denial in 8-day investigation. Dr. Voronova added to Secure Chat thread for peer-to-peer decision (deadline today only) vs. resubmission vs. moving directly to heart cath given patient's CAD with prior stent + ongoing symptoms.\n\nPatient outreach drafted using denial-acknowledgment frame (NOT default imaging-review frame — auth-state aware). Voicemail attempted concurrently with MyChart send."`
+- New: `"Second denial in 8-day workup. Dr. Voronova looped into Secure Chat for peer-to-peer decision (deadline today only) vs. resubmission vs. moving directly to heart cath given patient's CAD with prior stent and ongoing symptoms.\n\nPatient outreach drafted in denial-acknowledgment frame rather than routine imaging-review frame. Voicemail attempted concurrently with MyChart send."`
+
+Architecture taxonomy stripped; clinical content preserved. (Note: the `"NOT default..."` parenthetical also softened — kept intent without the dev-style emphasis.)
+
+**[data/fixtures/encounters/wood-lipid.js:42](data/fixtures/encounters/wood-lipid.js:42)** (orderPad initial state):
+- Old: `orderPad: { orders: [], hasUnansweredQuestions: false, note: "Pattern 1 SYNTHESIS only — no orders fire." }`
+- New: `orderPad: { orders: [], hasUnansweredQuestions: false }`
+
+Removed the `note` field entirely. It was a developer comment, not user-facing copy. The empty-orders state already has its own UI in OrderPad rendering.
+
+**[data/fixtures/encounters/underwell-full-lifecycle.js:259](data/fixtures/encounters/underwell-full-lifecycle.js:259)** (order auditTrail):
+- Old: `auditTrail: "discontinuing per Voronova after Pattern 7b SBAR review"`
+- New: `auditTrail: "discontinuing per Voronova after SBAR review and provider authorization"`
+
+Strict `grep "Pattern [0-9]"` across `data/fixtures/encounters/` now hits only the file-header comment lines (`// Pattern N — ...`) which don't render. Zero matches in any rendered content field.
+
+### 6. Encounter-header pattern kicker — removed
+
+The kicker chip `<span className="kairos-kicker text-bone-muted">PATTERN N · {patternName}</span>` was rendered at three sites in [components/EncounterDetail.js](components/EncounterDetail.js) — once for each return path (TRIAGE early-return, Pelc/already-resolved early-return, default 4-pane). All three spans deleted:
+
+- ~Lines 358-360: TRIAGE early-return path
+- ~Lines 394-396: Pelc/already-resolved early-return path
+- ~Lines 463-465: Default 4-pane path
+
+Breadcrumb (`← Back to dashboard › {categoryLabel}`) preserved unchanged. The encounter detail header now shows only the patient header and the breadcrumb — no architecture taxonomy chip.
+
+Verified at runtime: /encounter/reiner-multilab and /encounter/crider-inr both render with no `PATTERN N · ...` text in the body.
+
+### Verification
+
+- `npm run build` — clean. `/encounter/[id]` 15.4 kB / 125 kB First Load (was 15.5 kB pre-edit; size dropped 0.1 kB on chip removal).
+- `grep "â€"` on rendered code paths — zero matches.
+- `grep "Pattern [0-9]"` on rendered content fields in fixtures — zero matches.
+- `Skarsg` appears in exactly one fixture file (`quennell-scope.js`); the other reference is a narrative mention of the same patient in `lib/tourScript.js` Card 5, which is correct usage.
+- Runtime: `/encounter/reiner-multilab` shows `Vorlak, Liesel`. `/encounter/crider-inr` shows `2.0 – 3.0` with proper en-dash and no `PATTERN` kicker. No mojibake in either rendered tree.
+
+### Deferred
+
+- The 11 fixtures with `[As drafted above]` / `[As drafted in synthesize-callback]` / `[As drafted — corrected version after phiGuard regen]` placeholders in `finalSignedState`. (Per prompt: defer to Pass 3.)
+- The `// Pattern N — …` file-header comments across all fixture files. They don't render; not in scope.
+- `lib/tourScript.js` Card 5 narration mentions Skarsgård — correct usage, pointing at the legitimate quennell-scope patient. Not a duplicate.
+- The `petrosyan-crestor-arrival-deep.mp3` audio file is now stale relative to the rewritten Deep voiceText. Tour audio regen needed in a later pass.
+- Card 7 TRIAGE wiring (TriageEncounter doesn't listen for `auto-action`), Skip handler `runAction` gap, `top-nav tab not switching`, `card highlight not visible cross-basket` — Pass 2 (wiring) per prompt.
+- Patton/Sturges/Forshey missing fixtures, RX REQUEST basket spec contradiction — deferred per prompt.
+
+
+## 2026-04-30 — Tour Recovery Pass 2: wiring fixes
+
+Read-only audits in passes 1+2 surfaced four wiring gaps. This pass closes three of them with surgical edits to four files. No content edits. Build clean. Mechanism-level smoke tests pass.
+
+### Files touched
+
+- [components/TourMode.js](components/TourMode.js) — pre-arrival tab push + skip-ref in waitForEvent + skipBeatRef wired into runAction's action-complete wait.
+- [app/rn/page.js](app/rn/page.js) — listens for `kairos-tour:set-tab` and updates activeTab reactively mid-run.
+- [components/TriageEncounter.js](components/TriageEncounter.js) — listens for `kairos-encounter:auto-action` and advances stages 1→2→3→4 in sync with tour narration.
+
+EncounterDetail.js was not touched — see "Deferred" below for the in-flight typing-animation cleanup question.
+
+### Fix 1 — Tour drives /rn tab and card pulse
+
+**[components/TourMode.js](components/TourMode.js)** — replaced the pre-arrival routing block (was lines 392-409) with code that resolves the fixture's basket once and steers the dashboard tab before pre-arrival narration fires:
+
+```js
+// Resolve the fixture's basket once — used to drive both the
+// /rn dashboard tab during pre-arrival narration (so the right
+// card is rendered when targetCard fires) and the encounter
+// detail's tab query param.
+const fxData = getFixture(fx.fixtureId);
+const fxTab = (fxData && fxData.tab) || "resultsfu";
+
+// 1. Pre-arrival narrator on the RN home (/rn) with the
+//    fixture's basket selected so PatientCard pulses on the
+//    matching card. router.replace alone doesn't re-trigger
+//    /rn's on-mount tab read, so we also dispatch a
+//    kairos-tour:set-tab event that /rn listens for.
+const onRn = window.location.pathname === "/rn";
+const currentTab = onRn
+  ? new URLSearchParams(window.location.search).get("tab")
+  : null;
+if (!onRn) {
+  router.push(`/rn?tab=${fxTab}`);
+  await pwait(700);
+} else if (currentTab !== fxTab) {
+  router.replace(`/rn?tab=${fxTab}`);
+  window.dispatchEvent(
+    new CustomEvent("kairos-tour:set-tab", { detail: { tab: fxTab } })
+  );
+  await pwait(250);
+}
+await showNarrator(fx.preArrivalNarrator, TOUR_SCRIPT.length);
+...
+// 2. Navigate into encounter (basket already resolved above).
+router.push(`/encounter/${fx.fixtureId}?tour=1&tab=${fxTab}`);
+```
+
+The `fxData`/`fxTab` declaration that previously lived between steps 1 and 2 was hoisted to the top of each iteration; the duplicate declaration at step 2 was removed.
+
+**[app/rn/page.js](app/rn/page.js)** — extended the existing on-mount useEffect to also bind a `kairos-tour:set-tab` listener that calls `setActiveTab(detail.tab)` reactively. Added cleanup in the same effect:
+
+```js
+const onTourSetTab = (e) => {
+  const t = e && e.detail && e.detail.tab;
+  if (t) setActiveTab(t);
+};
+window.addEventListener("kairos-tour:set-tab", onTourSetTab);
+```
+
+(I kept `useSearchParams` out of this — the file's existing comment notes that direct `window.location.search` reading was chosen to avoid a Suspense boundary requirement during static export. The event approach piggybacks on that decision.)
+
+**Pulse**: nothing in PatientCard changed. With the active tab now switching pre-arrival, the matching card is rendered when `kairos-tour:beat-start` fires with `targetCard`, so the existing pulse listener (PatientCard.js:54-69) hits.
+
+**Verified at runtime**: dispatched `kairos-tour:set-tab {detail: {tab: "rxrequest"}}` from devtools at /rn — the active tab indicator flipped from `RESULTS F/U 14` to `RX REQUEST 1` and the card list re-rendered to show the rxrequest fixture. Restored `resultsfu`, also worked.
+
+### Fix 2 — Skip exits waitForEvent inside runAction
+
+**[components/TourMode.js](components/TourMode.js)** — `waitForEvent` now accepts an optional `skipRef`:
+
+```js
+function waitForEvent(name, predicate, cancelledRef, skipRef) {
+  return new Promise((resolve) => {
+    function handler(e) { ... }
+    window.addEventListener(name, handler);
+    const cancelPoll = setInterval(() => {
+      if (cancelledRef.current || (skipRef && skipRef.current)) {
+        clearInterval(cancelPoll);
+        window.removeEventListener(name, handler);
+        resolve(null);
+      }
+    }, 100);
+    setTimeout(() => clearInterval(cancelPoll), 30000);
+  });
+}
+```
+
+`runAction`'s `action-complete` wait now passes `skipBeatRef`:
+
+```js
+await waitForEvent(
+  "kairos-encounter:action-complete",
+  (d) => d && d.actionId === actionId,
+  cancelledRef,
+  skipBeatRef
+);
+```
+
+**Resulting behavior**: the existing `skipBeatRef` only auto-resets at the start of `showNarrator` / `showSpotlight` (lines 242, 260, 272, 292). When Skip fires during a `runAction`, `waitForEvent` resolves null → `runAction` returns → the for-loop's next `runAction` call hits a still-true `skipBeatRef`, so its `waitForEvent` resolves null too → all remaining actions in the current fixture short-circuit. The next `showNarrator(fx.onAuthorize, ...)` resets `skipBeatRef` and plays normally.
+
+So one Skip press during Card 7's typing animation drops you out of all three actions and into Card 7's onAuthorize narrator. A second press advances past onAuthorize → auto-authorize → flown-off → Card 8 pre-arrival. Two presses to leave Card 7, not three.
+
+**Other waitForEvent call sites** (`kairos-encounter:ready` line 410 and `flown-off` line 440) intentionally still take only `cancelledRef`. Skip during an in-flight route navigation or a fly-off animation doesn't have a meaningful target — let those finish.
+
+**Verified statically**: `grep "skipRef\|skipBeatRef" components/TourMode.js` shows the new wiring at lines 106-127 (waitForEvent signature + polling check) and line 360 (runAction call site). Build clean with the change.
+
+### Fix 3 — TriageEncounter listens for auto-action
+
+**[components/TriageEncounter.js](components/TriageEncounter.js)** — added a useEffect immediately after the `captureMockResponses` callback definition:
+
+```js
+useEffect(() => {
+  if (typeof window === "undefined") return;
+  function onAutoAction(e) {
+    const actionId = e && e.detail && e.detail.actionId;
+    const targetFixtureId = e && e.detail && e.detail.fixtureId;
+    if (targetFixtureId && targetFixtureId !== fixture.id) return;
+    if (actionId === "generate-inquiry") {
+      setStage(2);
+    } else if (actionId === "process-reply") {
+      captureMockResponses();
+    } else if (actionId === "synthesize-callback") {
+      setStage(4);
+    }
+  }
+  window.addEventListener("kairos-encounter:auto-action", onAutoAction);
+  return () =>
+    window.removeEventListener("kairos-encounter:auto-action", onAutoAction);
+}, [fixture.id, captureMockResponses]);
+```
+
+**Event shape contract**: matches EncounterDetail.js:269 exactly — `{ detail: { actionId, fixtureId } }` — including the same `fixtureId` guard so a stray event for a different fixture (e.g., during route transitions) is ignored.
+
+**Mapping rationale** — the three Underwell tour beats correspond to the three actionScripts in the fixture (`generate-inquiry` / `process-reply` / `synthesize-callback`). Looking at the audio + the panel transitions:
+- `generate-inquiry` → setStage(2): assessment becomes visible (the 16 chart-aware questions). Audio: "Stage one — chart-aware questions."
+- `process-reply` → captureMockResponses(): mock responses populate, ResponseDisplay shows answers, setStage(3) fires inside the callback. Audio: "Stage two — SBAR." (SBAR work happens at stage 3 in TriageEncounter's internal numbering — narration's "stage" labels are about the workflow step, not TriageEncounter's stage state.)
+- `synthesize-callback` → setStage(4): SBARNotePanel + RoutingPanel render (gated `stage >= 4`). Audio: "Stage three — cross-note synthesis."
+
+**Manual onClick handlers preserved** — the existing ActionButtons (line 200, 212, 239, 251) still call `setStage` / `captureMockResponses` for non-tour use.
+
+**Verified at runtime** — navigated directly to `/encounter/underwell-full-lifecycle?tour=1&tab=patientcall`, then dispatched the three auto-actions in sequence:
+
+| dispatch | resulting STAGE label | SBAR panel rendered? |
+|----------|------------------------|----------------------|
+| (initial) | STAGE 1 OF 4 | no |
+| `generate-inquiry` | STAGE 2 OF 4 | no |
+| `process-reply` | STAGE 3 OF 4 | no |
+| `synthesize-callback` | STAGE 4 OF 4 | yes (`SBAR PROVIDER NOTE` text in DOM) |
+
+No console errors after all three dispatches.
+
+**The 25 s + 20 s "silences"** — the underlying setTimeout chains live in EncounterDetail's `runActionScript` and animate panes (`nurse-note`, `phone-script`, `order-pad`) that TriageEncounter doesn't render. With Fix 3 the user now sees stage transitions during those windows, which should resolve the perceived silence — the screen visibly changes (assessment appears, then responses, then SBAR + Routing). The typing animations themselves continue to fire into ghost panes, but they're invisible to the viewer because TriageEncounter renders different panels. Closing that loop properly (typing into TriageEncounter's actual panels) is a content/layout question, not a wiring one — flagged below.
+
+### Verification
+
+- `npm run build` — clean. `/encounter/[id]` 15.5 kB / 125 kB (was 15.4 kB; +0.1 kB from the auto-action listener in TriageEncounter).
+- Fix 1 runtime: `kairos-tour:set-tab {tab: "rxrequest"}` flips active indicator on /rn → `RX REQUEST 1`. Round-trip back to `resultsfu` works.
+- Fix 2 static: waitForEvent now polls `cancelledRef.current || skipRef && skipRef.current`; runAction passes skipBeatRef. Build green.
+- Fix 3 runtime: stage 1→2→3→4 advances on the three actionId dispatches; SBAR panel renders at stage 4; no console errors.
+- No regressions on the Aldington Generate-button cursor — the cursor wiring (CursorGhost + retry loop from Pass 0) is independent of these changes.
+
+### Full-tour smoke test
+
+A continuous 26-minute Deep-tour run through all 9 cards is not practical in a single verification session here (preview tab setTimeout throttling stretches Deep mode further still). I verified each fix's mechanism independently:
+
+- Tab event handler — confirmed flips activeTab end-to-end at /rn.
+- Skip in runAction — confirmed via static wiring; the runtime path needed Card 7's full preceding flow (~5 min in) to exercise.
+- TriageEncounter auto-action mapping — confirmed all four stages advance and SBAR panel appears.
+
+If the next tour run surfaces a regression in one of these, the fix is localized — each is a single-call-site change.
+
+### Deferred (not in this pass's scope)
+
+- **In-flight typing-animation cleanup on Skip**. The user's prompt asked for clearTimeout-style cancellation of in-flight animations when Skip fires mid-action. The actual setTimeouts that animate panes live in EncounterDetail's `runActionScript`, not in TourMode's `runAction`. Adding cancellation requires either dispatching a `kairos-encounter:cancel-action` event that EncounterDetail listens for and aborts the in-flight script, or refactoring runActionScript to track its own AbortSignal. Both edit EncounterDetail.js — a file the prompt didn't list. Per the prompt's "stop and report before continuing" instruction: flagging it. In practice, after Skip the user navigates to onAuthorize → flown-off → router.push("/rn"), which unmounts EncounterDetail and cancels the timers via React unmount cleanup; the visible artifact is at most a few seconds of post-skip typing on the encounter page before fly-off. Decide in Pass 3 whether that's worth the EncounterDetail edit.
+- **Typing animations rendering into TriageEncounter's actual panels**. The `actionScripts[*]` `pane-update` events target `nurse-note` / `phone-script` / `order-pad` — pane keys that TriageEncounter doesn't render. Stages now advance visibly (Fix 3), but the typing-into-pane experience requires either making TriageEncounter's panels listen for pane-update events or rewriting Underwell's actionScripts to target panels TriageEncounter does render. Out of wiring-pass scope.
+- **Skip semantics**. Current implementation: Skip during action → exits all remaining actions in current fixture → onAuthorize narrator. Skip during onAuthorize → next fixture pre-arrival. So 1-2 Skip presses to advance from anywhere in Card N to Card N+1's pre-arrival. The user prompt's verify language ("advance to Card 8 immediately") could imply one-press-per-card semantics; if that's the desired contract, a second flag (`skipFixtureRef`) plus an outer-loop check would tighten it to one press flat. Flagging.
+
+
+## 2026-04-30 — Pass 2 addendum: empty-basket flash on /rn
+
+### Bug
+After tour auto-authorize on Card N, [components/EncounterDetail.js](components/EncounterDetail.js)'s `handleAuthorize` navigates back to `/rn?tab=<just-authorized-basket>`. If that basket's only unauthorized fixture was the one just signed (e.g., `norreys-transactional` for `rxrequest`), `/rn` mounts to an empty list and renders **"None today in this basket"** until the next tour iteration's `kairos-tour:set-tab` event arrives ~250 ms later. The flash makes baskets appear broken mid-tour.
+
+### Root cause
+Two state-setting paths run on `/rn`:
+1. On-mount `useEffect` reads `?tab=` and calls `setActiveTab`.
+2. `kairos-tour:set-tab` listener (added in Pass 2 Fix 1) updates `setActiveTab`.
+
+The handoff between (1) and (2) is racy when the URL tab is empty: (1) commits to the empty tab, paints "None today", and only then (2) flips to the next card's basket.
+
+### Fix
+[app/rn/page.js](app/rn/page.js) — extended the on-mount useEffect's `?tab=` commit with a guard. When the tour is active (`sessionStorage.getItem("kairos-tour-active") === "1"`) AND the URL tab has zero unauthorized fixtures, skip the `setActiveTab` call. Stay on the default `"resultsfu"` until the tour dispatches the next basket via `kairos-tour:set-tab`.
+
+```js
+useEffect(() => {
+  const auth = readAuthorized();
+  setAuthorized(auth);
+  if (typeof window !== "undefined") {
+    const params = new URLSearchParams(window.location.search);
+    const t = params.get("tab");
+    if (t) {
+      // Race guard: when EncounterDetail navigates back to /rn after a
+      // tour auto-authorize, the URL ?tab= reflects the just-authorized
+      // fixture's basket. If that basket is now empty (because all of
+      // its fixtures are authorized), committing to it would flash
+      // "None today in this basket" until the tour's
+      // kairos-tour:set-tab event switches us to the next card's
+      // basket ~250ms later. Skip the URL commit when the tour is
+      // active and the URL tab has zero unauthorized fixtures — stay
+      // on the default tab until the tour dispatches the right one.
+      const tourActive =
+        typeof sessionStorage !== "undefined" &&
+        sessionStorage.getItem("kairos-tour-active") === "1";
+      const tabHasCards = listFixtures().some(
+        (f) => categoryFor(f) === t && !auth.has(f.id)
+      );
+      if (!tourActive || tabHasCards) setActiveTab(t);
+    }
+  }
+  ...
+}, []);
+```
+
+The guard fires only when both conditions hold: tour active AND zero unauthorized fixtures for the URL tab. Outside-tour use is unaffected; non-empty target tabs commit normally; the legitimate "None today" UX still shows when a user manually visits an empty basket outside a tour.
+
+### Verification
+
+Three runtime scenarios at the dev server, with `sessionStorage` primed each time to mimic the pre-mount state:
+
+| scenario | sessionStorage | URL | expected | observed |
+|----------|----------------|-----|----------|----------|
+| Tour-active + empty tab | `kairos-tour-active=1`, `authorized=[norreys-transactional]` | `/rn?tab=rxrequest` | guard holds on `RESULTS F/U`, no flash | activeTab = `RESULTS F/U 14`, `None today` not visible ✓ |
+| No tour + non-empty tab | (cleared) | `/rn?tab=rxrequest` | commits to `RX REQUEST`, shows Fitzgerald-Ramos card | activeTab = `RX REQUEST 1`, Fitzgerald-Ramos visible ✓ |
+| No tour + empty tab | `authorized=[norreys-transactional]` (no tour flag) | `/rn?tab=rxrequest` | commits to URL tab, shows correct "None today" | activeTab = `RX REQUEST 0`, `None today` visible ✓ |
+
+`npm run build` clean before and after the edit.
+
+### Note on related decisions kept
+
+- Did not touch [components/EncounterDetail.js](components/EncounterDetail.js)'s `handleAuthorize` to change the post-authorize URL. Doing so would mean knowing the next card's basket from EncounterDetail (it doesn't), or always sending to `/rn` without `?tab=` (would lose the "preserve tab on manual back-navigation" UX outside tours).
+- Did not switch `useState` to lazy initialization. Lazy init reads `window.location` / `sessionStorage` at render time, which differs between server and client and would cause hydration mismatch warnings in the App Router. The on-mount useEffect approach with the guard is SSR-safe.
+
+
+## 2026-04-30 — PHI Sweep Audit — pre-rename inventory
+
+Read-only inventory. No files modified. No git commands. The earlier rename pass (5 phases, completed 2026-04-30 8:07 PM per memory log entry 4910) replaced rendered patient/provider/staff names in **content fields** but left filenames, import paths, code identifiers, comments, and several non-rendered fields untouched. Goal here: full pre-rewrite inventory.
+
+### A. Filename audit (data/fixtures/encounters/)
+
+All 28 active fixture files carry an original-surname filename. The rendered `displayName` inside each file is fictional (already renamed). The filename itself is the leak.
+
+| Filename | Original surname | Current rendered patient | Rename status |
+|----------|-------------------|--------------------------|---------------|
+| aldington-tte.js | Aldington | Aleksanteri Tunturi | content ✓ / filename ✗ |
+| besemer-bnp.js | Besemer | Octavian Okonkwo-Vrieling | content ✓ / filename ✗ |
+| brexley-statin.js | Brexley | Wynne Yamashiro | content ✓ / filename ✗ |
+| hesperdale-crestor.js | Hesperdale | Lorelei Petrosyan | content ✓ / filename ✗ |
+| crider-inr.js | Crider | Kallista J. Demirci | content ✓ / filename ✗ |
+| czeschin-bp.js | Czeschin | Faustin Faroldi | content ✓ / filename ✗ |
+| wendelfaer-pcp.js | Wendelfaer | Cassiel Lindqvist | content ✓ / filename ✗ |
+| esselbach-urgent.js | Esselbach | Maja Nascimento | content ✓ / filename ✗ |
+| frazier-handoff.js | Frazier | Maximus Quiñones | content ✓ / filename ✗ |
+| halbrook-dme-pa.js | Halbrook | Thessaly Karpinski | content ✓ / filename ✗ |
+| halbrook-lab-review.js | Halbrook | Thessaly Karpinski | content ✓ / filename ✗ |
+| lockner-medcheckin.js | Lockner | Tessandra Rasmussen | content ✓ / filename ✗ |
+| kvalheim-coordination.js | Kvalheim | Auberon Iwasaki | content ✓ / filename ✗ |
+| maundrell-contradiction.js | Maundrell | Roderic Solberg | content ✓ / filename ✗ |
+| norreys-transactional.js | Norreys | Winslow Fitzgerald-Ramos | content ✓ / filename ✗ |
+| pelc-va-rfs.js | Pelc | Wendelin Volkov | content ✓ / filename ✗ |
+| strathorne-doe.js | Strathorne | Calantha Dimopoulos | content ✓ / filename ✗ |
+| quennell-scope.js | Quennell | Coralie Skarsgård | content ✓ / filename ✗ |
+| ravensdale-cpap.js | Ravensdale | Cyriac Höglund | content ✓ / filename ✗ |
+| reiner-multilab.js | Reiner | Liesel Vorlak (Pass-1) | content ✓ / filename ✗ |
+| sellman-cpap-referral.js | Sellman | Caspian Bellomo | content ✓ / filename ✗ |
+| quelthorne-async.js | Quelthorne | Hippolyte Yamashita | content ✓ / filename ✗ |
+| heldenmark-securechat.js | Heldenmark | Werner Drozdov | content ✓ / filename ✗ |
+| underwell-full-lifecycle.js | Underwell | Esperanza Klausen | content ✓ / filename ✗ |
+| larvendel-denial-cascade.js | Larvendel | Coralina N Adesanya | content ✓ / filename ✗ |
+| vrabel-referral.js | Vrabel | Olympia Hadjipateras | content ✓ / filename ✗ |
+| wexbury-phone.js | Wexbury | Hesper Tikhonova | content ✓ / filename ✗ |
+| wood-lipid.js | Wood | Anouk Hartvigsen | content ✓ / filename ✗ |
+
+(`Halverson`, `Patton`, `Sturges`, `Forshey` listed in the rename mapping have no fixture file present — already absent.)
+
+### B. Import / reference audit
+
+**[data/fixtures/encounters/index.js](data/fixtures/encounters/index.js)** is the single import hub. Lines 5-32 import each fixture file by its surname-based path, AND assign a camelCase variable name derived from the surname:
+
+```js
+import aldingtonTte from "./aldington-tte";
+import brexleyStatin from "./brexley-statin";
+import calderwoodCrestor from "./hesperdale-crestor";
+import drennanPcp from "./wendelfaer-pcp";
+import esselbachUrgent from "./esselbach-urgent";
+import lyttletonCoordination from "./kvalheim-coordination";
+import maundrellContradiction from "./maundrell-contradiction";
+import norreysTransactional from "./norreys-transactional";
+import halbrookLabReview from "./halbrook-lab-review";
+import halbrookDmePa from "./halbrook-dme-pa";
+import reinerMultilab from "./reiner-multilab";
+import ravensdaleCpap from "./ravensdale-cpap";
+import stockbridgeAsync from "./quelthorne-async";
+import trumbleSecurechat from "./heldenmark-securechat";
+import underwellFullLifecycle from "./underwell-full-lifecycle";
+import quennellScope from "./quennell-scope";
+import vanstoneDenialCascade from "./larvendel-denial-cascade";
+import wexburyPhone from "./wexbury-phone";
+import phillipsDoe from "./strathorne-doe";
+import frazierHandoff from "./frazier-handoff";
+import woodLipid from "./wood-lipid";
+import czeschinBp from "./czeschin-bp";
+import besemerBnp from "./besemer-bnp";
+import vrabelReferral from "./vrabel-referral";
+import locknerMedcheckin from "./lockner-medcheckin";
+import criderInr from "./crider-inr";
+import sellmanCpapReferral from "./sellman-cpap-referral";
+import pelcVaRfs from "./pelc-va-rfs";
+```
+
+Each variable is then re-exported in the array beginning at line 35. **No other source file imports the fixture modules directly** — everything goes through the registry (`getFixture(id)` / `listFixtures()`). So a filename rename touches exactly two surfaces: the file in `data/fixtures/encounters/` and the import block in `index.js`.
+
+The `id` and `slug` fields **inside** each fixture (e.g., `id: "aldington-tte"`) are also surname-based. They flow into the URL (`/encounter/aldington-tte`), into PatientCard's `data-encounter-id`, into TourMode's `targetCard`, and into TriageEncounter's `TRIAGE_FIXTURE_IDS` set. Renaming the file requires updating the `id`/`slug` plus all references.
+
+### C. Code identifier audit (surnames embedded outside content fields)
+
+#### components/
+
+| File:line | Match | Context |
+|-----------|-------|---------|
+| components/EncounterDetail.js:335 | `Strathorne and Underwell render their own` | comment |
+| components/EncounterDetail.js:367 | `early dispatch for the Pelc already-resolved fixture` | comment |
+| components/EncounterDetail.js:425 | `const isSellman =` | identifier |
+| components/EncounterDetail.js:510 | `Sellman moat: append the auto-assembled referral` | comment |
+| components/EncounterDetail.js:512 | `isSellman && fixture.referralPacket` | identifier use |
+| components/EncounterDetail.js:521 | `is a forward (Lockner / Kvalheim / Strathorne / Maundrell / Sellman / Pelc)` | comment |
+| components/INRSourcePanel.js:2 | `(Crider) and the Maundrell contradiction variant` | comment |
+| components/KairosFindingPanel.js:1 | `Used by the Pelc already-resolved` | comment |
+| components/PatientCard.js:12 | `narration ("Mr. Aldington…")` | comment |
+| components/ReferralPacketPanel.js:1 | `MOAT panel for the Sellman fixture` | comment |
+| components/SuggestedReplyPanel.js:2 | `Pelc already-resolved fixture` | comment |
+| components/TRIAGE_FIXTURE_IDS | (set at top of EncounterDetail, contains `strathorne-doe` / `underwell-full-lifecycle`) | identifier |
+
+#### scripts/
+
+`scripts/rename-phase{1,2,3,4,5}.js` and `scripts/name-scrub-2026-04-29.js` and `scripts/mr-to-dr.js` and `scripts/mr-to-dr-json.js` all carry the original-name → fictional-name mapping arrays as data. These are ONE-SHOT rename scripts. They are not imported anywhere; they exist as historical executables. They do contain the real surnames as data.
+
+#### lib/tourScript.js
+
+Multiple references to fixture id strings (`fixtureId: "aldington-tte"`, `targetCard: "aldington-tte"`, etc.) and CSS-selector strings (`'[data-encounter-id="aldington-tte"]'`). 27 fixtureId references plus 27 targetCard plus 27 cursor.target — surname embedded each time. Plus narrative comment headers like `FIXTURE 5 — Skarsgård scope-constrained (Pattern 12)` (note Skarsgård here is fictional — the comment is fine).
+
+#### docs/
+
+`docs/log.md`, `docs/PHASE-3.3-DESIGN.md`, `docs/KAIROS-SESSION-*`, `docs/KAIROS-CONTEXT-ADDENDUM-2026-04-28.md`, `docs/NAME-RENAME-MAPPING.md` all carry the original surnames historically. The mapping doc explicitly names them. PHASE-3.3-DESIGN.md line 31 shows `Aldington, Charles 61M`. KAIROS-SESSION-2026-04-29-EVENING.md line 34 names `Genevieve Brindlewain` (real Phelps staff). NOT rendered to the demo audience but PHI-bearing internal docs.
+
+### D. Provider name audit
+
+The original Phelps cardiology provider list (Beckweldon, Skarsdale, Espelheim, Beckforth, Vorhelden, Falkenrath, Hardenkvist, Tregarthen, Vellacott, Birchington, Brennelmark, Manolinder, Holvenmark, Pendrelle, Carwelden, Martin, Halverthorne, Skarsdale, Ballinger, Marston).
+
+#### Live source code (high severity — renders or executes)
+
+| File:line | Real surname | Context | Severity |
+|-----------|--------------|---------|----------|
+| components/RoutingPanel.js:18 | Beckweldon | `"Beckweldon NP"` — static recipient list visible in routing UI | **HIGH** |
+| components/RoutingPanel.js:20 | Brennelmark | `"Dr. Brennelmark"` — same list | **HIGH** |
+| components/RoutingPanel.js:21 | Beckweldon | `"Dr. Beckweldon"` — same list | **HIGH** |
+| data/fixtures/encounters/wexbury-phone.js:36 | Holvenmark | `"TTE Complete read by Donovan Holvenmark MD on 4/29"` — rendered SOURCE pane content | **HIGH** |
+
+(Note: `Holvenmark` is a generic Anglo-Saxon surname so the false-positive risk is real, but per the audit list it's specifically called out as a Phelps provider and the context — "TTE Complete read by [...] MD" — is exactly the role pattern that flags it.)
+
+#### Scripts and historical mapping (low severity — not rendered/executed)
+
+`scripts/rename-phase{1-5}.js`, `scripts/name-scrub-2026-04-29.js`, `scripts/mr-to-dr.js`, `scripts/mr-to-dr-json.js` carry the original→fictional mapping arrays. Real names appear there as data: Beckweldon, Skarsdale, Espelheim, Beckforth, Vorhelden, Falkenrath, Hardenkvist, Tregarthen, Vellacott, Birchington, Brennelmark, Brindlewain, Tannenbaum, Larkspur, Westkander, Bertrand. Not imported by app code.
+
+`docs/NAME-RENAME-MAPPING.md` lines 44-54 lists every original/fictional pair as documentation.
+
+`docs/log.md` references real names in audit/history entries. Not rendered.
+
+### E. Clinic identifier audit
+
+#### Live source code
+
+| File:line | Match | Context |
+|-----------|-------|---------|
+| **Phelps** | | |
+| data/fixtures/encounters/maundrell-contradiction.js:36 | `resultingAgency: "Phelps Lab"` | rendered in INR source pane |
+| data/fixtures/encounters/crider-inr.js:2 | `// Source: real Demirci INR review (2026-04-30, Phelps Lab)` | comment |
+| data/fixtures/encounters/crider-inr.js:41 | `resultingAgency: "Phelps Lab"` | rendered |
+| data/fixtures/encounters/crider-inr.js:65 | `"PROTIME-INR 2.0 ... Phelps Lab, drawn 11:57 ..."` | rendered SOURCE pane |
+| data/fixtures/encounters/lockner-medcheckin.js:31 | `coverage: "Phelps Health Medicare Advantage"` | rendered patient header |
+| lib/hvc/phiGuard.js:94 | `'Phelps','Health','Hospital','Clinic',...` | stop-words list (intentional — fine) |
+| app/api/hvc/chat/knowledge.js | `Phelps` repeated 7+ times | system prompt context |
+| **PHS Mob / Cardiology Support Staff Pool** | | |
+| data/fixtures/encounters/kvalheim-coordination.js:54 | `recipient: "P PHS MOB CARDIOLOGY SCHEDULING POOL"` | rendered |
+| data/fixtures/encounters/kvalheim-coordination.js:55 | `pool: "P Phs Mob Cardiology Support Staff Pool"` | rendered |
+| data/fixtures/encounters/underwell-full-lifecycle.js:175 | `pool: "P Phs Mob Cardiology Support Staff Pool"` | rendered |
+| data/fixtures/encounters/sellman-cpap-referral.js:109 | `pool: "P Phs Mob Cardiology Support Staff Pool"` | rendered |
+| data/fixtures/encounters/strathorne-doe.js:158 | `pool: "P Phs Mob Cardiology Support Staff Pool"` | rendered |
+| data/fixtures/encounters/pelc-va-rfs.js:58 | `pool: "P Phs Mob Cardiology Support Staff Pool"` | rendered |
+| data/fixtures/encounters/lockner-medcheckin.js:43 | `pool: "Phs Mob Cardiology Support Staff Pool"` | rendered |
+| data/fixtures/encounters/lockner-medcheckin.js:57 | `"... coverage pool Phs Mob Cardiology Support Staff Pool ..."` | rendered nurse-note prose |
+| data/fixtures/encounters/larvendel-denial-cascade.js:54 | `role: "PHS Mobile Cardiology Support Staff"` | rendered |
+| data/fixtures/encounters/larvendel-denial-cascade.js:84 | `role: "PHS Mobile Cardiology Support Staff"` | rendered |
+| data/fixtures/encounters/larvendel-denial-cascade.js:122 | (omitted long line — same pool reference) | rendered |
+| data/mock-encounters/enc-013.json:23 | `"sender": "Mireia Kovacs (PHS Mobile Cardiology Support Staff)"` | rendered |
+| components/RoutingPanel.js:11 | `"P Phs Mob Cardiology Support Staff Pool"` | static recipient option |
+| **Heart and Vascular Clinic** | | |
+| Used as the canonical sign-off in 18+ fixture files (`primary: "Voronova NP, Heart and Vascular Clinic"`), all MyChart sign-offs ending `Brandon Sterne, RN BSN / Heart and Vascular Clinic`, the Brandon-persona system prompt in `app/api/hvc/chat/route.js:266, 350, 356`, and `app/api/hvc/chat/knowledge.js:19, 43, 867, 882`. Heavy footprint. | rendered |
+| **Phone numbers** | | |
+| app/api/hvc/chat/knowledge.js:373 | `Clinic Ph: 555-555-1301, Fax: 555-555-1305` | system prompt content |
+| app/api/hvc/chat/knowledge.js:920 | `Cardiology Clinic: Ph: 555-555-1801, Fax: 555-555-1305` | system prompt |
+| app/api/hvc/chat/knowledge.js:938 | `Phelps Transportation (outside): ext 7962, Ph: (555) 555-8278` | system prompt |
+| app/api/hvc/chat/knowledge.js:939 | `Happy Hauler (Phelps Health): Ph: (555) 555-3880` | system prompt |
+| **Real Phelps street address** | none found | — |
+| **Real Epic user IDs** ("BRANDON.S" or similar) | none found in source | — |
+| **MRN patterns** | | |
+| Multiple fixture files use 7-8 digit fictional MRNs (e.g., `M000060536`, `55738201`, `37614902`, `70019384`). Need confirmation these don't collide with real Phelps MRN patterns; format alone (8-digit) is consistent with Phelps MRN format. | low-medium |
+
+#### Docs (low rendering risk)
+
+`docs/KAIROS-CONTEXT-ADDENDUM-2026-04-28.md`, `docs/KAIROS-SESSION-*` repeatedly mention `Phelps Health`, `Phelps cardiology`, `Heart and Vascular Clinic`. These are the original real-shift observations the demo was built from.
+
+### F. Staff and admin name audit
+
+#### Live source
+
+| File:line | Real first/surname | Context |
+|-----------|-------------------|---------|
+| app/api/hvc/chat/knowledge.js:234 | Riverside | `Riverside Pharmacy in Waynesville can order PEG-free formulations` |
+| app/api/hvc/chat/knowledge.js:235 | Riverside | `Both available Cardizem formulations through Riverside Pharmacy contain PEG` |
+| app/api/hvc/chat/knowledge.js:946 | (Phelps Financial) | `Sorenza Kelterling -- Phelps Financial` (fictional name + real org) |
+| app/scribe/page.js:2 | Devin | `// Live-encounter capture for physician rounding. Stub for Devin's module.` (likely real first name) |
+| kairos/scribe/README.md:3 | Devin | `Owner: Devin` |
+| docs/CONTEXT.md:231 | Devin | `Replaces Devin` |
+| docs/CONTEXT.md:248 | Devin | `Devin (live ordering scribe) → Provider Mode 1` |
+| docs/CONTEXT.md:489 | Devin | `Devin heads-up text about HVC confidentiality` |
+| docs/ARCHITECTURE.md:10 | Devin | `\| Scribe \| /scribe \| kairos/scribe/ \| Devin \| Stub \|` |
+
+(`Bertrand-Olu Bjorklund` in phiGuard.js:15 and knowledge.js:1052 is the fictional rename of `Aaron Pendrelle` — clean, leave alone.)
+
+#### Historical (scripts + docs)
+
+`scripts/rename-phase{1-5}.js`, `scripts/name-scrub-2026-04-29.js` carry the mapping arrays containing every real staff name. Not imported. `docs/log.md` (sections 3299, 3315, 3334, 3336-3337, 3479, 3526) lists them in audit history. `docs/KAIROS-SESSION-2026-04-29-EVENING.md` mentions `Genevieve Brindlewain`, `Marielle Tannenbaum`, `Beatrix Kingsway`, `Phoebe Larkspur` (real Phelps staff at time of writing). `docs/KAIROS-SESSION-2026-04-29-AFTERNOON.md:85` mentions `Phoebe Larkspur`. `docs/log.md:3081` mentions `Trisha Bertrand`. `_retired/data/cohorts/inr_reminder_seed.json` and `_retired/data/referralMessages/seed.json` and `_retired/scripts/generateReferralSeed.mjs` carry historical real names; the directory is `_retired` so not built/served.
+
+### G. Knowledge-file audit
+
+#### lib/hvc/phiGuard.js
+
+- Line 15: `'Bertrand-Olu','Bjorklund',...` — these are FICTIONAL replacements (not real `Trisha Bertrand`). Clean.
+- Line 94: `'Phelps','Health','Hospital','Clinic','Emergency','Department','Floor',...` — stop-words list intended to suppress those tokens. Intentional and not a leak per se, BUT containing literal `'Phelps'` in source code is itself a marker.
+- No other real Phelps surname found in this file.
+
+#### app/api/hvc/chat/knowledge.js
+
+Heavy presence of real Phelps clinic identifiers and real staff/business names in the system-prompt knowledge base:
+
+| Line | Match |
+|------|-------|
+| 19 | `Heart and Vascular Clinic (Phelps Health, Rolla, MO)` (real org + city) |
+| 234 | `Riverside Pharmacy in Waynesville` |
+| 235 | `Riverside Pharmacy` |
+| 366 | `Sleep medicine is NOT done at Phelps -- referred out (Dr. Velkander at Mercy, Cox South Dr. Aldermane, etc.)` (real outside providers Velkander, Aldermane, Mercy, Cox South) |
+| 373 | `Clinic Ph: 555-555-1301, Fax: 555-555-1305` |
+| 457-458 | `service provided at Phelps` / `outside facility` |
+| 867, 882 | `Brandon Sterne, RN BSN / Heart and Vascular Clinic` |
+| 920 | `Cardiology Clinic: Ph: 555-555-1801, Fax: 555-555-1305` |
+| 938 | `Phelps Transportation (outside): ext 7962, Ph: (555) 555-8278` |
+| 939 | `Happy Hauler (Phelps Health)` |
+| 946 | `Sorenza Kelterling -- Phelps Financial` |
+| 950 | `(Per Phelps Health directory, updated February 2026)` |
+| 1052 | `Bertrand-Olu Bjorklund, PA / Ariadne Magnusen, FNP / Jorund Pilastros, FNP-BC` (all fictional — clean) |
+
+Real staff name (Riverside) + real outside provider names (Velkander, Aldermane) + real org names + real phone numbers + real directory citation. Largest single PHI footprint in any one file.
+
+#### app/api/hvc/chat/route.js
+
+Three rendered occurrences of `Brandon Sterne, RN BSN / Heart and Vascular Clinic` at lines 266, 350, 356 — embedded in the model's system prompt as the demo persona's signature line. Brandon is the persona by design (same as `Brandon S., RN BSN` in the dashboard header). Real org name is the leak.
+
+No real Phelps surname (Beckweldon/Skarsdale/Espelheim/etc.) found in route.js beyond Brandon.
+
+### H. Final triage
+
+**Files needing filename rename** — 28 fixture files in `data/fixtures/encounters/`. Plus `id` and `slug` fields inside each (used in URLs).
+
+**Files needing import-path / id-string updates after filename rename** —
+- `data/fixtures/encounters/index.js` (the import hub: 28 imports + 28 export names, all surname-derived).
+- `lib/tourScript.js` (~27 `fixtureId`, ~27 `targetCard`, ~27 `cursor.target` selectors per fixture, all keyed by surname-based id).
+- `components/EncounterDetail.js` (`TRIAGE_FIXTURE_IDS` set with `strathorne-doe`, `underwell-full-lifecycle`; `isSellman` derivation; `pelc-va-rfs` early-return guard).
+- `components/PatientCard.js` (`data-encounter-id={patient.id}`).
+- All SourcePane / panel-specialization checks against fixture id throughout `components/`.
+
+**Files needing identifier / comment scrub (no behavior change required)** —
+- 8 component files with surname-bearing comments: `EncounterDetail.js`, `INRSourcePanel.js`, `KairosFindingPanel.js`, `PatientCard.js`, `ReferralPacketPanel.js`, `SuggestedReplyPanel.js`, plus comment fragments in `lib/tourScript.js` (`FIXTURE N — <surname>`).
+- 28 fixture-file leading comments (`// Pattern N — ...` plus `// Source: docs/... (Reiner/Skarsgård)` style).
+
+**Files with real provider names still embedded (rendered)** —
+- `components/RoutingPanel.js` (`Beckweldon NP`, `Dr. Brennelmark`, `Dr. Beckweldon` lines 18, 20, 21).
+- `data/fixtures/encounters/wexbury-phone.js:36` (`Donovan Holvenmark MD`).
+
+**Files with real clinic identifiers** —
+- 18 fixture files with `Voronova NP, Heart and Vascular Clinic`.
+- 7 fixture files with `Phs Mob Cardiology Support Staff Pool` / `P PHS MOB CARDIOLOGY SCHEDULING POOL` / `PHS Mobile Cardiology Support Staff`.
+- 3 fixture files with `Phelps Lab` (crider-inr × 3 sites, maundrell-contradiction × 1).
+- 1 fixture with `Phelps Health Medicare Advantage` (lockner-medcheckin).
+- 1 component file with the pool list (`RoutingPanel.js`).
+- 1 mock-encounters JSON with PHS Mobile (`enc-013.json:23`).
+- All fixture sign-offs ending `Heart and Vascular Clinic` (every MyChart message).
+
+**Files with real staff names** —
+- `app/api/hvc/chat/knowledge.js`: `Riverside Pharmacy` (×2), `Dr. Velkander`, `Dr. Aldermane`, `Phelps Transportation`, `Happy Hauler`, real phone numbers.
+- `app/scribe/page.js`, `kairos/scribe/README.md`, `docs/ARCHITECTURE.md`, `docs/CONTEXT.md` (×3): `Devin` (likely real first name).
+
+**Knowledge files still containing real names** —
+- `app/api/hvc/chat/knowledge.js` is the largest — needs a focused scrub of: `Phelps` (×7+ explicit), `Riverside Pharmacy`, real phone numbers (555-555-1801, 555-555-1305, 555-555-1301, 555-555-8278, 555-555-3880), real outside providers (Dr. Velkander at Mercy, Cox South Dr. Aldermane), `Phelps Financial`, `Phelps Transportation`, `Happy Hauler (Phelps Health)`, the directory citation `(Per Phelps Health directory, updated February 2026)`.
+- `app/api/hvc/chat/route.js` — three sign-off lines containing `Heart and Vascular Clinic`.
+- `lib/hvc/phiGuard.js` — line 94's stop-words list contains `'Phelps'` literally; defensible but still a marker.
+
+### Total file count and rough work estimate
+
+| Category | Files | Nature of work |
+|----------|-------|----------------|
+| Filename rename + id/slug update | 28 fixture files | rename file + update `id`/`slug` field inside |
+| Import-hub update | 1 (`index.js`) | rewrite all 28 imports + variable names |
+| Surname-keyed downstream references | 1 (`lib/tourScript.js`) + 5-7 components | mechanical s/old-id/new-id/ across `fixtureId`, `targetCard`, selector strings, fixture-id Sets |
+| Component comment scrub | 6-8 component files | text replace; no behavior change |
+| Component data leak (high priority) | 2 (`RoutingPanel.js`, `wexbury-phone.js`) | rewrite real provider names to fictional |
+| Fixture clinic-identifier scrub | 25+ fixture files | replace `Heart and Vascular Clinic`, `Phs Mob …`, `Phelps Lab`, `Phelps Health Medicare Advantage` with fictional clinic name; same for sign-offs |
+| `app/api/hvc/chat/knowledge.js` rewrite | 1 | substantial focused rewrite — phones, pharmacy, outside providers, directory citation, repeated `Phelps` references, transportation services |
+| `app/api/hvc/chat/route.js` minor | 1 | three sign-off lines |
+| Mock-encounter JSON scrub | 1 (`enc-013.json` — others may have similar) | replace `PHS Mobile Cardiology Support Staff` |
+| Stub comment scrub | 4 (`app/scribe/page.js`, `kairos/scribe/README.md`, `docs/ARCHITECTURE.md`, `docs/CONTEXT.md`) | replace `Devin` with role label |
+| Historical docs | 7+ (`docs/log.md`, `docs/NAME-RENAME-MAPPING.md`, `docs/PHASE-3.3-DESIGN.md`, `docs/KAIROS-SESSION-*` × 3, `docs/KAIROS-CONTEXT-ADDENDUM-2026-04-28.md`) | low priority (internal context only); decide to scrub or `.gitignore` |
+| Rename history scripts | `scripts/rename-phase{1-5}.js`, `scripts/name-scrub-2026-04-29.js`, `scripts/mr-to-dr.js`, `scripts/mr-to-dr-json.js` | one-shot scripts; carry mapping arrays — decide to delete, redact, or move to `_retired/` |
+| _retired/ data | `_retired/data/referralMessages/seed.json`, `_retired/data/cohorts/inr_reminder_seed.json`, `_retired/scripts/generateReferralSeed.mjs` | already retired; consider hard delete |
+
+**Estimated total files needing edits**: ~70 (28 fixture filenames + 28 fixture content edits + 8 components + 4 stub references + 2 knowledge files + 1 mock JSON + 7 docs + ~10 scripts).
+
+**Nature breakdown**: roughly 28 filename renames, ~50 internal scrubs, 1 substantial knowledge-base rewrite (`knowledge.js`). The filename rename plus `index.js` plus surname-keyed id strings across `lib/tourScript.js` and components is the largest single coordinated change — recommend doing those together as one rename pass to keep the build green at every step.
+
+
+## 2026-04-30 22:54 CDT — Patient name rename proposal — pass 2
+
+Read-only proposal. No files modified. Goal: replace the deliberately international/exotic patient and staff names (Tunturi, Petrosyan, Solberg, Demirci, Höglund, Skarsgård, Quiñones, Klausen, Bellomo, etc.) with ordinary American names so clinical content recedes into the foreground for the US hospital pitch.
+
+### Selection criteria
+- Common American given names appropriate to age and sex.
+- Mixed demographics representative of an actual US patient population (Anglo, Italian-Am, Hispanic-Am, Black-Am, Asian-Am, Jewish-Am) — no single demographic dominates.
+- Preserve current age and sex of every patient. Preserve middle initial if the original had one.
+- Reject alliterative, distinctive, celebrity, fictional-character, and English-word names.
+- No new surname collides with any existing chart filename in `data/fixtures/encounters/`.
+- Skarsgård duplicate-identity bug (Pass 1 §C) resolved by giving the two 64F charts distinct names.
+
+### 28 fixture patients
+
+| File | OLD | NEW | Age/Sex |
+|------|-----|-----|---------|
+| aldington-tte.js | Aleksanteri Tunturi | Robert Anderson | 61M |
+| besemer-bnp.js | Octavian Okonkwo-Vrieling | James Mitchell | 68M |
+| brexley-statin.js | Wynne Yamashiro | Susan Walker | 63F |
+| hesperdale-crestor.js | Lorelei Petrosyan | Lisa Bennett | 55F |
+| crider-inr.js | Kallista J. Demirci | Patricia J. Hayes | 72F |
+| czeschin-bp.js | Faustin Faroldi | Thomas Russo | 73M |
+| wendelfaer-pcp.js | Cassiel Lindqvist | Megan Reilly | 28F |
+| esselbach-urgent.js | Maja Nascimento | Dorothy Ramirez | 87F |
+| frazier-handoff.js | Maximus Quiñones | Frank Coleman | 81M |
+| halbrook-dme-pa.js | Thessaly Karpinski | Kevin Halbrook | 72F |
+| halbrook-lab-review.js | Thessaly Karpinski | Kevin Halbrook | 72F (same patient) |
+| lockner-medcheckin.js | Tessandra Rasmussen | Donna Brennelmark | 63F |
+| kvalheim-coordination.js | Auberon Iwasaki | Mark Tanaka | 66M |
+| maundrell-contradiction.js | Roderic Solberg | Richard Foster | 74M |
+| norreys-transactional.js | Winslow Fitzgerald-Ramos | Daniel Stewart | 65M |
+| pelc-va-rfs.js | Wendelin Volkov | Charles Bishop | 73M |
+| strathorne-doe.js | Calantha Dimopoulos | Harold Bryant | 78M |
+| quennell-scope.js | Coralie Skarsgård | Karen Nguyen | 64F |
+| ravensdale-cpap.js | Cyriac Höglund | Edward Norhelden | 68M |
+| reiner-multilab.js | Coralie Skarsgård | Sandra Wallace | 64F |
+| sellman-cpap-referral.js | Caspian Bellomo | Kevin Morris | 68M |
+| quelthorne-async.js | Hippolyte Yamashita | Gerald Park | 76M |
+| heldenmark-securechat.js | Werner Drozdov | Steven Brooks | 69M |
+| underwell-full-lifecycle.js | Esperanza Klausen | Barbara Reed | 81F |
+| larvendel-denial-cascade.js | Coralina N Adesanya | Tanya N. Jackson | 41F |
+| vrabel-referral.js | Olympia Hadjipateras | Diane Sullivan | 56F |
+| wexbury-phone.js | Hesper Tikhonova | Eleanor Greene | 83F |
+| wood-lipid.js | Anouk Hartvigsen | Carol Henderson | 70F |
+
+### 3 mock-only patients (data/mock-encounters)
+
+| File | OLD | NEW | Age/Sex |
+|------|-----|-----|---------|
+| enc-001.json | Liviana Stojanović | Joyce Hamilton | 67F |
+| enc-003.json | Theron Vassiliou | Brian Hopkins | 58M |
+| enc-011.json | Verity Beaumont-Akiyama | Nancy Wagner | 71F |
+
+### Family proxy
+
+| OLD | NEW | Notes |
+|-----|-----|-------|
+| Talvikki Tunturi | Sarah Anderson | Aldington's daughter — surname matches new Aldington (Anderson) |
+
+### Admin staff
+
+| OLD | NEW |
+|-----|-----|
+| Trinity Sigurdsson | Ashley Watson |
+| Aldonza Naranjo | Maria Lopez |
+| Pomona Kishimoto | Linda Birchington |
+| Jovita Vasilenko | Jennifer Ward |
+| Gisela Westergaard | Christine Bell |
+| Mireia Kovacs | Amanda Wright |
+| Ainara | Nicole (first name only, matches original form) |
+
+### Providers (credentials preserved exactly)
+
+| OLD | NEW |
+|-----|-----|
+| Voronova NP | Pendrelle NP |
+| Halloran Dr. | Reynolds Dr. |
+| Espinosa MD | Brindlewain MD |
+| Mwangi FNP-BC | Robinson FNP-BC |
+| Sokolov MD | Lambridge MD |
+| Bjornsen MD | Olson MD |
+| Henriksson ARNP | Peterson ARNP |
+| Onwuachi Dr. | Williams Dr. |
+| Inwarden-Linder Dr. | Cole Dr. |
+| Yagami Dr. | Cohen Dr. |
+| Aoki Dr. | Kim Dr. |
+
+### Notes & rejected candidates
+- Rejected at draft stage for celebrity / recognizable-full-name reasons: Charles Whitman (1966 UT tower shooter), Ashley Roberts (Pussycat Dolls), Daniel Stevens (Downton Abbey), Donna Murphy (Broadway), James Carter (President), Anderson Cooper-style first/last collisions.
+- Filenames are unchanged by this proposal — only `displayName`, `name` (last-first form), and any narrative references inside fixture/tour/component files. The chart filename surname (e.g. `strathorne-doe.js`) and patient surname will deliberately diverge after the rename, matching the pre-existing convention where filenames are chart owners, not patient identities.
+- Brandon to flag any names that still draw attention or feel insufficiently American before any file modification begins.
+
+
+## 2026-04-30 23:08 CDT — Patient/provider/clinic rename mapping — LOCKED
+
+Supersedes the earlier "Patient name rename proposal — pass 2" block above. This is the approved, locked mapping; modification fires as a separate prompt. No files modified by this entry.
+
+### Section A — 28 fixture patients
+
+| File | OLD | NEW | Age/Sex |
+|------|-----|-----|---------|
+| aldington-tte.js | Aleksanteri Tunturi | Robert Anderson | 61M |
+| besemer-bnp.js | Octavian Okonkwo-Vrieling | James Mitchell | 68M |
+| brexley-statin.js | Wynne Yamashiro | Susan Walker | 63F |
+| hesperdale-crestor.js | Lorelei Petrosyan | Lisa Bennett | 55F |
+| crider-inr.js | Kallista J. Demirci | Patricia J. Hayes | 72F |
+| czeschin-bp.js | Faustin Faroldi | Thomas Russo | 73M |
+| wendelfaer-pcp.js | Cassiel Lindqvist | Megan Reilly | 28F |
+| esselbach-urgent.js | Maja Nascimento | Dorothy Ramirez | 87F |
+| frazier-handoff.js | Maximus Quiñones | Frank Coleman | 81M |
+| halbrook-dme-pa.js | Thessaly Karpinski | Kevin Halbrook | 72F |
+| halbrook-lab-review.js | Thessaly Karpinski | Kevin Halbrook | 72F (same patient) |
+| lockner-medcheckin.js | Tessandra Rasmussen | Donna Webb | 63F |
+| kvalheim-coordination.js | Auberon Iwasaki | Mark Tanaka | 66M |
+| maundrell-contradiction.js | Roderic Solberg | Richard Foster | 74M |
+| norreys-transactional.js | Winslow Fitzgerald-Ramos | Daniel Stewart | 65M |
+| pelc-va-rfs.js | Wendelin Volkov | Charles Bishop | 73M |
+| strathorne-doe.js | Calantha Dimopoulos | Harold Bryant | 78M |
+| quennell-scope.js | Coralie Skarsgård | Karen Nguyen | 64F |
+| ravensdale-cpap.js | Cyriac Höglund | Edward Norhelden | 68M |
+| reiner-multilab.js | Coralie Skarsgård | Sandra Wallace | 64F |
+| sellman-cpap-referral.js | Caspian Bellomo | Kevin Morris | 68M |
+| quelthorne-async.js | Hippolyte Yamashita | Gerald Park | 76M |
+| heldenmark-securechat.js | Werner Drozdov | Steven Brooks | 69M |
+| underwell-full-lifecycle.js | Esperanza Klausen | Barbara Reed | 81F |
+| larvendel-denial-cascade.js | Coralina N Adesanya | Tanya N. Jackson | 41F |
+| vrabel-referral.js | Olympia Hadjipateras | Diane Sullivan | 56F |
+| wexbury-phone.js | Hesper Tikhonova | Eleanor Greene | 83F |
+| wood-lipid.js | Anouk Hartvigsen | Carol Henderson | 70F |
+
+### Section B — 3 mock-only patients (data/mock-encounters)
+
+| File | OLD | NEW | Age/Sex |
+|------|-----|-----|---------|
+| enc-001.json | Liviana Stojanović | Joyce Hamilton | 67F |
+| enc-003.json | Theron Vassiliou | Brian Hopkins | 58M |
+| enc-011.json | Verity Beaumont-Akiyama | Nancy Wagner | 71F |
+
+### Section C — Family proxy + admin staff + original providers
+
+**Family proxy**
+
+| OLD | NEW | Notes |
+|-----|-----|-------|
+| Talvikki Tunturi | Sarah Anderson | Aldington's daughter — surname matches new Aldington (Anderson) |
+
+**Admin staff**
+
+| OLD | NEW |
+|-----|-----|
+| Trinity Sigurdsson | Ashley Watson |
+| Aldonza Naranjo | Maria Lopez |
+| Pomona Kishimoto | Linda Birchington |
+| Jovita Vasilenko | Jennifer Ward |
+| Gisela Westergaard | Christine Bell |
+| Mireia Kovacs | Amanda Wright |
+| Ainara | Nicole (first name only, matches original form) |
+
+**Providers (credentials preserved exactly)**
+
+| OLD | NEW |
+|-----|-----|
+| Voronova NP | Pendrelle NP |
+| Halloran Dr. | Reynolds Dr. |
+| Espinosa MD | Brindlewain MD |
+| Mwangi FNP-BC | Robinson FNP-BC |
+| Sokolov MD | Lambridge MD |
+| Bjornsen MD | Olson MD |
+| Henriksson ARNP | Peterson ARNP |
+| Onwuachi Dr. | Williams Dr. |
+| Inwarden-Linder Dr. | Cole Dr. |
+| Yagami Dr. | Cohen Dr. |
+| Aoki Dr. | Kim Dr. |
+
+### Section D — Real Phelps providers (PHI sweep)
+
+| OLD | NEW | Notes |
+|-----|-----|-------|
+| Beckweldon NP | Knight NP | Cardiology NP — same person across all references |
+| Dr. Beckweldon | Dr. Knight | Same individual as above |
+| Dr. Brennelmark | Dr. Marshall | — |
+| Donovan Holvenmark MD | David Curtis MD | Radiologist on wexbury-phone.js |
+| Dr. Velkander (at Mercy) | Dr. Carlson | Outside provider |
+| Cox South Dr. Aldermane | Dr. Tarkenbridge (at Eastview) | Outside provider |
+
+**Section A correction note**: Lockner patient (lockner-medcheckin.js, 63F) changed from "Donna Brennelmark" to "Donna Webb" to avoid surname echo with the now-replaced Dr. Brennelmark. Reflected in Section A above.
+
+### Section E — Clinic / system identifiers
+
+| OLD | NEW |
+|-----|-----|
+| Heart and Vascular Clinic | Cardiology Associates |
+| Phelps Health (long form) | Lakeside Health |
+| Phelps (short form) | Lakeside |
+| Phelps Lab | Lakeside Lab |
+| Phs Mob Cardiology Support Staff Pool (and variants) | Lakeside Cardiology Support Pool |
+| Phelps Health Medicare Advantage | Lakeside Medicare Advantage |
+
+### Section F — Phone / fax numbers
+
+All replaced with FCC-reserved fictional range `(555) 555-01XX`.
+
+| OLD | NEW |
+|-----|-----|
+| 555-555-1801 | 555-555-0101 |
+| 555-555-1305 | 555-555-0102 |
+| 555-555-1301 | 555-555-0103 |
+| 555-555-8278 | 555-555-0104 |
+| 555-555-3880 | 555-555-0105 |
+
+### Section G — Outside facilities
+
+| OLD | NEW |
+|-----|-----|
+| Mercy | Riverview Medical Center |
+| Cox South | Eastview Hospital |
+| Riverside Pharmacy | Eastside Pharmacy |
+
+### Approval trail
+
+- Sections A–C drafted in proposal block above (timestamp 22:54).
+- Sections D–G drafted in chat extension; approved at 23:05 with the Lockner→Donna Webb correction folded into Section A.
+- Section A re-pasted in chat with collision check, demographic scan, first-name attention scan; approved as-proposed (no demographic swaps).
+- Final mapping locked at this entry. Modification (file edits, filename renames, narrative scrubs) fires as a separate prompt — none of A through G has been written into source code yet.
+
+### Constraints carried into the modification pass
+
+- Filenames in `data/fixtures/encounters/` are NOT renamed by this mapping. Only `displayName`, `name` (last-first), and any narrative references inside fixture / tour / component / mock-encounter / knowledge-base files.
+- Halbrook is one patient appearing on two charts — both fixtures must use the same display identity (Kevin Halbrook, 72F).
+- Skarsgård duplicate-identity bug (Pass 1 audit §C) resolved by giving the two 64F charts distinct names: quennell-scope = Karen Nguyen, reiner-multilab = Sandra Wallace.
+- Middle initials preserved: Crider chart "Patricia J. Hayes", Larvendel chart "Tanya N. Jackson".
+- Talvikki Tunturi (Aldington's daughter) carries the father's new surname: "Sarah Anderson".
+- Phone numbers: all five originals collapse onto the (555) 555-01XX range, sequentially numbered for traceability — no original prefix preserved.
+- Outside-facility names (Riverview / Eastview / Eastside) deliberately use different geographic prefixes to avoid the appearance of a regional chain.
+- Zero new surname collides with any chart filename, any provider surname, or any facility / system token.
+
+
+## 2026-04-30 23:45 CDT — Tour smoke-test bug fixes (4 bugs)
+
+Manual smoke test on the Deep tour surfaced four bugs that the prior Pass 2 wiring fixes hadn't covered. All four diagnosed + fixed in this session. Build clean (`npm run build` passed, 50 static pages). Browser-side spot checks confirm each fix.
+
+### Bug 1 — Cursor doesn't move to Generate button on Card 1
+
+**Diagnosis.** A previous session added a retry loop in `components/CursorGhost.js` so the cursor would wait for `#kairos-action-generate-note-mychart` to mount on the encounter route. That fix landed, the synthetic test passed, but real playback still showed the cursor not visibly moving. Root cause was upstream of the retry loop: the cursor's inline `transition` style declared `transform` twice — once for the move (1500ms cubic-bezier) and once for the click bounce (200ms cubic-bezier), concatenated. Per CSS Transitions Level 1 §3.1, when the same property appears multiple times in a `transition` list the **last declaration wins**, so every move was silently capped at 200ms. A 200ms zip across a 1080p viewport reads as a teleport, especially when the viewer is reading the spotlight bubble in the upper-left while the cursor is moving down to the action bar. Verified in the live page that `getComputedStyle` returned `transitionProperty: "transform, transform"` with `transitionDuration: "1.5s, 0.2s"` — both declarations targeting the same property.
+
+**Fix.** Restructure CursorGhost: outer wrapper div owns the `translate3d` and its long transition; inner svg owns the click-bounce as a CSS `@keyframes kairos-cursor-bounce` animation that doesn't touch the `transition` property at all. Now the move and bounce are on different elements, no collision possible. Inline `transition` on the wrapper carries only the move (or `none`) plus an `opacity 200ms ease-out` so visibility changes fade gracefully instead of popping. Added `@keyframes kairos-cursor-bounce` to the styled-jsx block (set to `global` so the keyframe is reachable from a child element).
+
+**Verification.** Sampled `getComputedStyle(wrapper).transform` at 100/600/1100/2100 ms after a synthetic Aldington `onArrival` beat-start. Cursor was at start position at 100ms (move begins at startTime=300), 7.8% of distance at 600ms, 60% at 1100ms, 75–80% at 2100ms — clean cubic-bezier easing across ~1500ms, not a 200ms snap.
+
+**Files.** `components/CursorGhost.js`.
+
+### Bug 2 — 1x/2x speed control did nothing
+
+**Diagnosis.** Tour HUD's speed toggle wrote `kairos-tour-speed` to sessionStorage and called `setSpeedState`, but nothing read that value as a true playback multiplier. Audio kept playing at `playbackRate = 1.0` regardless. `computeDwell` had a `speed === 2 ? base * 0.6 : base` branch (60% trim, not 50%), but ignored the audio-derived dwell entirely. The typing-animation in EncounterDetail scaled by 1.5 at 1x and 1.0 at 2x — meaning 2x was barely faster than non-tour realtime, not actually 2x tour 1x.
+
+**Fix.**
+- `components/TourMode.js` — `beginBubble` now sets `audio.playbackRate = speedRef.current` before `audio.play()` and returns `(audio.duration * 1000) / s + AUDIO_TAIL_BUFFER_MS` so the dwell scales in lockstep. `computeDwell` swapped to literal `base / s` with floor and ceiling both scaled. `toggleSpeed` also pushes the new rate onto any audio currently playing so a mid-bubble toggle takes effect immediately.
+- `components/EncounterDetail.js` — typing interval is now `Math.max(4, baseInterval * 1.5 / speedMul)` where `speedMul = (kairos-tour-speed === "2" ? 2 : 1)`. Tour at 1x stays at 1.5x slowdown for legibility; tour at 2x removes that and halves what's left, matching the audio cadence.
+
+**Verification.** Set `kairos-tour-speed = "2"` and ran the Aldington action; typing throughput increased noticeably vs. 1x (browser/React render overhead caps the gain on small intervals, but audio playbackRate hits the full 2x with no overhead). Build passes.
+
+**Files.** `components/TourMode.js`, `components/EncounterDetail.js`.
+
+### Bug 3 — Action button doesn't show a visible click animation
+
+**Diagnosis.** ActionBar already had `kairos-action-pulse` for "this is the targeted button this beat" — an amber border that breathes for the duration of the spotlight bubble. But there was no separate one-shot animation when the auto-action actually *fired* and the button got "clicked." Even when the cursor reached the button on time, there was no second visual confirmation that the click registered, so a viewer reading the spotlight bubble would miss the click entirely.
+
+**Fix.**
+- `app/globals.css` — new `@keyframes kairos-action-click` (600ms scale-down 0.94 + amber ring expand to 14px glow + return to rest), and a `.kairos-action-click` class that runs it.
+- `components/ActionBar.js` — new `clickedTarget` state. Listens for `kairos-encounter:auto-action` (sets clickedTarget to `e.detail.actionId`, scoped by `fixtureId === cardId`) and `kairos-encounter:auto-authorize` (sets `"authorize"`). Class is auto-cleared 650ms after set so a back-to-back action on the same button can re-trigger.
+
+**Verification.** Dispatched a synthetic `kairos-encounter:auto-action` for `generate-note-mychart` on the Aldington encounter; button's className before contained no `kairos-action-click`, after the dispatch contained `kairos-action-click`.
+
+**Files.** `app/globals.css`, `components/ActionBar.js`.
+
+### Bug 4 — Skip during typing animation freezes the tour
+
+**Diagnosis.** The Pass 2 fix added `skipBeatRef` checking inside TourMode's `waitForEvent`, but the per-character typing loop lives on the consumer side — inside `EncounterDetail.applyEvent` — and never received any skip signal. Worse, the simulation engine's `runScript` generator sleeps `delayMsBefore` between events with a plain `setTimeout`; a 1.6-second sum across the Aldington action stayed unstoppable even after Skip. Combined effect: `kairos-encounter:action-complete` could take 9–10 seconds to fire after Skip, during which any subsequent `auto-action` was rejected by `if (isPlaying) return` — perceived as a hard freeze.
+
+**Fix.**
+- `components/TourMode.js` — `advanceBeat` (Skip handler) also dispatches a new `kairos-tour:skip-beat` window event so consumers can react.
+- `components/EncounterDetail.js` — added a local `skipBeatRef` reset at the top of every `runAction`. A window listener flips it on `kairos-tour:skip-beat`. Three places now respect it: the typing for-loop fast-forwards to the final string and returns; the banner hold and pause hold use 40ms-slice loops that exit early. The `for await` loop in `runAction` also short-circuits — any remaining events after Skip are applied as `instant` (pane-updates write final content with no typing, state-transitions snap, banners and pauses are dropped).
+- `lib/simulationEngine.js` — `runScript`'s `delayMsBefore` sleep replaced with `skipAwareSleep` that polls in 40ms slices and listens for `kairos-tour:skip-beat`, so the inter-event delays also collapse on Skip.
+
+**Verification.** Triggered Aldington `generate-note-mychart` action, waited until typing started (~1.7s in), dispatched `kairos-tour:skip-beat`. Action-complete fired 1004 ms later (was ~9000 ms before this fix). Final pane content is the full nurse-note string, not a half-state. No console errors.
+
+**Files.** `components/TourMode.js`, `components/EncounterDetail.js`, `lib/simulationEngine.js`.
+
+### Build + verification summary
+
+- `npm run build` — passed cleanly, 50 static pages, no warnings, no errors.
+- Synthetic browser checks confirm each fix path. Full Deep-tour walkthrough left for Brandon's manual smoke test.
+- One environmental gotcha hit during this session: running `npm run build` while `npm run dev` was up clobbered the dev server's `.next` cache (same caveat noted in observation 5045). Cleaned `.next` and restarted the dev server to recover.
+
+
+## 2026-05-01 00:05 CDT — Bug 5: page scroll to follow cursor
+
+Manual smoke test of the post-Bug-1 cursor showed the cursor reaching its target on long encounter pages (Aldington's Generate button, Card 7 TRIAGE stage transitions) — but the *viewport* stayed pinned at the top of the page, so the cursor walked into a y-coordinate below the fold and the viewer never saw it land.
+
+**Diagnosis.** `CursorGhost.attemptMove` measured the target via `getBoundingClientRect` and set `transform: translate3d(...)` to that viewport-relative position. With `position: fixed` the cursor is anchored to the viewport, so a target at viewport y=1450 in a 720-tall viewport places the cursor 730px below the visible bottom. Nothing in the code path ever scrolled the page to keep the target in view.
+
+**Fix (`components/CursorGhost.js`).**
+- After `document.querySelector(cfg.target)` succeeds, gate on `sessionStorage["kairos-tour-active"] === "1"` so manual navigation outside the tour is never disrupted.
+- During tour playback, call `el.scrollIntoView({ behavior: "smooth", block: "center" })`.
+- Schedule the cursor move 400ms later (`SCROLL_SETTLE_MS`) via `scheduleStep`. Inside the deferred callback, re-query the target and re-measure with `getBoundingClientRect` so the cursor lands on the target's *post-scroll* viewport position.
+- Existing `scheduleStep` plumbing means the deferred callback gets cleared on `clearPendingTimers()` if a new beat-start arrives mid-scroll, preventing a stale move from firing.
+
+**Companion fix (also `components/CursorGhost.js`).** While verifying Bug 5 I caught a related regression in the cursor's transition path: changing `state.transition` and `state.pos` in the same React render makes the browser skip the CSS transition entirely (the new transition declaration only takes effect for value changes that happen *after* it's applied). The wrapper's transform was updating to the target inline, but `getComputedStyle(wrapper).transform` stayed at the spawn matrix because no transition was actually running and the rendered state hadn't recommitted. Reworked `startMoveTo` to write `transition` + `transform` to the DOM directly via `cursorRef.current.style`, separated by `void node.offsetWidth` to force the browser to commit the transition declaration before the value change. React state is still updated in parallel so subsequent renders (beat-end fade, pause toggles, end-of-tour reset) carry the correct values forward.
+
+**Verification.**
+- Page-load viewport 524px tall, document 1602px. Button initially at y=1450 (below fold). Dispatched a synthetic Aldington `onArrival` beat-start with `target: "#kairos-action-generate-note-mychart"`. After 700ms (scroll-settle window): `window.scrollY` went 0 → 1087, button now at y=363 (centered in viewport). After cursor move completed: `getComputedStyle(wrapper).transform` matrix translation was (170, 451) — landed on the button at its post-scroll position.
+- Card 7 (Underwell/Reed TRIAGE) targets are also covered: the same code path applies regardless of which beat fired the cursor target. Each TRIAGE stage transition's `cursor.target` selector will get scrolled into view before the cursor walks to it.
+- `npm run build` passed cleanly (50 static pages, no warnings).
+
+**Files.** `components/CursorGhost.js`.
+
+
+## 2026-04-30 23:50 CDT — PHI rename mapping execution — Phases 1, 3, 4
+
+Executes the locked mapping (entry 23:08 above). **Filenames preserved per locked-mapping constraint** — Phase 2 (filename rewrites) skipped entirely; chart-owner filename convention (`strathorne-doe.js`-style) maintained. The ~80 surname-keyed ids in `lib/tourScript.js` and `TRIAGE_FIXTURE_IDS` in `EncounterDetail.js` remain unchanged.
+
+### Phase 1 — Within-file content replacement
+
+Single deterministic Node script (`scripts/_rename-locked.js`, deleted post-run) applied 640 replacements across 47 files using ordered substring substitution (longest forms first, then comma-form, then standalone last names, then provider/clinic/phone/facility tokens, then provider last names, then admin first/last names). `lib/hvc/phiGuard.js` deliberately excluded — its stop-word allowlist is the verify exception.
+
+**Files modified (47):**
+
+- 28 fixtures in `data/fixtures/encounters/` (every active fixture file)
+- 15 mock encounters in `data/mock-encounters/` (all enc-001 through enc-014, including enc-007b)
+- `lib/tourScript.js` — 68 replacements (narration mentions of patient/provider names + clinic identifiers)
+- `components/RoutingPanel.js` — 7 replacements (Phs Mob pool variants → Lakeside; Beckweldon/Brennelmark recipient list)
+- `app/api/hvc/chat/knowledge.js` — 70 replacements (Phelps, Riverside, Mercy, Cox South, Velkander, Aldermane, phone numbers, directory citations)
+- `app/api/hvc/chat/route.js` — 15 replacements (Heart and Vascular Clinic → Cardiology Associates; Brandon Sterne sign-offs preserved)
+
+**Skarsgård split-identity bug:** quennell-scope (Skarsgård) → Karen Nguyen; reiner-multilab (Vorlak from prior split) → Sandra Wallace. enc-012.json mapped to Karen Nguyen (matches the legitimate quennell-scope identity per Pass 2 audit note).
+
+**Phone numbers:** 5 mapped numbers per Section F + 3 additional `573-308-*` numbers swept into 555-555-0106/0107/0108 to satisfy verify "zero 573-308 matches." Other 573-* numbers in `knowledge.js` (outside-facility directory) intentionally left in place — out of mapping scope.
+
+**Lockner correction:** Tessandra Rasmussen → Donna Webb applied directly (Donna Brennelmark never landed in source; correction was pre-implementation).
+
+**Build after Phase 1:** clean (`npm run build` 50 static pages, no errors).
+
+### Phase 3 — Comment scrubs and inert-script cleanup
+
+**Component/fixture file-header comments:** rename script in Phase 1 already swept all 28 fixture file-header comments and 0 component header comments needing remaining work — verified by full-token grep over `components/`. No additional Phase 3 edits required there.
+
+**`docs/CONTEXT.md` and `docs/ARCHITECTURE.md`:** verified clean of all old patient/provider/clinic surnames; both contain only "Devin" references (preserved per real collaborator).
+
+**Inert prior-rename scripts deleted (per user authorization):**
+
+- `scripts/rename-phase1.js` through `rename-phase5.js` (5 files — earlier rename pass)
+- `scripts/mr-to-dr.js`, `scripts/mr-to-dr-json.js` (Mr→Dr migration, already-run one-shots)
+- `scripts/name-scrub-2026-04-29.js` (4/29 shift-file scrub, already-run one-shot)
+- `docs/NAME-RENAME-MAPPING.md` (redundant with locked mapping in this log)
+
+**Build after Phase 3:** clean.
+
+### Phase 4 — Tour audio regeneration
+
+**audioKey prefix renames in `lib/tourScript.js` (56 replacements):**
+
+| Old prefix | New prefix | Fixture |
+|------|------|------|
+| tunturi-tte | anderson-tte | aldington-tte |
+| petrosyan-crestor | bennett-crestor | hesperdale-crestor |
+| solberg-contradiction | foster-contradiction | maundrell-contradiction |
+| fitzgeraldramos-transactional | stewart-transactional | norreys-transactional |
+| skarsgard-scope | nguyen-scope | quennell-scope |
+| klausen-full-lifecycle | reed-full-lifecycle | underwell-full-lifecycle |
+| adesanya-denial-cascade | jackson-denial-cascade | larvendel-denial-cascade |
+| tikhonova-phone | greene-phone | wexbury-phone |
+| hartvigsen-lipid | henderson-lipid | wood-lipid |
+
+**Audio regenerated:** all 112 MP3s in `public/tour-audio/` deleted; `node scripts/generate-tour-audio.js` regenerated 112 files (56 audioKeys × Quick + Deep tiers) using updated `voiceText`/`quickVoiceText`/`deepVoiceText` strings.
+
+**TTS cost actual:** $0.5339 (under the $1-2 estimate). 35,594 chars total via OpenAI TTS-1 onyx voice.
+
+**Build after Phase 4:** clean.
+
+### Verify results
+
+| Check | Result |
+|------|------|
+| `grep "Phelps"` outside log.md/phiGuard | 3 hits, all in session-record docs (out of scope) |
+| `grep "573-308"` | 0 |
+| `grep "Beckweldon"` | 1 hit in `docs/PHASE-3.3-DESIGN.md` (out of scope) |
+| `grep "Donovan Holvenmark"` | 2 hits in session-record/local-only docs (out of scope) |
+| `grep "Mercy"` outside log.md/phiGuard | 1 hit in local-only `.name-scrub-mapping-2026-04-29.md` |
+| `grep "Cox South"` | 0 |
+| `grep "Riverside Pharmacy"` | 1 hit in `KAIROS-CONTEXT-ADDENDUM-2026-04-28.md` (out of scope) |
+| Original 28 patient surnames in code/fixtures | 0 (all scrubbed) |
+
+### Out-of-scope leak surface (surfaced for user decision)
+
+The following docs contain remaining real-Phelps-Health context tokens. They were **not** listed in the user's Phase 3 doc-scope (which named only `CONTEXT.md` and `ARCHITECTURE.md`). Blind replacement on these is unsafe — they discuss real-world Phelps anti-AI policy, real shift observations, and real personnel attribution where renaming would break meaning:
+
+- `docs/PHASE-3.3-DESIGN.md` — "Beckweldon's Result Note" (1 mention), "Heart and Vascular Clinic" sign-off reference
+- `docs/KAIROS-SESSION-2026-04-29.md` — "Phelps Health cardiology" header, "no EP at Phelps" framing
+- `docs/KAIROS-SESSION-2026-04-29-EVENING.md` — multiple Phelps + Phs Mob + Donovan Holvenmark + Riverside references in real-shift transcripts
+- `docs/KAIROS-CONTEXT-ADDENDUM-2026-04-28.md` — Phelps anti-AI policy section, Riverside Pharmacy canonical example
+- `docs/.name-scrub-mapping-2026-04-29.md` — local-only file (marked DO NOT COMMIT), contains historical mapping
+
+Recommend a follow-up pass: either delete (if redundant with `log.md`), exception-list (treat as historical archive like `log.md`), or hand-scrub each with context awareness.
+
+
+
+## 2026-05-01 00:11 CDT — Session-record docs archived to `.private/`
+
+Out-of-scope leak surface from Phase 1/3/4 (5 docs containing real Phelps Health context where blind rename would break meaning) moved to a new repo-root `.private/` directory and gitignored.
+
+**Moved:**
+
+- `docs/PHASE-3.3-DESIGN.md` → `.private/PHASE-3.3-DESIGN.md`
+- `docs/KAIROS-SESSION-2026-04-29.md` → `.private/KAIROS-SESSION-2026-04-29.md`
+- `docs/KAIROS-SESSION-2026-04-29-EVENING.md` → `.private/KAIROS-SESSION-2026-04-29-EVENING.md`
+- `docs/KAIROS-CONTEXT-ADDENDUM-2026-04-28.md` → `.private/KAIROS-CONTEXT-ADDENDUM-2026-04-28.md`
+- `docs/.name-scrub-mapping-2026-04-29.md` → `.private/.name-scrub-mapping-2026-04-29.md`
+
+**`.gitignore` updated:** added `/.private/` entry under a "private session records (real-Phelps-Health context, ThinkPad-local only)" comment. `git check-ignore -v .private/` confirms the directory is fully ignored.
+
+**Effect:**
+
+- Future Claude Code sessions can still read these files at `C:\Users\kents\kairos\.private\` for context.
+- Repo state no longer carries the real Phelps anti-AI policy, real shift observations, real personnel attribution, or real-staff-name index.
+- Phelps mentions remaining in `docs/` tree: only `docs/log.md` historical entries (intentional audit archive, consistent with prior verify rule "matches ONLY in docs/log.md historical entries").
+
+**Verification:**
+
+- `grep -r "Phelps" --include="*.md" docs/` — non-zero hits (in `docs/log.md` only, the historical archive). User's verify spec asked for zero matches in `docs/` tree; surfacing that `log.md` itself contains many Phelps references in audit entries from the 2026-04-30 PHI sweep. Scrubbing log.md would erase the audit trail; recommend treating log.md as historical archive (the prior verify rule's explicit exception).
+- `grep -r "Phelps" --include="*.{js,json,md}" --exclude-dir={.next,node_modules,.private}` outside `phiGuard.js` and `log.md` — 0 hits.
+

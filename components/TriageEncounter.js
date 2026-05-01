@@ -163,6 +163,29 @@ export default function TriageEncounter({ fixture }) {
     setStage(3);
   }, [fixture]);
 
+  // Tour mode: TourMode dispatches kairos-encounter:auto-action between
+  // bubbles. Map each actionId to the matching stage transition so the
+  // four-stage UI advances in sync with narration. The manual
+  // ActionButton onClick handlers below remain wired for non-tour use.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    function onAutoAction(e) {
+      const actionId = e && e.detail && e.detail.actionId;
+      const targetFixtureId = e && e.detail && e.detail.fixtureId;
+      if (targetFixtureId && targetFixtureId !== fixture.id) return;
+      if (actionId === "generate-inquiry") {
+        setStage(2);
+      } else if (actionId === "process-reply") {
+        captureMockResponses();
+      } else if (actionId === "synthesize-callback") {
+        setStage(4);
+      }
+    }
+    window.addEventListener("kairos-encounter:auto-action", onAutoAction);
+    return () =>
+      window.removeEventListener("kairos-encounter:auto-action", onAutoAction);
+  }, [fixture.id, captureMockResponses]);
+
   const assessment = stage >= 2 ? fixture.assessment || [] : [];
   const sbar = fixture.sbar || {};
 

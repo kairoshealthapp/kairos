@@ -256,6 +256,20 @@ details[open] > summary .drawer-chev { transform: rotate(90deg); }
   animation: kairos-action-pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+/* One-shot button-click animation — fires the moment an auto-action is
+   dispatched against this button's id, regardless of whether the cursor
+   ghost made it to the button or not. Combination of a brief scale-down
+   + amber ring expand to read as "clicked", then settle. */
+@keyframes kairos-action-click {
+  0%   { transform: scale(1);    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+  20%  { transform: scale(0.94); box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.55); }
+  60%  { transform: scale(1.03); box-shadow: 0 0 14px 6px rgba(245, 158, 11, 0.7); }
+  100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+.kairos-action-click {
+  animation: kairos-action-click 600ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 /* Phase-3.7 landing page — five-tile orbit pulse. Each tile runs the same
    3s scale + opacity cycle; staggered by 2.4s in clockwise order
    (Provider → Front Desk → Executive → Nurse → Scribe), so at any moment

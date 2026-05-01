@@ -1,4 +1,4 @@
-// Phase-3.6 — Vasilenko VA RFS already-resolved. Pattern: ALREADY-RESOLVED.
+// Phase-3.6 — Ward VA RFS already-resolved. Pattern: ALREADY-RESOLVED.
 // Demonstrates Media tab OCR — Kairos surfaces previously-handled work
 // already documented in scanned PDFs. Second moat fixture for May 5 demo.
 
@@ -20,19 +20,19 @@ const fixture = {
     severity: "green",
   },
   patient: {
-    name: "Volkov, Wendelin",
-    displayName: "Wendelin Volkov",
+    name: "Bishop, Charles",
+    displayName: "Charles Bishop",
     age: 73,
     sex: "M",
     dob: "1953-03-08",
     mrn: "M000412580",
     proxyName: null,
-    primary: "Stellan R Henriksson, NP",
+    primary: "Stellan R Peterson, NP",
     coverage: "VA Healthcare + Medicare",
   },
   sourceArtifact: {
     type: "Patient Call routed via Secure Chat",
-    author: "Jovita Vasilenko (front desk)",
+    author: "Jennifer Ward (front desk)",
     timestamp: "2026-04-30 10:27",
     body: "Patient was referred to Columbia heart & Vascular. Patient called in and asked us to send the referral to VA so they will pay for the Columbia Heart & Vascular clinic. Please advise.",
   },
@@ -45,17 +45,17 @@ const fixture = {
     sources: [
       { name: "Scanned RFS form (4/14/2026)", source: "Media tab → Outside Records" },
       { name: "VA submission confirmation page (4/14/2026)", source: "Media tab → Outside Records" },
-      { name: "Original Columbia referral (Henriksson, 4/10/2026)", source: "Notes → Office Visit" },
+      { name: "Original Columbia referral (Peterson, 4/10/2026)", source: "Notes → Office Visit" },
       { name: "Patient VA enrollment verification (1/15/2026)", source: "Media tab → Insurance" },
     ],
   },
   suggestedReply: {
-    channel: "Secure Chat reply to Jovita Vasilenko",
+    channel: "Secure Chat reply to Jennifer Ward",
     body: "RFS already submitted to VA Community Care 4/14. Awaiting VA authorization. Will update this thread once VA responds. — Brandon",
   },
   routing: {
-    recipient: "Jovita Vasilenko (original sender)",
-    pool: "P Phs Mob Cardiology Support Staff Pool",
+    recipient: "Jennifer Ward (original sender)",
+    pool: "Lakeside Cardiology Support Pool",
     comment: "Already-resolved finding — RFS submitted 4/14, awaiting VA authorization. Replying to original Secure Chat thread.",
     priority: "Normal",
   },

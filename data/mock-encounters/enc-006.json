@@ -10,8 +10,8 @@
   "receivedAt": "2026-04-29T13:01:00Z",
   "investigationState": "AWAITING_NURSE",
   "patient": {
-    "name": "Lindqvist, Cassiel",
-    "displayName": "Cassiel Lindqvist",
+    "name": "Reilly, Megan",
+    "displayName": "Megan Reilly",
     "age": 28,
     "sex": "F",
     "dob": "1998-07-14",
@@ -20,27 +20,27 @@
   },
   "source": {
     "title": "Result Note: CTA abdomen — incidental pancreatic cyst, please forward to PCP",
-    "sender": "Voronova, Cardiology",
+    "sender": "Pendrelle, Cardiology",
     "receivedAt": "2026-04-29 08:01",
-    "body": "CTA abdomen reviewed. Cardiac findings unremarkable. Incidental 1.4 cm simple-appearing pancreatic cyst noted; below standard threshold for cardiology workup. Please forward results to her PCP (Fenella Bjornsen MD) for further follow-up."
+    "body": "CTA abdomen reviewed. Cardiac findings unremarkable. Incidental 1.4 cm simple-appearing pancreatic cyst noted; below standard threshold for cardiology workup. Please forward results to her PCP (Fenella Olson MD) for further follow-up."
   },
-  "nurseNote": "Dr. Voronova reviewed CTA abdomen today. Cardiac findings unremarkable. Incidental 1.4 cm simple-appearing pancreatic cyst noted; below threshold for cardiology workup. Forwarded to PCP (Fenella Bjornsen MD) for further follow-up per provider request.\n\nPatient notified via MyChart.",
+  "nurseNote": "Dr. Pendrelle reviewed CTA abdomen today. Cardiac findings unremarkable. Incidental 1.4 cm simple-appearing pancreatic cyst noted; below threshold for cardiology workup. Forwarded to PCP (Fenella Olson MD) for further follow-up per provider request.\n\nPatient notified via MyChart.",
   "output": {
     "channel": "mychart",
     "mychart": {
-      "recipient": "Cassiel Lindqvist",
+      "recipient": "Megan Reilly",
       "proxyName": null,
       "subject": "Test results",
       "notifyBy": "2026-05-02",
       "repliesAllowed": "Replies allowed; nurse on alert",
-      "greeting": "Ms Lindqvist,",
-      "body": "Dr. Voronova has reviewed your recent CT scan. From a heart standpoint everything looks unremarkable.\n\nThe scan also showed a small 1.4 cm cyst on your pancreas (an incidental finding), which is not something we follow from cardiology. We have forwarded the results to your primary care provider (Dr. Fenella Bjornsen) so her office can decide on any additional follow-up. If you have not heard from them within the next week or two, feel free to reach out to her office directly.\n\nBrandon Sterne, RN BSN / Heart and Vascular Clinic"
+      "greeting": "Ms Reilly,",
+      "body": "Dr. Pendrelle has reviewed your recent CT scan. From a heart standpoint everything looks unremarkable.\n\nThe scan also showed a small 1.4 cm cyst on your pancreas (an incidental finding), which is not something we follow from cardiology. We have forwarded the results to your primary care provider (Dr. Fenella Olson) so her office can decide on any additional follow-up. If you have not heard from them within the next week or two, feel free to reach out to her office directly.\n\nBrandon Sterne, RN BSN / Cardiology Associates"
     }
   },
   "orderPad": {
     "orders": [
       {
-        "type": "Route imaging study to PCP (Fenella Bjornsen MD)",
+        "type": "Route imaging study to PCP (Fenella Olson MD)",
         "codeVariant": null,
         "reason": "Incidental pancreatic cyst, non-cardiology follow-up",
         "associatedDx": ["Other specified disorders of pancreas"],
@@ -52,7 +52,7 @@
         "clinicalQuestions": [],
         "releaseToPatient": false,
         "ccResults": [],
-        "cosign": "Voronova"
+        "cosign": "Pendrelle"
       }
     ],
     "hasUnansweredQuestions": false

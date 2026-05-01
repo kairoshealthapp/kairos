@@ -1,5 +1,5 @@
 // Pattern 10 — COORDINATION (Secure Chat origin — skeleton)
-// Source: docs/KAIROS-SESSION-2026-04-29-AFTERNOON.md CASE 20 (Bailey/Drozdov)
+// Source: docs/KAIROS-SESSION-2026-04-29-AFTERNOON.md CASE 20 (Bailey/Brooks)
 
 const fixture = {
   id: "heldenmark-securechat",
@@ -18,19 +18,19 @@ const fixture = {
     severity: "amber",
   },
   patient: {
-    name: "Drozdov, Werner",
-    displayName: "Werner Drozdov",
+    name: "Brooks, Steven",
+    displayName: "Steven Brooks",
     age: 69,
     sex: "M",
     dob: "1957-04-01",
     mrn: "73018241",
     proxyName: null,
-    primary: "Voronova NP, Heart and Vascular Clinic",
+    primary: "Pendrelle NP, Cardiology Associates",
     coverage: "Aetna Medicare Advantage",
   },
   sourceArtifact: {
     type: "Secure Chat (11-participant thread)",
-    author: "Pomona Kishimoto (PHS scheduling, 9:20 AM)",
+    author: "Linda Birchington (PHS scheduling, 9:20 AM)",
     timestamp: "2026-04-29 08:24",
     body:
       "Patient referral order placed 1/2026 still status=PEND with 2 missed appointments. Verify clinical relevance — should we cancel and re-place, or chase the patient?",
@@ -44,7 +44,7 @@ const fixture = {
   actionScripts: {},
   finalSignedState: {
     nurseNote:
-      "Stale referral identified. Voronova confirms still clinically relevant. Patient outreach scheduled. Thread-state synchronization will close the originating Secure Chat thread automatically once patient acknowledges.",
+      "Stale referral identified. Pendrelle confirms still clinically relevant. Patient outreach scheduled. Thread-state synchronization will close the originating Secure Chat thread automatically once patient acknowledges.",
     mychartMessage: "Touching base on a referral that has been pending since January…",
     orders: [],
     dxAssociated: [],
