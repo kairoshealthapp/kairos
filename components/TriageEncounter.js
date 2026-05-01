@@ -75,9 +75,10 @@ function ResponseDisplay({ assessment, responses, notes }) {
   );
 }
 
-function ActionButton({ onClick, children, primary, disabled }) {
+function ActionButton({ onClick, children, primary, disabled, id }) {
   return (
     <button
+      id={id}
       type="button"
       onClick={onClick}
       disabled={disabled}
@@ -241,7 +242,11 @@ export default function TriageEncounter({ fixture }) {
 
         {stage === 1 ? (
           <>
-            <ActionButton primary onClick={() => setStage(2)}>
+            <ActionButton
+              id="kairos-triage-generate-inquiry"
+              primary
+              onClick={() => setStage(2)}
+            >
               Generate Patient Assessment
             </ActionButton>
             <ActionButton onClick={() => {}}>Defer</ActionButton>
@@ -253,7 +258,11 @@ export default function TriageEncounter({ fixture }) {
           <>
             {mychartActive && mode === "mychart" ? (
               <>
-                <ActionButton primary onClick={captureMockResponses}>
+                <ActionButton
+                  id="kairos-triage-process-reply"
+                  primary
+                  onClick={captureMockResponses}
+                >
                   Send via MyChart
                 </ActionButton>
                 <ActionButton onClick={() => setMode("phone")}>
@@ -262,7 +271,11 @@ export default function TriageEncounter({ fixture }) {
               </>
             ) : (
               <>
-                <ActionButton primary onClick={captureMockResponses}>
+                <ActionButton
+                  id="kairos-triage-process-reply"
+                  primary
+                  onClick={captureMockResponses}
+                >
                   Phone call mode
                 </ActionButton>
                 {mychartActive ? (
@@ -280,7 +293,11 @@ export default function TriageEncounter({ fixture }) {
 
         {stage === 3 ? (
           <>
-            <ActionButton primary onClick={() => setStage(4)}>
+            <ActionButton
+              id="kairos-triage-synthesize-callback"
+              primary
+              onClick={() => setStage(4)}
+            >
               Synthesize SBAR
             </ActionButton>
             <ActionButton onClick={() => {}}>Defer</ActionButton>
@@ -292,7 +309,11 @@ export default function TriageEncounter({ fixture }) {
 
         {stage === 4 ? (
           <>
-            <ActionButton primary onClick={() => {}}>
+            <ActionButton
+              id="kairos-triage-authorize"
+              primary
+              onClick={() => {}}
+            >
               Authorize → forward to provider
             </ActionButton>
             <ActionButton onClick={() => setStage(3)}>Edit</ActionButton>
