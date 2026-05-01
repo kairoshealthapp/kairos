@@ -3562,3 +3562,14 @@ Replaced the pentagon-orbit landing at `app/page.js` with the editorial dark + w
 - Dev server at 375×812 mobile: tiles collapse to 1-col, tile body switches to row flex, no horizontal overflow.
 - Visual check: KAIROS wordmark renders with amber metallic gradient against the dark bg, "the opportune moment" italic + "THE TIME IS NOW" amber kicker visible, eyebrow rules + tiles rules in low-opacity amber, Nurse tile pip is solid amber with glow while the four "Coming soon" tiles get a hollow ring.
 
+### Follow-up — hydration fix (CSS relocation)
+
+The first cut put all `.kairos-landing` styles inside an inline `<style>` block returned from the page component. That triggered a "Text content does not match server-rendered HTML" hydration warning on `/`. Moved every landing rule into [app/globals.css](app/globals.css) (keeping the same `.kairos-landing` scope) and stripped the `<style>` tag from [app/page.js](app/page.js). Pattern now matches the project convention — `/rn` and the rest of the app use Tailwind utilities + named classes defined in `globals.css` (`.kairos-card`, `.kairos-display`, `.kairos-stagger`, etc.); no CSS modules anywhere in the repo.
+
+No visual change. Verified post-restart of `npm run dev`:
+- `npm run build`: ✓ clean.
+- Computed styles match: tile border `rgba(245, 158, 11, 0.18)`, wordmark gradient `linear-gradient(rgb(252, 214, 129) 0%, rgb(245, 182, 66) 38%…)`, Fraunces wordmark sized correctly, all 5 tiles render.
+- Console: no hydration warnings, no errors after reload (only the React DevTools info banner).
+
+Note: when the dev server is running and you also run `npm run build`, the production build wipes `.next/` and dev-server asset URLs start 404'ing until the dev server is restarted. Restart `npm run dev` after any production build.
+
