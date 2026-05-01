@@ -1,12 +1,12 @@
 // Pattern 2 — SYNTHESIS + NEW ORDER
-// Source: docs/KAIROS-SESSION-2026-04-29.md Section 5 CASE 1 (Boultes/Aldington TTE)
+// Source: docs/KAIROS-SESSION-2026-04-29.md Section 5 CASE 1 (Boultes/Tunturi TTE)
 
 const fixture = {
   id: "aldington-tte",
   slug: "aldington-tte",
   patternId: 2,
   patternName: "SYNTHESIS + NEW ORDER",
-  tab: "notify",
+  tab: "resultsfu",
   urgency: "calm",
   sourceChannel: "epic-result",
   sourceBox: "results-followup",
@@ -18,19 +18,19 @@ const fixture = {
     severity: "green",
   },
   patient: {
-    name: "Aldington, Charles",
-    displayName: "Charles Aldington",
+    name: "Tunturi, Aleksanteri",
+    displayName: "Aleksanteri Tunturi",
     age: 61,
     sex: "M",
     dob: "1965-04-15",
     mrn: "71005544",
-    proxyName: "Tamara Joy Aldington",
-    primary: "Loxley NP, Heart and Vascular Clinic",
+    proxyName: "Talvikki Tunturi",
+    primary: "Voronova NP, Heart and Vascular Clinic",
     coverage: "Medicare A+B + supplemental",
   },
   sourceArtifact: {
     type: "Result Note",
-    author: "Loxley, Cardiology",
+    author: "Voronova, Cardiology",
     timestamp: "2026-04-29 06:41",
     body: "CTA chest reviewed. Findings consistent with mild aortic stenosis and mild aortic regurgitation, possible bicuspid aortic valve. Recommend transthoracic echo (TTE) for reassessment of valve morphology and severity. No immediate change in management. Patient may follow up at his next routine visit if asymptomatic; sooner if symptomatic. Please notify.",
   },
@@ -62,7 +62,7 @@ const fixture = {
         typingSpeedCps: 80,
         delayMsBefore: 600,
         content:
-          "Dr. Loxley reviewed CTA chest from this week. Findings consistent with mild aortic stenosis and mild aortic regurgitation, possible bicuspid aortic valve. TTE ordered for reassessment of valve morphology and severity. No medication changes. Patient to follow up at next routine visit if asymptomatic, sooner if symptomatic.\n\nPatient notified via MyChart. Patient's daughter (Tamara Joy Aldington, MyChart proxy) auto-included.",
+          "Dr. Voronova reviewed CTA chest from this week. Findings consistent with mild aortic stenosis and mild aortic regurgitation, possible bicuspid aortic valve. TTE ordered for reassessment of valve morphology and severity. No medication changes. Patient to follow up at next routine visit if asymptomatic, sooner if symptomatic.\n\nPatient notified via MyChart. Patient's daughter (Talvikki Tunturi, MyChart proxy) auto-included.",
       },
       {
         type: "pane-update",
@@ -71,7 +71,7 @@ const fixture = {
         typingSpeedCps: 70,
         delayMsBefore: 400,
         content:
-          "Mr Aldington,\n\nDr. Loxley has reviewed your recent CTA (a detailed CT scan of the heart and chest). The scan showed mild narrowing (stenosis) and mild leakage (regurgitation) at one of your heart valves, possibly a bicuspid (two-leaflet) valve.\n\nTo take a closer look, we have ordered an echocardiogram (an ultrasound of your heart). The scheduling team will reach out to set a time. There are no changes to your medications.\n\nPlease follow up at your next routine visit, or sooner if you notice new chest pain, shortness of breath, light-headedness, or fainting.\n\nBrandon Sterne, RN BSN / Heart and Vascular Clinic",
+          "Mr Tunturi,\n\nDr. Voronova has reviewed your recent CTA (a detailed CT scan of the heart and chest). The scan showed mild narrowing (stenosis) and mild leakage (regurgitation) at one of your heart valves, possibly a bicuspid (two-leaflet) valve.\n\nTo take a closer look, we have ordered an echocardiogram (an ultrasound of your heart). The scheduling team will reach out to set a time. There are no changes to your medications.\n\nPlease follow up at your next routine visit, or sooner if you notice new chest pain, shortness of breath, light-headedness, or fainting.\n\nBrandon Sterne, RN BSN / Heart and Vascular Clinic",
       },
       {
         type: "pane-update",
@@ -95,8 +95,8 @@ const fixture = {
                 { q: "Saline bubble study?", answered: true, answer: "No" },
               ],
               releaseToPatient: true,
-              ccResults: ["Loxley"],
-              cosign: "Loxley",
+              ccResults: ["Voronova"],
+              cosign: "Voronova",
             },
           ],
           hasUnansweredQuestions: false,
@@ -112,10 +112,10 @@ const fixture = {
   },
   finalSignedState: {
     nurseNote:
-      "Dr. Loxley reviewed CTA chest. Mild AS, mild AR, possible bicuspid AV. TTE ordered for reassessment. No med changes. Patient notified via MyChart.",
+      "Dr. Voronova reviewed CTA chest. Mild AS, mild AR, possible bicuspid AV. TTE ordered for reassessment. No med changes. Patient notified via MyChart.",
     mychartMessage: "[As drafted above]",
     orders: [
-      "Transthoracic echo (TTE) Complete — ECH110 STERNE BR — Future 4/29 First Available — Routine — Loxley cosign",
+      "Transthoracic echo (TTE) Complete — ECH110 STERNE BR — Future 4/29 First Available — Routine — Voronova cosign",
     ],
     dxAssociated: ["Mild aortic stenosis", "Mild aortic regurgitation"],
   },

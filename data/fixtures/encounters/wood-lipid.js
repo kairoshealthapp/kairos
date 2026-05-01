@@ -1,12 +1,12 @@
 // Pattern 1 — SYNTHESIS only (PROMOTED from skeleton for tour mode)
-// Source: docs/KAIROS-CONTEXT-ADDENDUM-2026-04-28.md Pattern 1 (Wood lipid panel)
+// Source: docs/KAIROS-CONTEXT-ADDENDUM-2026-04-28.md Pattern 1 (Hartvigsen lipid panel)
 
 const fixture = {
   id: "wood-lipid",
   slug: "wood-lipid",
   patternId: 1,
   patternName: "SYNTHESIS only",
-  tab: "notify",
+  tab: "resultsfu",
   urgency: "calm",
   sourceChannel: "epic-result",
   sourceBox: "results-followup",
@@ -18,19 +18,19 @@ const fixture = {
     severity: "green",
   },
   patient: {
-    name: "Wood, Adelina",
-    displayName: "Adelina Wood",
+    name: "Hartvigsen, Anouk",
+    displayName: "Anouk Hartvigsen",
     age: 70,
     sex: "F",
     dob: "1955-12-03",
     mrn: "10381274",
     proxyName: null,
-    primary: "Loxley NP, Heart and Vascular Clinic",
+    primary: "Voronova NP, Heart and Vascular Clinic",
     coverage: "Medicare A+B",
   },
   sourceArtifact: {
     type: "Result Note",
-    author: "Loxley, Cardiology",
+    author: "Voronova, Cardiology",
     timestamp: "2026-04-28 09:32",
     body:
       "Lipid panel: LDL 67 (at goal), HDL 41 (slightly below goal), triglycerides 182 (slightly above goal), total 139 (at goal). No medication change. Lifestyle counseling for HDL/triglyceride pattern (exercise, diet, alcohol moderation).",
@@ -59,7 +59,7 @@ const fixture = {
         typingSpeedCps: 80,
         delayMsBefore: 500,
         content:
-          "Dr. Loxley reviewed lipid panel today. LDL 67 (at goal), HDL 41 (slightly below goal), triglycerides 182 (slightly above goal), total cholesterol 139 (at goal). No medication change. Continue current statin. Lifestyle counseling provided in patient message.\n\nPatient notified via MyChart.",
+          "Dr. Voronova reviewed lipid panel today. LDL 67 (at goal), HDL 41 (slightly below goal), triglycerides 182 (slightly above goal), total cholesterol 139 (at goal). No medication change. Continue current statin. Lifestyle counseling provided in patient message.\n\nPatient notified via MyChart.",
       },
       {
         type: "pane-update",
@@ -68,7 +68,7 @@ const fixture = {
         typingSpeedCps: 70,
         delayMsBefore: 400,
         content:
-          "Ms Wood,\n\nDr. Loxley has reviewed your recent cholesterol panel:\n\n  • LDL (bad cholesterol) 67 — at goal\n  • HDL (good cholesterol) 41 — slightly below where we'd like\n  • Triglycerides (a type of fat in the blood) 182 — slightly above\n  • Total cholesterol 139 — at goal\n\nNo medication change is needed. Continue your current statin as prescribed.\n\nA few small things tend to help the HDL and triglyceride pattern: 30 minutes of brisk walking most days of the week, swapping refined carbs for whole grains and lean protein, and keeping alcohol to one drink or fewer per day. None of this is urgent — these are low-and-slow improvements over months, not weeks.\n\nWe'll recheck at your next routine visit. Reach out if anything changes.\n\nBrandon Sterne, RN BSN / Heart and Vascular Clinic",
+          "Ms Hartvigsen,\n\nDr. Voronova has reviewed your recent cholesterol panel:\n\n  • LDL (bad cholesterol) 67 — at goal\n  • HDL (good cholesterol) 41 — slightly below where we'd like\n  • Triglycerides (a type of fat in the blood) 182 — slightly above\n  • Total cholesterol 139 — at goal\n\nNo medication change is needed. Continue your current statin as prescribed.\n\nA few small things tend to help the HDL and triglyceride pattern: 30 minutes of brisk walking most days of the week, swapping refined carbs for whole grains and lean protein, and keeping alcohol to one drink or fewer per day. None of this is urgent — these are low-and-slow improvements over months, not weeks.\n\nWe'll recheck at your next routine visit. Reach out if anything changes.\n\nBrandon Sterne, RN BSN / Heart and Vascular Clinic",
       },
       { type: "state-transition", target: "card", newState: "drafted", delayMsBefore: 200 },
     ],

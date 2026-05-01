@@ -26,6 +26,10 @@ import woodLipid from "./wood-lipid";
 import czeschinBp from "./czeschin-bp";
 import besemerBnp from "./besemer-bnp";
 import vrabelReferral from "./vrabel-referral";
+import locknerMedcheckin from "./lockner-medcheckin";
+import criderInr from "./crider-inr";
+import sellmanCpapReferral from "./sellman-cpap-referral";
+import pelcVaRfs from "./pelc-va-rfs";
 
 const FIXTURES = [
   aldingtonTte,
@@ -52,6 +56,10 @@ const FIXTURES = [
   czeschinBp,
   besemerBnp,
   vrabelReferral,
+  locknerMedcheckin,
+  criderInr,
+  sellmanCpapReferral,
+  pelcVaRfs,
 ];
 
 const BY_ID = {};

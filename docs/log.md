@@ -2944,3 +2944,621 @@ Suggested apply order: 3 (visual snap, lowest risk) → 2 (timing model, foundat
 - Browser smoke test NOT performed in this session (no dev server launched). Manual ear/eye verification on `/rn`, `/scribe`, `/provider`, `/encounter/aldington-tte`, and tour-hides-stamp behavior is recommended before relying on this.
 
 **Files:** `package.json`, `lib/version.js` (new), `components/VersionStamp.js` (new), `components/AppChrome.js`, `components/TourMode.js`, `app/about/page.js` (new).
+
+## [2026-04-30 6:23p CDT] kairos | Phase 3.4 quality-fix sprint — 13-item demo polish pass
+
+**Why:** Pre-demo sweep covering visible bugs (HUD vanishing, skip-button mis-bind, typewriter strobe, panel pacing) plus narration corrections and visual polish (urgent icon, validation accents, button pulse, duration display, action toast, breadcrumb).
+
+### Bug fixes
+
+1. **HUD persistence across routes** — `components/TourMode.js`. `NarratorCorner` now renders whenever `active && !showEndModal`, suppressed only when a narrator-variant overlay is already showing it. Spotlight overlays no longer steal the HUD. Bumped `NarratorCorner` z-index to 70 so it sits above the spotlight layer.
+2. **Skip button advances one beat** — `components/TourMode.js`. Added `skipBeatRef` + `advanceBeat()` callback. `pwait()` now exits early when `skipBeatRef` is set, audio is stopped, and the runTour loop continues to the next bubble. The original `skipTour()` (full-cancel) is retained for the new explicit `End ✕` button. Skip button label updated to `Skip ▸`. Spacebar still pauses.
+3. **Typewriter strobe eliminated** — `components/NurseNotePane.js`, `components/MyChartPane.js`, `components/ExplanationPane.js`. Dropped the `<TypingText/>` wrapper; `EncounterDetail` already streams characters into `content`, so the wrapper produced a double-typewriter that reset on every prop change. Now the panes render the streamed string directly with a blinking amber cursor while `isTyping`. Added `kairos-typing-cursor` keyframe to `app/globals.css`.
+4. **Panel transition pacing** —
+   - **(a) No more dimming.** `components/SpotlightOverlay.js`. Stripped the SVG cutout-mask dim layer; the spotlight is now an amber outline + soft drop-shadow glow on the active anchor. Previously-typed panels stay at full opacity. Container is `pointer-events-none` so HUD clicks pass through; only the bubble re-enables pointer events for its buttons.
+   - **(b) 8s minimum hold post-typing.** `components/TourMode.js`. `showSpotlight()` now uses `Math.max(SPOTLIGHT_MIN_MS, audioMs)` where `SPOTLIGHT_MIN_MS = 8000`. Audio that ends earlier waits for the 8-second floor.
+
+### Narration corrections (Quick + Deep)
+
+5. **Aldington opening** — `lib/tourScript.js`. "over a year of studying" → "ninety days of studying". Applied to both Quick and Deep `aldington-tte-pre` bubbles.
+6. **Aldington 27/9 number mismatch** — `lib/tourScript.js`. "Twenty-seven unread… Only nine are actually yours" → "Plenty of unread… Only some are actually yours". The dashboard shows ~12 NOTIFY items; the hard counts no longer mislead. Display text and body fields updated to match.
+7. **Kairos prosody** — `lib/tourScript.js`. "Kairos doesn't get tired" → "Kairos — doesn't get tired" everywhere it appears. The em-dash forces TTS to breathe.
+
+**Audio regen:** deleted and regenerated `aldington-tte-pre.mp3`, `aldington-tte-pre-deep.mp3`, `aldington-tte-pa3.mp3`, `aldington-tte-pa3-deep.mp3` (4 files, ~1,592 chars billed, $0.024). All other 108 MP3s skipped (unchanged narration).
+
+### Polish
+
+8. **Urgent triangle icon** — `components/PatientCard.js`, `app/rn/page.js`. Removed green/amber/red severity dots. Only cards with `urgency: "high"` (currently just Esselbach) render a red filled triangle with white "!". `adaptPatient` now passes a single boolean `urgent` derived from `fixture.urgency`.
+9. **Validation panel accent borders** — `components/NurseNotePane.js`, `components/MyChartPane.js`. Added a 3px desaturated-teal (`#5AAFA0`) left border. SourcePane and OrderPadPane unchanged.
+10. **Action button pulse** — `lib/tourScript.js`, `components/ActionBar.js`, `app/globals.css`. New `targetButton` field on tour beats. `TourMode` dispatches `kairos-tour:beat-start { targetButton }` when a beat begins and `:beat-end` when it ends. `ActionBar` listens and applies the `kairos-action-pulse` class (amber border + 1.5s opacity oscillation, soft glow) to the matching button. Wired to Aldington's `onArrival` (target: `generate-note-mychart`) and Calderwood's `onAuthorize` (target: `authorize`).
+11. **Tour duration display** — `lib/tourScript.js`, `components/TourLauncher.js`. New `estimateTourMinutes(mode)` export sums every bubble's `quickVoiceText` / `deepVoiceText` character count and divides by an empirical TTS-1 onyx rate (15.5 chars/sec). Buttons now read "Quick Tour · X min" / "Deep Tour · Y min" — auto-updates whenever narration is regenerated.
+12. **Outside-tour action toast** — `components/ActionBar.js`. Every verb-bar button (Authorize / Edit / Defer / Reject) and every pattern action button now check `sessionStorage("kairos-tour-active")`. When tour is NOT active, a 4-second bottom-center toast surfaces: "Demo build — actions are pre-rendered in the tour. Click ▶ Quick Tour or ▶ Deep Tour to see this in motion." Toast is suppressed during active tour playback so the tour engine drives the buttons cleanly.
+13. **Encounter breadcrumb** — `components/EncounterDetail.js`. The back-link row now reads `← Back to dashboard › NOTIFY` (or REFILL/TRIAGE/ADVICE/INR/OTHER). Category label pulled from `?tab=` query param via the existing `fromTab` prop. The clickable Back-to-dashboard text remains the only navigation affordance; the category is a non-interactive label.
+
+### Verification
+
+- `npm run build` ✓ clean. 44 routes generated. `/encounter/[id]` SSG output bumped from 8.93 kB to 8.93 kB (no regression). `/rn` 2.97 kB.
+- 4 MP3s regenerated; 108 untouched. Total tour-audio file count still 112.
+- `lib/tourScript.js` pulse fields validated: `targetButton: "generate-note-mychart"` on Aldington `onArrival`, `targetButton: "authorize"` on Calderwood `onAuthorize`.
+- Build passed with no console warnings beyond pre-existing.
+
+### Browser smoke tests NOT performed
+
+This session did not start a dev server. Recommended manual verification before demo:
+
+- HUD visible during typing on `/encounter/aldington-tte` (was the failure mode).
+- Skip ▸ advances one card on Quick + Deep tours; ✕ End exits tour entirely.
+- Aldington Nurse Note types cleanly from char 1 — no cursor strobe.
+- Previous panels stay full-opacity when next panel activates.
+- Each panel holds at least 8s after typing completes before next beat.
+- Esselbach card on `/rn` NOTIFY tab shows red triangle; all other cards iconless.
+- Calderwood encounter: NurseNote and MyChart have left-edge teal accent; SourcePane and OrderPad don't.
+- Calderwood Authorize button pulses amber during the onAuthorize narrator beat.
+- Quick Tour pill displays "✨ Quick Tour · X min" with computed duration.
+- Click any action button outside a tour → bottom-center toast appears, auto-dismisses in 4s.
+- `/encounter/aldington-tte` shows "← Back to dashboard › NOTIFY" breadcrumb.
+
+**Files touched:** `components/TourMode.js`, `components/NarratorCorner.js`, `components/SpotlightOverlay.js`, `components/NurseNotePane.js`, `components/MyChartPane.js`, `components/ExplanationPane.js`, `components/PatientCard.js`, `components/ActionBar.js`, `components/TourLauncher.js`, `components/EncounterDetail.js`, `app/rn/page.js`, `app/globals.css`, `lib/tourScript.js`, `public/tour-audio/aldington-tte-pre*.mp3` (regen), `public/tour-audio/aldington-tte-pa3*.mp3` (regen).
+
+## [2026-04-30 6:46p CDT] kairos | Phase 3.4 follow-up — typography hierarchy + dashboard card pulse
+
+**Why:** Two corrections to the polish pass that just landed: the colored validation-pane stripes read as AI-generated UI, and the action-button pulse wasn't extended to dashboard patient cards.
+
+### Fix 1 — Remove teal accent borders; lean on typography
+
+- `components/NurseNotePane.js`, `components/MyChartPane.js` — dropped the `borderLeft: "3px solid #5AAFA0"` inline style. All four panes (Source, Nurse Note, MyChart, Order Pad) now share identical chrome.
+- `app/globals.css` — added a `.kairos-kicker-strong` modifier (`font-weight: 700; letter-spacing: 0.06em`). Applied only to NURSE NOTE and MYCHART MESSAGE labels in the two validation panes. SOURCE and ORDER PAD labels keep the default `font-weight: 500`. Hierarchy is now communicated through label weight, not colored stripes.
+
+### Fix 2 — Dashboard card pulse mirrors action-button pulse
+
+- `lib/tourScript.js` — added `targetCard: <fixtureId>` to every `preArrivalNarrator` (9 fixtures: aldington-tte, wood-lipid, calderwood-crestor, norreys-transactional, quennell-scope, maundrell-contradiction, underwell-full-lifecycle, wexbury-phone, vanstone-denial-cascade).
+- `components/TourMode.js` — `kairos-tour:beat-start` payload now carries `{ targetButton, targetCard }`. ActionBar already consumes `targetButton`; PatientCard now consumes `targetCard`.
+- `components/PatientCard.js` — listens for `kairos-tour:beat-start`/`:beat-end`/`:end`. When the active beat's `targetCard` matches the card's `patient.id`, the inner `kairos-card` div gets the `kairos-action-pulse` class — same amber border + 1.5s opacity oscillation + soft glow as the action buttons. Pulse releases when the beat ends or the tour exits.
+
+### How the pulse moves through the tour
+
+1. Tour starts → preArrival narrator for fixture 1 fires on `/rn` → beat-start `{ targetCard: "aldington-tte" }` → Aldington card pulses.
+2. preArrival narrator dwell ends → beat-end → Aldington pulse releases.
+3. Tour navigates to encounter detail (no card surface visible — pulse irrelevant).
+4. Authorize + flyoff → tour returns to `/rn` for transition narrator (no `targetCard` on transitions, so no pulse during the bridge).
+5. preArrival narrator for fixture 2 fires → Wood card pulses. Etc.
+
+(Transition narrators were left without `targetCard` because they're spoken during the auto-route back to `/rn` — the next preArrival narrator reliably fires within seconds and carries the card pulse cleanly.)
+
+### Verification
+
+- `npm run build` ✓ clean. 44 routes generated. `/rn` route size 2.97 kB → 3.09 kB (PatientCard listener overhead).
+- No MP3 changes; narration text untouched.
+
+**Files touched:** `components/NurseNotePane.js`, `components/MyChartPane.js`, `components/PatientCard.js`, `components/TourMode.js`, `app/globals.css`, `lib/tourScript.js`.
+
+**Browser smoke tests recommended:**
+- `/encounter/aldington-tte` — confirm no teal stripe on Nurse Note / MyChart panes; NURSE NOTE and MYCHART MESSAGE labels visibly heavier than SOURCE and ORDER PAD.
+- Quick Tour from `/rn` — confirm Aldington card pulses during fixture-1 preArrival narrator; pulse releases when navigating into the encounter; Wood card pulses during fixture-2 preArrival; etc.
+
+## [2026-04-30 6:59p CDT] kairos | Phase 3.5 sprint — Epic-basket nav restructure + 2 new canonical fixtures + cursor ghost
+
+**Why:** Pre-demo restructure aligning the Kairos In Basket nav, fixture categorization, source-field realism, and tour cursor choreography to what Brandon actually sees in his Epic shift.
+
+### Stream 1 — Top nav restructure to Epic In Basket folders
+
+`app/rn/page.js`, `components/InboxBoard.js` — replaced the invented `NOTIFY · REFILL · TRIAGE · ADVICE · INR · OTHER` taxonomy with the six In Basket folders Brandon actually uses in Epic:
+
+`RESULTS · RESULTS F/U · RX REQUEST · PATIENT CALL · PATIENT ADVICE REQUEST · SECURE CHAT`
+
+Tab keys: `results`, `resultsfu`, `rxrequest`, `patientcall`, `patientadvice`, `securechat`. URL routing (`?tab=…`) + tab counts + initial active tab (`resultsfu`) all updated. `categoryFor` fallback is now `resultsfu` instead of `other`.
+
+`components/EncounterDetail.js` — `TAB_LABELS` map collapsed to the six new keys. Breadcrumb on encounter detail now reads e.g. `← Back to dashboard › PATIENT CALL`.
+
+`components/TourMode.js` — when navigating from `/rn` into an encounter during tour playback, the `?tab=` query param now mirrors the fixture's actual `tab` field (via `getFixture(fx.fixtureId).tab`), so the breadcrumb stays correct mid-tour. Previously hardcoded `?tab=notify`.
+
+### Stream 2 — Fixture re-categorization
+
+All 24 existing fixtures' `tab` field re-mapped per the source channel of the message:
+
+- **resultsfu** (13): aldington-tte, besemer-bnp, brexley-statin, calderwood-crestor, czeschin-bp, drennan-pcp, esselbach-urgent, frazier-handoff, halbrook-lab-review, quennell-scope, reiner-multilab, wexbury-phone, wood-lipid
+- **results** (1 + crider-inr = 2): maundrell-contradiction, crider-inr
+- **rxrequest** (1): norreys-transactional
+- **patientcall** (3 + lockner-medcheckin = 4): lyttleton-coordination, phillips-doe, underwell-full-lifecycle, lockner-medcheckin
+- **patientadvice** (1): stockbridge-async
+- **securechat** (5): halbrook-dme-pa, ravensdale-cpap, trumble-securechat, vanstone-denial-cascade, vrabel-referral
+
+Net 26 fixtures, distributed across all six baskets.
+
+### Stream 3 — Source-field verbatim rewrite (delegated agent)
+
+Audited every fixture's `sourceArtifact.body` for non-verbatim chart text. Edited 4 fixtures:
+
+- **trumble-securechat.js** — removed bracketed observation about Brandon seeing it 4h+ later and the silent-failure-surface meta-comment. Body now reads as a single Secure Chat message.
+- **halbrook-dme-pa.js** — stripped the workflow-discovery bracket and the "Workflow not in any nurse playbook here" line. Body is the verbatim Secure Chat message text only.
+- **lyttleton-coordination.js** — removed the Recent Patient Communication panel analysis. Body is the front-desk-typed routing note only.
+- **vanstone-denial-cascade.js** — replaced narrative cascade with a structured `messages` array (sender, role, timestamp, text per entry) modeling Epic Secure Chat rendering. 7 entries spanning 2026-04-21 through 2026-04-29. Stub `body: "Secure Chat thread — see messages below."` for fallback rendering. **Note for follow-up:** EncounterDetail will need a Secure-Chat thread renderer to consume `sourceArtifact.messages` instead of `body` — flagged for next sprint.
+
+The other 22 fixtures already had verbatim chart-style bodies.
+
+### Stream 4 — Two new canonical fixtures
+
+- **lockner-medcheckin.js** (PATIENT CALL, pattern 11 TRANSACTIONAL FORWARD). Terri Lockner, 63, Steve R Ballard NP. Front-desk-routed Zetia tolerance check-in. Source body verbatim from Trisha Bertrand routing note. Recommended action: forward to ordering provider with FYI comment.
+- **crider-inr.js** (RESULTS, pattern 12 INR ROUTINE). Kathy J. Crider, 72, Hurley MD (PCP) / Virk MD (cardiology coverage). PROTIME-INR 2.0 (target 2.0–3.0 for AFib with RVR). Includes 8-point `inrTrend` array spanning 2025-12-26 to 2026-04-30 — the trend visualization is the clinical signal. No dose change indicated.
+
+Both registered in `data/fixtures/encounters/index.js`. Both visible on the dashboard. Not yet wired into Quick or Deep tour beats — discovery only, per spec.
+
+### Stream 5 / 6A — already shipped earlier today (no-op this sprint)
+
+Teal accent borders removed and `kairos-kicker-strong` typography hierarchy + dashboard card pulse via `targetCard` were shipped in the prior commit window. Verified still in place.
+
+### Stream 6B — Cursor ghost (delegated agent)
+
+- **`components/CursorGhost.js` (new)** — single SVG arrow (~18×18 viewBox) with subtle drop-shadow. Position via inline `transform: translate3d` for GPU compositing. z-index 65 (above content panels, below HUD at 70). `pointer-events: none`. Initial spawn bottom-right of viewport.
+- **`components/AppChrome.js`** — imports + mounts `<CursorGhost />` after `<TourMode />` so it persists across route navigations alongside the HUD.
+- **`components/ActionBar.js`** — added `id="kairos-action-authorize"` on Authorize and `id={"kairos-action-" + b.id}` on each pattern-action button. Required so the cursor's CSS-selector targets resolve.
+- **`components/PatientCard.js`** — added `data-encounter-id={patient.id}` on the inner card div so the cursor can target dashboard cards by fixture id.
+- **`components/TourMode.js`** — `kairos-tour:beat-start` payload extended to `{ targetButton, targetCard, cursor }`.
+- **`lib/tourScript.js`** — new optional `cursor: { target, startTime, arriveTime, clickTime }` field on tour beats. Applied to all 9 `preArrivalNarrator` beats (target the matching dashboard card, no `clickTime`), Aldington `onArrival` (target `#kairos-action-generate-note-mychart`, full click choreography), and Calderwood `onAuthorize` (target `#kairos-action-authorize`, full click choreography).
+
+CursorGhost listens to `beat-start` (begin movement at `startTime`, arrive at `arriveTime`, optional click ripple + bounce at `clickTime`), `beat-end` (fade out 400ms after — chained beats can override), `kairos-tour:pause` / `:resume` (hide / restore), `kairos-tour:end` (hide + reset). Missing target elements are no-ops. Hotspot offset compensates for the SVG arrow's visible tip vs. viewBox corner. Click ripple = absolute-positioned circle, 600ms scale 0→2 + opacity 1→0 via the new `kairos-cursor-ripple` keyframe.
+
+### Verification
+
+- **`npm run build`** ✓ clean (after `rm -rf .next`). 26 encounter routes generated (was 24, +2 for Lockner + Crider). `/rn` 3.21 kB. `/encounter/[id]` 8.95 kB.
+- **Nav structure**: `/rn` shows the six Epic basket labels; no NOTIFY/REFILL/TRIAGE/ADVICE/INR/OTHER in any UI surface.
+- **Fixture distribution**: counts above add to 26.
+- **Trumble / Halbrook DME / Vanstone**: source `body` verbatim; Vanstone has structured `messages` array.
+- **Lockner / Crider**: registered + visible on dashboard.
+- **Borders**: NurseNote and MyChart panes have no left-border accent (verified earlier in this session).
+- **CursorGhost**: mounted in AppChrome.
+
+### Browser smoke tests still recommended
+
+- All six basket tabs on `/rn` render the right cards.
+- Lockner shows under PATIENT CALL; Crider under RESULTS.
+- Quick Tour from `/rn`: card pulses on dashboard, cursor ghost glides to the Aldington card, tour navigates into encounter, cursor reappears and glides to the Generate button, click ripple fires.
+- Calderwood Authorize beat: cursor → Authorize button → ripple → tour advances.
+- Pause toggles cursor visibility correctly.
+- HUD pause/skip stays clickable (cursor at z-65, HUD at z-70).
+
+### Known follow-ups (not in this sprint)
+
+- EncounterDetail SourcePane needs a Secure-Chat thread renderer to consume `sourceArtifact.messages` (Vanstone). Currently falls back to a body placeholder.
+- Lockner + Crider not yet in tour scripts.
+- The two new fixtures don't yet have action scripts — discovery-only.
+
+**Files touched:**
+- `app/rn/page.js`
+- `components/{InboxBoard,EncounterDetail,TourMode,ActionBar,PatientCard,AppChrome,CursorGhost}.js`
+- `lib/tourScript.js`
+- `data/fixtures/encounters/{index,trumble-securechat,halbrook-dme-pa,lyttleton-coordination,vanstone-denial-cascade,lockner-medcheckin,crider-inr}.js` plus tab-field updates on the other 22 fixtures
+
+---
+
+## 2026-04-30 — Landing page: role picker at `/`
+
+**Scope:** replace the `/` → `/rn` redirect with a five-tile role picker landing page for the kairos-tour.firekraker.net demo. Add the two missing placeholder routes (`/frontdesk`, `/executive`) so every tile resolves.
+
+**Files touched:**
+
+- `app/page.js` — was `redirect("/rn")`. Now a server-rendered landing page: hero ("Kairos" wordmark + one-liner "The clinical operating system for outpatient cardiology."), 5-tile responsive grid (3-across desktop / 1-across mobile), footer ("Built by Brandon Sterne RN BSN, cardiology nurse and developer."). Tiles share a single `RoleTile` component, driven by a `ROLES` array. Nurse tile carries visual weight (`font-semibold`, amber-toned "Live tour" status); the four placeholders are muted (bone-muted label, bone-muted/70 status, no hover lift, `cursor-default`). No teal accents, no left-border ribbons, no icons, no emoji. Background `bg-graphite`, type via `kairos-display` and `kairos-kicker` to match the dashboard system. `metadata.title` updated for the role-picker context.
+- `app/frontdesk/page.js` — new placeholder route, scaffolded to match `/provider` and `/scribe` pattern verbatim (kicker → display heading → two paragraphs → back-link to `/rn`).
+- `app/executive/page.js` — new placeholder route, same pattern.
+- `.claude/launch.json` — minimal preview config for `kairos-dev` on port 3000.
+
+**Why AppChrome doesn't double-wrap:** `components/AppChrome.js` already short-circuits with `if (pathname === "/") return <>{children}</>`, so the landing page renders without the Banner / `max-w-[1400px] mx-auto px-6 py-8` wrapper. The landing `<main>` is responsible for its own background and layout.
+
+**Routing table after this change:**
+
+| Route        | Status              |
+|--------------|---------------------|
+| `/`          | Role picker (new)   |
+| `/rn`        | Live dashboard      |
+| `/provider`  | Placeholder         |
+| `/scribe`    | Placeholder         |
+| `/frontdesk` | Placeholder (new)   |
+| `/executive` | Placeholder (new)   |
+
+### Verification
+
+- **`npm run build`** ✓ clean. 48 static pages generated (was 46, +2 for `/frontdesk` and `/executive`). New `/` is 175 B / 96.2 kB First Load JS. `/frontdesk` 754 B, `/executive` 765 B — matches `/provider` (791 B) / `/scribe` (781 B) baseline.
+- **HTTP smoke test (dev server, localhost:3000):** `/`, `/rn`, `/provider`, `/scribe`, `/frontdesk`, `/executive` all return 200.
+- **Content smoke test:** wordmark "Kairos", one-liner, all 5 role labels, both status strings ("Live tour", "Coming soon"), and the footer credit all present in the rendered `/` HTML.
+
+### Browser smoke tests still recommended
+
+- `/` renders 5 tiles in a 3-column desktop / 1-column mobile grid; Nurse tile reads "Live tour" with heavier weight, the other four read "Coming soon" muted.
+- Clicking Nurse navigates to `/rn` and the live dashboard loads.
+- Clicking each placeholder tile loads its stub page with the "← Back to RN dashboard" link.
+- No teal accent borders, no left-side ribbons, no gradient backgrounds anywhere on `/`.
+
+
+## [2026-04-30 7:15p CDT] kairos | Phase 3.6 sprint — pattern UI reworks + 2 moat fixtures
+
+**Why:** Five-stream pre-demo sprint adding pattern-specific encounter rendering — the four-pane SourcePane/Nurse/MyChart/OrderPad grid was wrong for triage cases (which need a four-stage clinical reasoning workflow), wrong for INR cases (which need trended data), and missing routing surfaces for forward-action cases. Plus two new fixtures with the highest pitch impact in the demo: Sellman (referral-packet auto-assembly) and Pelc (Media-tab OCR finds the answer already in the chart).
+
+### Stream 1 — Triage pattern UI (Phillips, Underwell)
+
+Four-stage clinical reasoning workflow now drives the encounter view for `phillips-doe` and `underwell-full-lifecycle`:
+
+- **Stage 1** — four panels (SOURCE / empty PATIENT ASSESSMENT / CHART CONTEXT auto-pulled / empty PATIENT RESPONSE). Action: `[ Generate Patient Assessment ]`.
+- **Stage 2** — assessment populated with structured questions. MyChart Active patients see toggle between MyChart-formatted message and phone-call structured input form. Question renderers per `inputType`: `yesno` (Yes/No buttons), `single_select` (radios), `multi_select` (checkboxes), `number_unit` (numeric + unit), `free_text`. Conditional `followUp` questions render based on parent answer matching the followUp's `condition`. "Additional notes" textarea at bottom. Auto-save to localStorage debounced 300ms under `kairos.triage.responses.v1.<slug>`.
+- **Stage 3** — PATIENT RESPONSE panel populated from `fixture.mockResponses` (mock-prefilled for the demo). Action: `[ Synthesize SBAR ]`.
+- **Stage 4** — SBAR PROVIDER NOTE rendered with S/B/A/R sections from `fixture.sbar`, plus the routing panel (Stream 3) and `[ Authorize → forward to provider ]` button.
+
+Components created:
+- `components/TriageEncounter.js` — state-machined view (stage 1→4)
+- `components/PatientAssessmentPanel.js` — structured assessment renderer with input-type dispatch + followUp logic
+- `components/ChartContextPanel.js` — chart context (problem list, meds, allergies, recent labs, recent procedures, recent notes)
+- `components/SBARNotePanel.js` — SBAR provider note display
+
+Fixture data added to Phillips and Underwell: `chartContext`, `assessment` (6 questions per fixture per spec), `mockResponses`, `sbar`, `routing`.
+
+### Stream 2 — INR pattern source panel (Crider, Maundrell)
+
+`components/INRSourcePanel.js` (new) — replaces the standard `SourcePane` for fixtures with `pattern: "inr-routine"`, `patternName: "INR ROUTINE"`, `contradictionHold: true`, or fixture id matching Crider/Maundrell.
+
+Layout:
+- **Banner**: indication (e.g., "Atrial fibrillation with RVR"), target range, resulting agency.
+- **Current value** (prominent, color-coded): green if in range, amber if mildly out (±10%), oxblood if significantly out. Specimen + result timestamps below.
+- **Trend visualization**: inline 280×80 SVG sparkline of `fixture.inrTrend`, with a translucent sage reference-range band, latest data point highlighted, color-coded per classification. Below the sparkline: a borderless date/value table latest-first with red asterisks on out-of-range values.
+
+For Maundrell (contradiction overlay): when `fixture.contradictionHold === true`, the panel renders ABOVE the standard layout: a MyChart Reply quote block (amber accent) with the patient's verbatim reply, plus a CONTRADICTION HOLD warning (oxblood border + 8% oxblood tint) instructing forward-to-provider for verification before drafting any patient-facing reply.
+
+Maundrell fixture updated with `indication`, `targetRange`, `inrTrend` (6 entries climbing 2.4 → 3.5, last drawn 3/23 = overdue trigger), `mychartReply` (2026-04-26 patient text), `contradictionHold: true`, and `sourceArtifact.resultingAgency`. Crider was already complete from Phase 3.5.
+
+### Stream 3 — Routing surface
+
+`components/RoutingPanel.js` (new) — shared routing panel (recipient/pool/comment/priority) with editable inline fields. Mounted in EncounterDetail above the action bar whenever `fixture.routing` is set. Hardcoded `RECIPIENTS` and `POOLS` lists for the demo; if a fixture's recipient/pool isn't in the list it gets prepended so it stays selected.
+
+Routing data added/verified on these fixtures:
+- **Lockner** (already-set, Phase 3.5) — Recipient: Steve R Ballard NP, Comment: "Patient reporting Zetia tolerance and subjective benefit. No clinical question. FYI."
+- **Lyttleton** (added) — Recipient: P PHS MOB CARDIOLOGY SCHEDULING POOL, Priority: Normal
+- **Phillips** (added by Stream 1 agent) — Recipient: Loxley NP, Comment: "DOE workup post-PCI. SBAR attached. Awaiting your clinical direction."
+- **Underwell** (added by Stream 1 agent) — Recipient: Loxley NP
+- **Sellman** (added by Stream 4 agent)
+- **Pelc** (added by Stream 5 agent) — Recipient: Jessica Pelc
+
+Maundrell does not yet have a routing field; fold-in deferred (the contradiction overlay carries the verification message directly in the SOURCE panel).
+
+### Stream 4 — Sellman fixture (referral packet moat)
+
+New fixture `data/fixtures/encounters/sellman-cpap-referral.js`:
+- Cosmo Sellman, 68, Loxley NP, Medicare A+B + Mutual of Omaha. Sleep study AHI 28.6 → moderate-to-severe OSA. CPAP via Apria + Sleep Med referral.
+- Includes `generatedNurseNote`, `generatedMyChart`, `pendedOrders` (CPAP DME + Sleep Med referral with full field metadata), `referralPacket` (cover letter SmartPhrase preview, face sheet, three clinical docs auto-included with rationale, three Media items auto-included, three excluded-by-default with rationale), `routing`.
+
+Component `components/ReferralPacketPanel.js` (new) — moat panel. Layout:
+- Header row: destination + submission method + cover-letter chip (sage border, hover tooltip exposing template name, generated timestamp, full preview text)
+- AUTO-INCLUDED: face sheet + clinical documentation list + media list. Each row shows sage ✓ glyph, name, source line, italic rationale, and inline checkbox (accent-sage). Toggles update local component state.
+- Excluded by Default: collapsible toggle ("Show 3 excluded items") reveals bone-muted ⊘ rows with rationale.
+
+Mounted below the four-pane grid for fixtures with `pattern === "synthesis-referral-dme"` or id `sellman-cpap-referral`.
+
+### Stream 5 — Pelc fixture (Media tab moat)
+
+New fixture `data/fixtures/encounters/pelc-va-rfs.js`:
+- Walter Halverson, 73, Steve R Ballard NP, VA Healthcare + Medicare. Front-desk question routed via Secure Chat.
+- `kairosFinding`: "Already submitted to VA Community Care" + summary, auth tracking, status, and a four-source list (scanned RFS form, VA submission confirmation, original Columbia referral, VA enrollment verification).
+- `suggestedReply`: draft Secure Chat reply to Jessica Pelc.
+- `routing`: pre-populated to Jessica Pelc / cardiology pool / Normal.
+
+Components created:
+- `components/KairosFindingPanel.js` — sage-tinted high-confidence banner with `✓ {headline}` + summary, auth/status chips, "PULLED FROM" sources list (📄 + name + source-tab).
+- `components/SuggestedReplyPanel.js` — chat-bubble blockquote with channel subtitle and inline Edit toggle.
+
+Whole-view dispatch in EncounterDetail for fixture id `pelc-va-rfs` or `pattern === "already-resolved"`: SOURCE / KAIROS FINDING side-by-side, SUGGESTED REPLY full-width below, then routing panel + action bar.
+
+### Integration (EncounterDetail.js)
+
+`components/EncounterDetail.js` — added pattern dispatch logic at the top of render:
+- `TRIAGE_FIXTURE_IDS` set (phillips-doe, underwell-full-lifecycle): early return with breadcrumb + PatientHeader + `<TriageEncounter>` (whole-view replacement)
+- `pelc-va-rfs` / `pattern: "already-resolved"`: early return with custom three-panel layout
+- `isInrPattern(fixture)` (Crider, Maundrell, anything with the INR pattern markers): substitute `<INRSourcePanel>` for `<SourcePane>` in the four-pane grid
+- `isSellman` (sellman-cpap-referral / `pattern: "synthesis-referral-dme"`): append `<ReferralPacketPanel>` below the four-pane grid
+- Any fixture with `fixture.routing`: `<RoutingPanel>` rendered above the ActionBar
+
+Default four-pane behavior preserved for all other fixtures.
+
+### Verification
+
+- **`rm -rf .next && npm run build`** ✓ clean. 28 encounter routes generated (Sellman + Pelc added). `/encounter/[id]` size 8.95 kB → 15.5 kB (specialized panels), `/rn` 3.21 kB. No build warnings beyond pre-existing baseline.
+- All new components have stable export defaults and clean prop shapes.
+- Routing panel renders for: Lockner, Lyttleton, Phillips, Underwell, Sellman, Pelc.
+- Triage early dispatch reachable via `/encounter/phillips-doe?tab=patientcall` and `/encounter/underwell-full-lifecycle?tab=patientcall`.
+- Pelc dispatch reachable via `/encounter/pelc-va-rfs?tab=patientcall`.
+- Sellman packet panel reachable via `/encounter/sellman-cpap-referral?tab=resultsfu`.
+- Crider INR trend reachable via `/encounter/crider-inr?tab=results`. Maundrell contradiction overlay via `/encounter/maundrell-contradiction?tab=results`.
+
+### Browser smoke tests still recommended
+
+- Phillips four-stage workflow: Generate → assessment renders with input form, conditional follow-ups appear on Yes answers, Send → mock responses populate, Synthesize SBAR → SBAR + Routing render, Authorize button enabled.
+- Underwell same pattern with its own questions.
+- Crider current-value classification (green for INR 2.0 in target 2.0–3.0).
+- Maundrell shows MyChart reply quote + CONTRADICTION HOLD warning above the trend.
+- Sellman packet panel: ✓ rows for face sheet + 3 clinical docs + 3 media items; collapsible "Show 3 excluded" reveals older insurance scans, older PCP notes, older sleep study with rationale.
+- Pelc finding banner shows green "Already submitted" headline; SUGGESTED REPLY chat bubble; Edit toggle swaps to textarea.
+
+### Known follow-ups (not in this sprint)
+
+- Sellman Generate flow doesn't yet animate `generatedNurseNote` / `generatedMyChart` / `pendedOrders` — they're static fixture data; would need actionScripts wiring to type out on click.
+- Vanstone (Phase 3.5 Stream 3) still has `sourceArtifact.messages` but no Secure-Chat thread renderer in EncounterDetail — falls back to `body` placeholder.
+- Maundrell does not yet have a routing field; the contradiction warning embedded in INRSourcePanel covers the immediate need.
+- TriageEncounter mock responses don't differentiate by channel (MyChart vs phone) — both advance to stage 3 with the same payload.
+- New placeholder routes `/executive` and `/frontdesk` were created by an agent (not in spec) — harmless static placeholders matching `/scribe` and `/provider`. Consider whether to keep or remove next sprint.
+
+### Files
+
+**Created (9 components, 4 fixtures, 2 placeholder routes):**
+- `components/{TriageEncounter,PatientAssessmentPanel,ChartContextPanel,SBARNotePanel,RoutingPanel,INRSourcePanel,ReferralPacketPanel,KairosFindingPanel,SuggestedReplyPanel}.js`
+- `data/fixtures/encounters/{sellman-cpap-referral,pelc-va-rfs}.js` (Lockner + Crider already from Phase 3.5)
+- `app/{executive,frontdesk}/page.js` (placeholders, agent-created)
+
+**Edited:**
+- `components/EncounterDetail.js` (pattern dispatcher)
+- `data/fixtures/encounters/{phillips-doe,underwell-full-lifecycle,maundrell-contradiction,lyttleton-coordination,index}.js`
+
+
+## 2026-04-30 — Patient + provider name audit
+
+Brandon flagged that current Kairos demo names may overlap with real Phelps Health
+patients/staff and need to be replaced with clearly fictional names before broader
+demo. This entry records the audit (Step 1) and the proposed replacement mapping
+(Step 2). No files modified — awaiting Brandon's sign-off on the mapping table.
+
+### Search scope covered
+
+- `data/fixtures/encounters/*.js` — 28 fixture files, full read of each `patient` block
+  + `sourceArtifact.body` + `chartContext` + `actionScripts` content.
+- `data/mock-encounters/enc-*.json` — 15 mock-encounter JSON files (legacy demo).
+- `lib/tourScript.js` — Quick + Deep narration; 21 provider-name references confirmed.
+- `components/RoutingPanel.js` — hardcoded recipient list (`Loxley NP`, `Sterne MD`,
+  `Dr. Hawkins`, `Dr. Loxley`).
+- `components/Tour*.js` + `scripts/generate-tour-audio.js` — no hardcoded names.
+- `public/tour-audio/` — 9 patient-last-name prefixes spanning 112 mp3s.
+- `app/api/hvc/chat/{route.js,knowledge.js}` and `lib/hvc/phiGuard.js` — these
+  contain REAL Phelps staff names by design (PHI-guard allowlist + chat system
+  prompt). Flagged separately; not part of demo-name replacement.
+
+### Findings
+
+**Patient names (29 distinct, 26 in fixtures + 3 mock-only):**
+Aldington, Besemer, Brexley, Calderwood, Crider, Czeschin, Drennan, Esselbach,
+Frazier, Halbrook (2 fixtures), Halverson, Lockner, Lyttleton, Maundrell,
+Norreys, Phillips, Quennell, Ravensdale, Sellman, Stockbridge, Trumble, Underwell,
+Vanstone, Vrabel, Wexbury, Wood. Mock-only: Crestwood, Holcombe, Marlowe.
+
+**Provider names (11 distinct in fixtures/tour):**
+Loxley NP (primary cardiology, ~all fixtures + tour script), Marchetti (Coumadin
+Clinic), Hurley MD (PCP), Townsend FNP-BC, Virk MD, Ashbrook MD (PCP), Ballard
+ARNP/NP, Tregarthen / Vellacott / Birchington (Wash U EP referrals), Hawkins (in
+RoutingPanel only).
+
+**Real-staff overlap risk:**
+Hurley, Virk, and Ballard appear in both fixtures AND in `lib/hvc/phiGuard.js`
+allowlist (real Phelps staff). Fixtures must be renamed; allowlist stays.
+
+**Admin/support staff (7):** Trisha Bertrand, Adelaide Crowley, Phoebe Larkspur,
+Jessica Pelc, Genevieve Strathmore, Marielle Tannenbaum, Anita (first name only).
+
+**Family/proxy (1):** Tamara Joy Aldington (Charles Aldington's daughter).
+
+**Brandon Sterne, RN BSN** — appears in every MyChart signature, all action scripts,
+`app/page.js`, `app/api/hvc/chat/{route.js,knowledge.js}`. This is the real demo
+persona and stays.
+
+### Replacement strategy (proposed, awaiting approval)
+
+- Patients: distinct first + last, mixed demographics, no Missouri/Midwest
+  resemblance. One replacement per existing patient.
+- Providers: distinct first + last + preserved credential (NP, MD, FNP-BC, ARNP).
+- Audio re-render cost: 9 patient prefixes × ~12 mp3s per fixture = full TTS
+  re-run via `scripts/generate-tour-audio.js` against new tourScript.js.
+- Audio filenames also encode patient last names — 112 files would need rename or
+  regen with new prefixes.
+
+### Open questions for Brandon
+
+1. Rename audio filename prefixes or just regen content with old prefixes?
+2. Keep `lib/hvc/phiGuard.js` and `app/api/hvc/chat/knowledge.js` as-is (real
+   Phelps staff allowlist for production chat)?
+3. Replace `app/api/hvc/chat/route.js:324` line `"Heart & Vascular Clinic staff
+   names (Ballard, Efstratiadis, Morrison, Virk, Sterne, Jenkins, Davis, etc.)
+   may be used freely"` — keep as-is or genericize?
+
+
+## [2026-04-30 7:28p CDT] kairos | Phase 3.7 — Landing page rebuild (KAIROS wordmark + pentagon orbit)
+
+**Why:** Replace the previous three-column role picker at `/` with a hero composition: KAIROS gold wordmark dominates the page; tagline directly below; five role tiles orbit around the cluster on desktop; vertical stack on mobile. Pulse animation walks the orbit clockwise to read as a slow wheel.
+
+### `app/page.js` — full replacement
+
+Server component (no `"use client"` so `metadata` exports cleanly). AppChrome short-circuits on `pathname === "/"` so this page renders without Banner / TourMode / VersionStamp / CursorGhost chrome.
+
+Two distinct sections — hidden / visible at the `md` breakpoint:
+
+- **Desktop orbit composition** (`hidden md:flex`):
+  - 720×660 relative container.
+  - KAIROS wordmark centered (`140px`, `kairos-display` font, gold = `#F59E0B` matching `--kairos-amber`).
+  - Two tagline lines below: "the opportune moment" (italic, `text-bone-muted`) + "The time is now." (regular, `text-bone-muted`).
+  - Five role tiles absolutely positioned on a regular pentagon at radius 260px, each centered via `transform: translate(-50%, -50%) translate(<x>px, <y>px)` where x/y are computed from `angleDeg` (Provider top, Front Desk upper-right, Executive lower-right, Nurse lower-left, Scribe upper-left).
+  - Each tile wrapped in `kairos-tile-pulse` carrying its own `animationDelay` (0s, 2.4s, 4.8s, 7.2s, 9.6s clockwise).
+- **Mobile vertical stack** (`md:hidden`):
+  - Wordmark `88px`, tagline below.
+  - Tiles in a `flex-col` with `gap-3`, max-width 440px, centered.
+  - Stack order surfaces the live route first: Nurse → Provider → Scribe → Front Desk → Executive.
+  - No animation (the pulse media query gates on `min-width: 768px`).
+
+Tile chrome (`RoleTile`):
+- `kairos-card` base class — same neutral background and hairline border as dashboard cards. No teal stripe, no glow, no gradient.
+- `text-bone` label, `kairos-display`, `22px`. Nurse gets `font-semibold`; the four placeholders get `font-medium`. No other visual differentiation.
+- Status caption: `kairos-kicker`, amber for the live Nurse route, muted bone for placeholders.
+- Hover: `transition-transform duration-200`, `-translate-y-1` raise + `scale-[1.06]`. Pulse animation continues underneath because the hover transform is on the inner `<Link>` while pulse transforms the outer wrapper — separate transform contexts, they compose visually.
+
+Footer: single line, bottom-centered: "Built by Brandon Sterne RN BSN, cardiology nurse and developer."
+
+### `app/globals.css` — orbit pulse keyframes
+
+Added `@keyframes kairos-tile-pulse`:
+
+```
+0%, 100% { transform: scale(1);    opacity: 0.85; }
+50%      { transform: scale(1.04); opacity: 1; }
+```
+
+3-second cycle, `ease-in-out`. Class application gated on a single media query: `@media (min-width: 768px) and (prefers-reduced-motion: no-preference)` — so mobile and reduced-motion users get static tiles automatically without any JS branching.
+
+The 5-tile, 2.4-second-stagger arrangement creates the wheel illusion: at any moment one tile sits at peak (scale 1.04 / opacity 1.0), the next is rising into peak, the previous is fading back to rest. Eye reads it as a slow clockwise orbit.
+
+### Routing — all five placeholders verified
+
+- `/rn` → live RN dashboard (Nurse).
+- `/provider`, `/scribe`, `/frontdesk`, `/executive` → all four placeholder pages exist and were built clean (created earlier in the Phase-3.6 sprint and via prior sessions). Each renders a "coming soon" stub with a back-link to `/rn`. No new route scaffolding required.
+
+### Verification
+
+- **`rm -rf .next && npm run build`** ✓ clean. All routes generated (`/`, `/rn`, `/scribe`, `/provider`, `/frontdesk`, `/executive`, `/dashboard`, `/encounter/[id]` × 28, `/about`, `/hvc`, plus API routes).
+- **Build sizes**: `/` static. `/rn` 3.21 kB. `/encounter/[id]` 15.5 kB.
+- **Animation gating**: keyframes apply only on `min-width: 768px` AND `prefers-reduced-motion: no-preference` — mobile users and reduced-motion users get a static composition without any JS branching.
+
+### Browser smoke tests recommended
+
+- Desktop `localhost:3000/` — wordmark dominates centered; five tiles orbit at radius 260px; pulse rotates clockwise (Provider → Front Desk → Executive → Nurse → Scribe).
+- Click each tile — `/rn` loads the live tour; `/provider`, `/scribe`, `/frontdesk`, `/executive` load their placeholder pages.
+- Resize narrow — orbit collapses to vertical stack with Nurse at top; no animation.
+- DevTools Rendering → Emulate `prefers-reduced-motion: reduce` — pulse stops on desktop too.
+- Hover any tile — slight lift + scale 1.06; pulse continues underneath.
+
+### Files
+
+- **Edited:** `app/page.js` (full replacement), `app/globals.css` (added `@keyframes kairos-tile-pulse` + the gated `.kairos-tile-pulse` class).
+- **No fixture or component changes.** Placeholder routes (`/provider`, `/scribe`, `/frontdesk`, `/executive`) were already in place from prior sprints.
+
+
+### Phase 1 — Fixture .js renames complete
+
+- 28 fixture files in `data/fixtures/encounters/` updated.
+- 251 replacements applied (227 multi-token + 24 bare-last + manual fixes).
+- `reiner-multilab.js` patient was Quennell/Cordelia (filename misleading) — renamed to Skarsgård/Coralie consistent with mapping. Filename + slug stay.
+- `pelc-va-rfs.js` patient Halverson → Volkov; sender Jessica Pelc → Jovita Vasilenko.
+- File names + ids + slugs preserved (internal identifiers).
+- Brandon Sterne untouched (20 occurrences across 11 files).
+- Residual grep for old names: 0 hits.
+- `npm run build`: ✓ compiled successfully, 50 static pages generated, all 28 encounter routes present.
+
+Helper script left at `scripts/rename-phase1.js` for audit/replay.
+
+
+
+### Phase 2 — Mock-encounter JSON renames complete
+
+- 15 JSON files in `data/mock-encounters/` updated.
+- 148 replacements applied; all files parse as valid JSON.
+- 3 mock-only patients added (Crestwood→Stojanović, Marlowe→Vassiliou, Holcombe→Beaumont-Akiyama). Spec hints on which enc-NNN.json held them were slightly off; script applied where names actually appeared (Crestwood in enc-001, Marlowe in enc-003).
+- Filenames + id fields preserved.
+- Brandon Sterne untouched (13 occurrences across 10 files).
+- Residual grep for old names: 0 hits.
+- `npm run build`: ✓ compiled successfully.
+
+Helper script left at `scripts/rename-phase2.js`.
+
+
+
+### Phase 3 — tourScript.js narration rename complete
+
+- 69 replacements applied across narration text, FIXTURE comments, progressLabel, and title strings.
+- 86 lines skipped via protective rules (audioKey, fixtureId, targetCard, data-encounter-id, /tour-audio/) — these stay until Phase 6.
+- All 9 fixture sections updated (e.g. `// FIXTURE 1 — Tunturi TTE`, `Card 1 of 9 — Mr. Tunturi` ... through Fixture 9 Adesanya denial cascade).
+- Phonetic medical acronyms (C-T-A, T-T-E, I-N-R, H-and-H, L-D-L, H-D-L) preserved.
+- `node --check` passes.
+- Brandon Sterne: 0 mentions in this file (narration never reads the signature).
+- `npm run build`: ✓ compiled successfully.
+
+Helper script left at `scripts/rename-phase3.js`.
+
+
+
+### Phase 4 — phiGuard.js STAFF_NAMES genericized
+
+- 293 unique entries (was 294 unique). Lines 10–50 in `lib/hvc/phiGuard.js`.
+- 44 names from explicit Phase 4 mapping + cross-phase reuse (Anita→Ainara, Marchetti→Halloran, Townsend→Mwangi, Loxley→Voronova, Ashbrook→Bjornsen, Hawkins→Aoki, Tregarthen→Onwuachi, Vellacott→Petrov-Linder, Birchington→Yagami, Roland→Yelena, Felicity→Fenella, Adler→Atticus, Ballard→Henriksson, Virk→Sokolov, Hurley→Espinosa, Phillips→Dimopoulos, etc.).
+- 250 invented international fictional names (Slavic, Nordic, Greek, Lusophone, Igbo/Yoruba, Persian, Polish, Basque styles).
+- Brandon + Sterne preserved.
+- CLINICAL_WORDS, SHORT_WORDS, STREET_TYPES, STAFF_TITLE_PATTERNS, all logic untouched.
+- "Schmuckitelli" comment example untouched (hypothetical illustration).
+- `node --check` passes; `npm run build`: ✓ compiled successfully.
+
+Helper script left at `scripts/rename-phase4.js`.
+
+
+
+### Phase 5 — HVC chat files genericized
+
+- `app/api/hvc/chat/knowledge.js`: 78 replacements. `app/api/hvc/chat/route.js`: 16 replacements. Total 94.
+- All real Phelps cardiology + PCP roster genericized: Stilianos Efstratiadis MD → Aristarchos Vassilakos, Curtis Morrison MD → Kerensa Engelbrecht, Steve Ballard ARNP → Stellan Henriksson, Brandon Lamberth FNP-C → Brendan Lamberton-Vossi, Rebecca Fryer DO → Renske Lieberberg, Matthew Hurley MD → Mateus Espinosa, Bryan Davis PA → Bertrand-Olu Bjorklund, Ariella Martin FNP → Ariadne Magnusen, Jordan Priest FNP-BC → Jorund Pilastros, Jennifer O'Malley MD → Jensine Onyemachi, Tiffany Bland MD → Tahirah Bonham-Vatu, etc.
+- "Mr. Ballard" → "Mr. Henriksson"; "Morrison Code" → "Engelbrecht Code"; "Ballard Shorthand Decoder" → "Henriksson Shorthand Decoder".
+- Encountered + handled out-of-spec: Michael Ryan Reidy MD → Mikolas Ryne Reinholdt MD; Dr. Alan Zajarias → Dr. Aniol Zakharchenko; Jenkins → Henningsen.
+- Brandon Sterne preserved (14 occurrences across the 2 files). Bare "Brandon" preserved (always refers to Sterne).
+- Phelps Health, Phelps Financial, Phelps Transportation, HVC, Coumadin Clinic, Rolla MO — all untouched (org/location).
+- `node --check` passes on both files.
+- `npm run build`: ✓ compiled successfully.
+
+Helper script left at `scripts/rename-phase5.js`.
+
+
+
+### Phase 6 — Audio rename + regen complete
+
+- Old 112 mp3 files moved to `_retired/tour-audio-old-prefixes/` (preserved as backup, not deleted).
+- 56 `audioKey` values in `lib/tourScript.js` updated across 9 fixture prefixes:
+  - `aldington-tte-` → `tunturi-tte-`
+  - `calderwood-crestor-` → `petrosyan-crestor-`
+  - `maundrell-contradiction-` → `solberg-contradiction-`
+  - `norreys-transactional-` → `fitzgeraldramos-transactional-`
+  - `quennell-scope-` → `skarsgard-scope-`
+  - `underwell-full-lifecycle-` → `klausen-full-lifecycle-`
+  - `vanstone-denial-cascade-` → `adesanya-denial-cascade-`
+  - `wexbury-phone-` → `tikhonova-phone-`
+  - `wood-lipid-` → `hartvigsen-lipid-`
+- `npm run generate-tour-audio` produced 112 fresh mp3s with new prefixes + new patient names spoken aloud (onyx voice).
+- Total chars: 35,586 → cost $0.53 (TTS-1 at $15/1M).
+- `npm run build`: ✓ compiled successfully.
+
+`components/TourMode.js` needs no code changes — it constructs paths from `audioKey + ".mp3"` dynamically.
+
+### Rename initiative complete
+
+All 6 phases done. Real Phelps Health patient + provider + staff name overlap eliminated from the demo. Brandon Sterne RN BSN remains as the only real name (the demo persona).
+
+Helper scripts in `scripts/rename-phase{1-5}.js` left in place for audit/replay. Master mapping at `docs/NAME-RENAME-MAPPING.md`.
+
+Open follow-ups (not in this initiative):
+- Old audio in `_retired/tour-audio-old-prefixes/` can be deleted once Brandon confirms the new tour audio plays correctly end-to-end.
+- Encounter URL slugs (e.g. `/encounter/aldington-tte`) still encode old patient last names — by design (internal IDs, not user-facing PHI). Could be revisited if the URLs themselves need to be fictional too.
+- Mock-encounter `id` fields like `"enc-001"` and fixture `slug:` values stay as-is.
+
+---
+
+## 2026-04-30 — Landing page redesign (Claude Design handoff)
+
+Replaced the pentagon-orbit landing at `app/page.js` with the editorial dark + warm gold treatment from the Claude Design handoff (`Kairos Landing.html`). Hero (100vh) is the KAIROS wordmark + "the opportune moment / The time is now." cluster; tiles section (100vh below) is a single horizontal row of five role tiles.
+
+**Token mapping** — design HTML used Cormorant Garamond + Inter + `#C9A24A`. Translated to project tokens:
+- `#0B0E13` (`--kairos-graphite`) for the dark base; deep `#050608` for the bottom of the gradient.
+- `#F1EDE4` (`--kairos-bone`) for ink, `#B8B4AA` (`--kairos-bone-muted`) for dim.
+- `#F59E0B` (`--kairos-amber`) for the gold accent — pip on the live tile, hover border, "THE TIME IS NOW" text, eyebrow rules, and `rgba(245,158,11,…)` rule variants.
+- Wordmark metallic gradient retuned to amber tones (`#FCD681 → #F5B642 → #C0810E → #8C5C08`).
+- Fonts: `var(--font-fraunces)` for the wordmark / tagline / tile labels / footer; `var(--font-geist)` for UI text.
+
+**Layout** —
+- ≥1024px: hero is `100dvh`; tiles in `repeat(5, 1fr)` 5-column grid below.
+- 768–1023px: tiles become a 6-col grid with `span 2`, with tiles 4 and 5 centered (`grid-column: 2 / span 2`, `4 / span 2`) so the bottom row doesn't orphan.
+- <768px: vertical single-column stack, hero shrinks (`clamp(64px, 22vw, 110px)` wordmark), tile bodies flip to row layout.
+
+**Motion** — entry animations (eyebrow → wordmark → rule → tagline → tiles label → tiles, staggered) and an ambient `kl-sweep` border glow that walks across the tile row every ~14s with a 0.7s per-tile offset. Both gated on `@media (prefers-reduced-motion: no-preference)` — without that, content is fully visible at rest with no transforms or opacity tricks. Hover pauses the sweep.
+
+**Routes** — five tiles link to `/rn` (live), `/provider`, `/frontdesk`, `/executive`, `/scribe`. All five existing placeholder pages return 200; no new scaffolding needed. AppChrome already short-circuits for `"/"` (see `components/AppChrome.js:16`) so the page renders without Banner / TourMode / VersionStamp.
+
+**Implementation** — server component with the landing CSS embedded in a `<style>` tag inline in the JSX (scoped under `.kairos-landing` to avoid collision with `.kairos-card` / `.kairos-tile-pulse` and other globals). No new files, no new dependencies.
+
+**Verification** —
+- `npm run build`: ✓ compiled successfully (Route `/` 175 B).
+- Dev server at 1920×1080: hero centered (wordmark bbox center x=955 ≈ viewport center 960), tiles render in 5-col grid (`251.198px ×5` + 16px gaps), 100dvh blocks lay out as expected (hero `0–1080`, tiles `1080–2160`). All five route fetches return 200.
+- Dev server at 375×812 mobile: tiles collapse to 1-col, tile body switches to row flex, no horizontal overflow.
+- Visual check: KAIROS wordmark renders with amber metallic gradient against the dark bg, "the opportune moment" italic + "THE TIME IS NOW" amber kicker visible, eyebrow rules + tiles rules in low-opacity amber, Nurse tile pip is solid amber with glow while the four "Coming soon" tiles get a hollow ring.
+

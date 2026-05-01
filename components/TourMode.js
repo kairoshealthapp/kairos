@@ -19,6 +19,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import TOUR_SCRIPT from "@/lib/tourScript";
+import { getFixture } from "@/data/fixtures/encounters";
 import SpotlightOverlay from "./SpotlightOverlay";
 import NarratorCorner from "./NarratorCorner";
 import TourEndModal from "./TourEndModal";
@@ -140,6 +141,7 @@ export default function TourMode() {
   const modeRef = useRef("quick");
   const runningRef = useRef(false);
   const audioRef = useRef(null);
+  const skipBeatRef = useRef(false);
 
   // state (drives render)
   const [active, setActive] = useState(false);
@@ -159,6 +161,9 @@ export default function TourMode() {
   const READ_PER_CHAR_MS = 50;
   const DWELL_FLOOR_MS = 3500;
   const DWELL_CEILING_MS = 16000;
+  // Spotlight panels (after-action bubbles, onArrival) hold at least this
+  // long after typing completes so the viewer can read what was just typed.
+  const SPOTLIGHT_MIN_MS = 8000;
 
   function computeDwell(data, speed) {
     if (!data) return DWELL_FLOOR_MS;
@@ -172,10 +177,13 @@ export default function TourMode() {
   }
 
   // pause-aware wait — caller passes the already-computed dwell ms.
+  // Returns early if skipBeatRef is set (Skip button advances current beat)
+  // or cancelledRef is set (full tour exit).
   const pwait = useCallback(async (ms) => {
     let elapsed = 0;
     while (elapsed < ms) {
       if (cancelledRef.current) return;
+      if (skipBeatRef.current) return;
       if (!pausedRef.current) {
         const slice = Math.min(40, ms - elapsed);
         await sleep(slice);
@@ -227,10 +235,28 @@ export default function TourMode() {
   const showNarrator = useCallback(
     async (data, total) => {
       if (!data) return;
+      skipBeatRef.current = false;
+      // Notify ActionBar (and other listeners) which button this beat
+      // targets — used to drive the pulse animation.
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("kairos-tour:beat-start", {
+            detail: {
+              targetButton: data.targetButton || null,
+              targetCard: data.targetCard || null,
+              cursor: data.cursor || null,
+            },
+          })
+        );
+      }
       const dwellMs = await beginBubble(data);
       setOverlay({ kind: "narrator", data, total });
       await pwait(dwellMs);
       stopAudio();
+      skipBeatRef.current = false;
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("kairos-tour:beat-end"));
+      }
       if (cancelledRef.current) return;
     },
     [pwait, beginBubble, stopAudio]
@@ -239,10 +265,30 @@ export default function TourMode() {
   const showSpotlight = useCallback(
     async (data) => {
       if (!data) return;
-      const dwellMs = await beginBubble(data);
+      skipBeatRef.current = false;
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("kairos-tour:beat-start", {
+            detail: {
+              targetButton: data.targetButton || null,
+              targetCard: data.targetCard || null,
+              cursor: data.cursor || null,
+            },
+          })
+        );
+      }
+      const audioMs = await beginBubble(data);
+      // Spotlight bubbles attach to a panel the viewer needs to read.
+      // Enforce a minimum hold so the next beat can't race the reader,
+      // regardless of how short the audio narration is.
+      const dwellMs = Math.max(SPOTLIGHT_MIN_MS, audioMs);
       setOverlay({ kind: "spotlight", data });
       await pwait(dwellMs);
       stopAudio();
+      skipBeatRef.current = false;
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("kairos-tour:beat-end"));
+      }
       if (cancelledRef.current) return;
     },
     [pwait, beginBubble, stopAudio]
@@ -353,7 +399,13 @@ export default function TourMode() {
           clearOverlay();
 
           // 2. Navigate into encounter
-          router.push(`/encounter/${fx.fixtureId}?tour=1&tab=notify`);
+          // Pass the fixture's actual basket so the encounter detail
+          // breadcrumb (← Back to dashboard › <CATEGORY>) reflects where
+          // this card lives in Epic. Fallback to resultsfu if the fixture
+          // is not registered.
+          const fxData = getFixture(fx.fixtureId);
+          const fxTab = (fxData && fxData.tab) || "resultsfu";
+          router.push(`/encounter/${fx.fixtureId}?tour=1&tab=${fxTab}`);
           // Wait for encounter to declare ready
           await waitForEvent(
             "kairos-encounter:ready",
@@ -513,7 +565,17 @@ export default function TourMode() {
     }
   }, []);
 
-  // Skip — cancel + restore.
+  // Advance current beat — Skip button. Stops audio for the current bubble,
+  // sets skipBeatRef so pwait returns immediately, and the runTour loop
+  // moves on to the next bubble/action/fixture without ending the tour.
+  const advanceBeat = useCallback(() => {
+    skipBeatRef.current = true;
+    stopAudio();
+  }, [stopAudio]);
+
+  // End-tour — cancel + restore. Used by the End button (modal) and
+  // Free-Explore exit paths. NOT bound to the Skip button (which advances
+  // the current beat instead, per Phase-3.4 quality-fix sprint).
   const skipTour = useCallback(() => {
     cancelledRef.current = true;
     runningRef.current = false;
@@ -592,14 +654,18 @@ export default function TourMode() {
           onToggleSpeed={toggleSpeed}
           onTogglePause={togglePause}
           onToggleMuted={toggleMuted}
-          onSkip={skipTour}
+          onSkip={advanceBeat}
+          onEnd={skipTour}
           onContinue={null}
         />
       ) : null}
 
-      {/* Always show tour HUD (skip + speed + mute + pause) when active, even
-          if no overlay is currently up (e.g. between steps during navigation). */}
-      {active && !overlay && !showEndModal ? (
+      {/* HUD persists across all route changes during tour playback —
+          including encounter detail pages where the bubble is a spotlight
+          (whose body doesn't carry HUD chrome of its own). Render the
+          HUD-only NarratorCorner whenever active, except when the narrator
+          variant is already showing it. */}
+      {active && (!overlay || overlay.kind !== "narrator") && !showEndModal ? (
         <NarratorCorner
           progressLabel={progressLabel || "Tour active"}
           step={stepIdx}
@@ -610,7 +676,8 @@ export default function TourMode() {
           onToggleSpeed={toggleSpeed}
           onTogglePause={togglePause}
           onToggleMuted={toggleMuted}
-          onSkip={skipTour}
+          onSkip={advanceBeat}
+          onEnd={skipTour}
           onContinue={null}
         />
       ) : null}

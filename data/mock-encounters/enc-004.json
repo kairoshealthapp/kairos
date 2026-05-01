@@ -10,8 +10,8 @@
   "receivedAt": "2026-04-29T12:18:00Z",
   "investigationState": "AWAITING_NURSE",
   "patient": {
-    "name": "Calderwood, Lorraine",
-    "displayName": "Lorraine Calderwood",
+    "name": "Petrosyan, Lorelei",
+    "displayName": "Lorelei Petrosyan",
     "age": 55,
     "sex": "F",
     "dob": "1971-05-12",
@@ -20,21 +20,21 @@
   },
   "source": {
     "title": "Result Note: Lipid panel + Chem-8 — increase Crestor",
-    "sender": "Loxley, Cardiology",
+    "sender": "Voronova, Cardiology",
     "receivedAt": "2026-04-29 07:18",
     "body": "Lipid panel and Chem-8 reviewed. LDL 142 (goal <100), HDL 38, TG 198, total 218. Chem-8 unremarkable. Increase Crestor (rosuvastatin) to 40 mg daily from 20 mg daily. Recheck lipid panel and hepatic function panel together in 90 days. Continue all other meds."
   },
-  "nurseNote": "Dr. Loxley reviewed lipid panel and Chem-8 today. LDL 142 (goal <100 in this patient with hyperlipidemia), HDL 38, triglycerides 198, total cholesterol 218. Chem-8 unremarkable. Plan: increase Crestor (rosuvastatin) to 40mg daily from 20mg daily. Repeat lipid panel and hepatic function panel together in 90 days (7/29/2026). Continue all other meds.\n\nPatient notified via MyChart.",
+  "nurseNote": "Dr. Voronova reviewed lipid panel and Chem-8 today. LDL 142 (goal <100 in this patient with hyperlipidemia), HDL 38, triglycerides 198, total cholesterol 218. Chem-8 unremarkable. Plan: increase Crestor (rosuvastatin) to 40mg daily from 20mg daily. Repeat lipid panel and hepatic function panel together in 90 days (7/29/2026). Continue all other meds.\n\nPatient notified via MyChart.",
   "output": {
     "channel": "mychart",
     "mychart": {
-      "recipient": "Lorraine Calderwood",
+      "recipient": "Lorelei Petrosyan",
       "proxyName": null,
       "subject": "Test results",
       "notifyBy": "2026-05-02",
       "repliesAllowed": "Replies allowed; nurse on alert",
-      "greeting": "Ms Calderwood,",
-      "body": "Dr. Loxley has reviewed your recent labs. Your LDL (bad cholesterol) is 142, above goal for you, while your other basic labs are normal.\n\nWe are increasing your Crestor (rosuvastatin) from 20 mg to 40 mg once daily. Continue all other medications.\n\nWe will recheck your lipid panel and a hepatic (liver) function panel together in about 90 days to make sure the higher dose is working and well tolerated. The lab orders are placed for you.\n\nPlease let us know if you have new muscle aches or dark urine.\n\nBrandon Sterne, RN BSN / Heart and Vascular Clinic"
+      "greeting": "Ms Petrosyan,",
+      "body": "Dr. Voronova has reviewed your recent labs. Your LDL (bad cholesterol) is 142, above goal for you, while your other basic labs are normal.\n\nWe are increasing your Crestor (rosuvastatin) from 20 mg to 40 mg once daily. Continue all other medications.\n\nWe will recheck your lipid panel and a hepatic (liver) function panel together in about 90 days to make sure the higher dose is working and well tolerated. The lab orders are placed for you.\n\nPlease let us know if you have new muscle aches or dark urine.\n\nBrandon Sterne, RN BSN / Heart and Vascular Clinic"
     }
   },
   "orderPad": {
@@ -51,9 +51,9 @@
         "expires": null,
         "clinicalQuestions": [],
         "releaseToPatient": true,
-        "ccResults": ["Loxley"],
-        "cosign": "Loxley",
-        "auditTrail": "increasing to 40mg daily from 20mg daily per Loxley"
+        "ccResults": ["Voronova"],
+        "cosign": "Voronova",
+        "auditTrail": "increasing to 40mg daily from 20mg daily per Voronova"
       },
       {
         "type": "Crestor (rosuvastatin) 40mg daily (PO)",
@@ -67,8 +67,8 @@
         "expires": "2027-04-29",
         "clinicalQuestions": [],
         "releaseToPatient": true,
-        "ccResults": ["Loxley"],
-        "cosign": "Loxley"
+        "ccResults": ["Voronova"],
+        "cosign": "Voronova"
       },
       {
         "type": "Lipid Panel",
@@ -84,8 +84,8 @@
           { "q": "Fasting?", "answered": true, "answer": "Yes" }
         ],
         "releaseToPatient": true,
-        "ccResults": ["Loxley"],
-        "cosign": "Loxley",
+        "ccResults": ["Voronova"],
+        "cosign": "Voronova",
         "labCluster": "lipid-hepatic-90d"
       },
       {
@@ -100,8 +100,8 @@
         "expires": "2026-08-29",
         "clinicalQuestions": [],
         "releaseToPatient": true,
-        "ccResults": ["Loxley"],
-        "cosign": "Loxley",
+        "ccResults": ["Voronova"],
+        "cosign": "Voronova",
         "labCluster": "lipid-hepatic-90d"
       }
     ],

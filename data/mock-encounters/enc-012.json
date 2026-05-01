@@ -10,8 +10,8 @@
   "receivedAt": "2026-04-29T15:44:00Z",
   "investigationState": "REPLY_RECEIVED",
   "patient": {
-    "name": "Quennell, Cordelia",
-    "displayName": "Cordelia Quennell",
+    "name": "Skarsgård, Coralie",
+    "displayName": "Coralie Skarsgård",
     "age": 64,
     "sex": "F",
     "dob": "1962-09-10",
@@ -28,13 +28,13 @@
   "output": {
     "channel": "mychart",
     "mychart": {
-      "recipient": "Cordelia Quennell",
+      "recipient": "Coralie Skarsgård",
       "proxyName": null,
       "subject": "Re: your question about H&H",
       "notifyBy": "2026-05-02",
       "repliesAllowed": "Replies allowed; nurse on alert",
-      "greeting": "Ms Quennell,",
-      "body": "Thanks for clarifying — you are asking about the elevated H&H result.\n\nThat question is best answered by the hematology specialist Dr. Loxley referred you to. They will review your full blood count history and explain how it might or might not affect your blood pressure or other symptoms. We will not change any of your cardiology medications based on this lab alone.\n\nIf you have not heard from hematology scheduling within the next week, let us know and we will help nudge things along.\n\nBrandon Sterne, RN BSN / Heart and Vascular Clinic"
+      "greeting": "Ms Skarsgård,",
+      "body": "Thanks for clarifying — you are asking about the elevated H&H result.\n\nThat question is best answered by the hematology specialist Dr. Voronova referred you to. They will review your full blood count history and explain how it might or might not affect your blood pressure or other symptoms. We will not change any of your cardiology medications based on this lab alone.\n\nIf you have not heard from hematology scheduling within the next week, let us know and we will help nudge things along.\n\nBrandon Sterne, RN BSN / Heart and Vascular Clinic"
     }
   },
   "orderPad": {

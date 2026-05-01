@@ -1,9 +1,14 @@
 // Phase 3.3 Tour Mode — Spotlight overlay.
-// Dims page + cuts a hole around an anchor element + floats a bubble next
-// to it. Anchor is found by data-tour-anchor="<id>" attribute.
+// Outlines the active anchor element with a soft amber border + glow and
+// floats a bubble next to it. Anchor is found by data-tour-anchor="<id>".
+//
+// Phase-3.4 quality fix: previously this component dimmed every other
+// panel via an SVG cutout mask. That was too aggressive — viewers couldn't
+// re-read previous panels while the next beat played. Now nothing is
+// dimmed; only the active anchor gets visual emphasis.
 //
 // Re-measures the anchor's bounding rect on mount + window resize so the
-// cutout stays aligned even if the page reflows during typing.
+// outline stays aligned even if the page reflows during typing.
 
 "use client";
 
@@ -135,46 +140,12 @@ export default function SpotlightOverlay({ anchor, position, title, body, onDism
     }
   }
 
-  // SVG mask cutout — fill the viewport black at 65% opacity, punch a hole.
-  const cutout = rect ? (
-    <rect
-      x={rect.x}
-      y={rect.y}
-      width={rect.w}
-      height={rect.h}
-      rx="6"
-      ry="6"
-      fill="black"
-    />
-  ) : null;
-
   return (
-    <div
-      className="fixed inset-0 z-[60] pointer-events-auto"
-      onClick={(e) => {
-        // Background click pauses tour (handled by TourMode).
-        // Bubble click handled separately via the Continue button.
-        if (e.target === e.currentTarget) {
-          // bubble area → propagate; backdrop → pass to TourMode pause handler
-        }
-      }}
-    >
-      {/* Dim layer with cutout via SVG mask */}
+    <div className="fixed inset-0 z-[60] pointer-events-none">
+      {/* Highlight layer — no dimming. Just an amber outline + soft glow on
+          the active anchor. Other panels stay at full opacity so the viewer
+          can keep reading what was just typed. */}
       <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
-        <defs>
-          <mask id="kairos-spot-mask">
-            <rect x="0" y="0" width="100%" height="100%" fill="white" />
-            {cutout}
-          </mask>
-        </defs>
-        <rect
-          x="0"
-          y="0"
-          width="100%"
-          height="100%"
-          fill="rgba(11, 14, 19, 0.72)"
-          mask="url(#kairos-spot-mask)"
-        />
         {rect && (
           <rect
             x={rect.x}
@@ -186,22 +157,24 @@ export default function SpotlightOverlay({ anchor, position, title, body, onDism
             fill="none"
             stroke="rgba(245, 158, 11, 0.85)"
             strokeWidth="2"
+            style={{ filter: "drop-shadow(0 0 12px rgba(245, 158, 11, 0.45))" }}
           />
         )}
       </svg>
 
       {/* Bubble — held at opacity 0 until anchor rect resolves so the bubble
           never flashes at the default (24,24) position before the page has
-          finished scrolling the anchor into view. */}
+          finished scrolling the anchor into view. The container above is
+          pointer-events-none so HUD clicks pass through; the bubble itself
+          re-enables pointer events for its Continue button. */}
       <div
-        className="absolute kairos-card p-4 shadow-2xl"
+        className="absolute kairos-card p-4 shadow-2xl pointer-events-auto"
         style={{
           width: BUBBLE_W,
           left: bubbleStyle.left,
           top: bubbleStyle.top,
           opacity: rect ? 1 : 0,
           transition: "opacity 180ms ease-out",
-          pointerEvents: rect ? "auto" : "none",
           background: "var(--color-platinum)",
           borderColor: "var(--color-amber)",
           borderWidth: 1,

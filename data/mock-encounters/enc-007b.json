@@ -10,8 +10,8 @@
   "receivedAt": "2026-04-29T19:02:00Z",
   "investigationState": "IN_PROGRESS",
   "patient": {
-    "name": "Underwell, Eleanora",
-    "displayName": "Eleanora Underwell",
+    "name": "Klausen, Esperanza",
+    "displayName": "Esperanza Klausen",
     "age": 81,
     "sex": "F",
     "dob": "1945-08-21",
@@ -24,12 +24,12 @@
     "receivedAt": "2026-04-29 14:02",
     "body": "Patient called clinic stating BP \"still high\" despite recent amlodipine dose reduction. Reports fuzzy thinking and feet swelling. Requests nurse callback. PMH: HTN, AFib, CAD, MR, CKD, peripheral edema. Last visit 3/2026 with amlodipine reduced from 10mg to 5mg due to peripheral edema."
   },
-  "nurseNote": "Patient called requesting callback re: amlodipine. Reports BP \"still high\" plus side effects (fuzzy thinking, feet swelling). PMH HTN/AFib/CAD/MR/CKD/peripheral edema, amlodipine reduced 3/2026 from 10mg to 5mg.\n\nPlanned 16-question chart-aware triage prior to callback. SBAR will be regenerated against patient answers post-call. Forwarded to Dr. Loxley once SBAR drafted.",
+  "nurseNote": "Patient called requesting callback re: amlodipine. Reports BP \"still high\" plus side effects (fuzzy thinking, feet swelling). PMH HTN/AFib/CAD/MR/CKD/peripheral edema, amlodipine reduced 3/2026 from 10mg to 5mg.\n\nPlanned 16-question chart-aware triage prior to callback. SBAR will be regenerated against patient answers post-call. Forwarded to Dr. Voronova once SBAR drafted.",
   "output": {
     "channel": "phone",
     "phone": {
-      "script": "Mrs. Underwell, this is Brandon from the Heart and Vascular Clinic. Thanks for calling earlier — Dr. Loxley asked me to gather some information from you before we make any decisions about your blood pressure medication.\n\nI have a few questions, and there are no wrong answers — please tell me what is true for you.\n\n1. What times of day are you taking your home blood pressure?\n2. What were your last few readings? Highest and lowest, if you remember.\n3. Tell me about the swelling in your feet — is it new since the dose change, or has it always been there?\n4. The fuzzy thinking — when do you notice it most? Morning, evening, after standing?\n5. Any new chest pain, palpitations, shortness of breath?\n6. Any episodes where you felt like you might pass out, or actually did?\n7. Are you still taking your eliquis and metoprolol every day?\n8. How is your appetite and your fluid intake?\n9. Any new medications since your March visit, even over the counter?\n10. Have you fallen or come close to falling since the dose change?\n11. Any new numbness, tingling, or weakness?\n12. How are you sleeping?\n13. Any change in how often you are urinating?\n14. Any new pain anywhere?\n15. Anything else that has been bothering you that we have not talked about?\n16. Is there a phone number where Dr. Loxley should reach you back today?\n\nThank you. I will share this with Dr. Loxley and we will call you back with a plan.",
-      "voicemail": "Hi Mrs. Underwell, this is Brandon from the Heart and Vascular Clinic returning your call about your blood pressure medication. Please give us a call back at the clinic number when you have ten minutes — Dr. Loxley wants to make sure we have the full picture before we make any changes. Thank you.",
+      "script": "Mrs. Klausen, this is Brandon from the Heart and Vascular Clinic. Thanks for calling earlier — Dr. Voronova asked me to gather some information from you before we make any decisions about your blood pressure medication.\n\nI have a few questions, and there are no wrong answers — please tell me what is true for you.\n\n1. What times of day are you taking your home blood pressure?\n2. What were your last few readings? Highest and lowest, if you remember.\n3. Tell me about the swelling in your feet — is it new since the dose change, or has it always been there?\n4. The fuzzy thinking — when do you notice it most? Morning, evening, after standing?\n5. Any new chest pain, palpitations, shortness of breath?\n6. Any episodes where you felt like you might pass out, or actually did?\n7. Are you still taking your eliquis and metoprolol every day?\n8. How is your appetite and your fluid intake?\n9. Any new medications since your March visit, even over the counter?\n10. Have you fallen or come close to falling since the dose change?\n11. Any new numbness, tingling, or weakness?\n12. How are you sleeping?\n13. Any change in how often you are urinating?\n14. Any new pain anywhere?\n15. Anything else that has been bothering you that we have not talked about?\n16. Is there a phone number where Dr. Voronova should reach you back today?\n\nThank you. I will share this with Dr. Voronova and we will call you back with a plan.",
+      "voicemail": "Hi Mrs. Klausen, this is Brandon from the Heart and Vascular Clinic returning your call about your blood pressure medication. Please give us a call back at the clinic number when you have ten minutes — Dr. Voronova wants to make sure we have the full picture before we make any changes. Thank you.",
       "callbackState": "VOICEMAIL_LEFT",
       "callbackTimestamp": "2026-04-29T19:18:00Z"
     }

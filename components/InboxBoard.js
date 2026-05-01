@@ -22,21 +22,30 @@ import { useMemo, useState } from "react";
 
 /* ---------------- helpers ---------------- */
 
+// Phase-3.5: nav restructure — six In Basket folders mirroring Epic
+// labels exactly.
 const SECTION_DEFS = [
-  { key: "notify",  label: "NOTIFY" },
-  { key: "refill",  label: "REFILL" },
-  { key: "triage",  label: "TRIAGE" },
-  { key: "advice",  label: "ADVICE" },
-  { key: "inr",     label: "INR" },
-  { key: "other",   label: "OTHER" },
+  { key: "results",       label: "RESULTS" },
+  { key: "resultsfu",     label: "RESULTS F/U" },
+  { key: "rxrequest",     label: "RX REQUEST" },
+  { key: "patientcall",   label: "PATIENT CALL" },
+  { key: "patientadvice", label: "PATIENT ADVICE REQUEST" },
+  { key: "securechat",    label: "SECURE CHAT" },
 ];
 
-const PRIMARY_TYPES = new Set(["notify", "refill", "triage", "advice", "inr"]);
+const PRIMARY_TYPES = new Set([
+  "results",
+  "resultsfu",
+  "rxrequest",
+  "patientcall",
+  "patientadvice",
+  "securechat",
+]);
 
 function sectionKeyForCard(card) {
-  const t = card?.type;
+  const t = card?.type || card?.tab;
   if (PRIMARY_TYPES.has(t)) return t;
-  return "other"; // handoff, auto, chase, anything unknown
+  return "resultsfu";
 }
 
 function ageFromDOB(dob) {

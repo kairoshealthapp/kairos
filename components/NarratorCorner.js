@@ -51,6 +51,7 @@ export default function NarratorCorner({
   speed,
   onToggleSpeed,
   onSkip,
+  onEnd,
   onContinue,
   paused,
   onTogglePause,
@@ -60,7 +61,7 @@ export default function NarratorCorner({
   const pct = total > 0 ? Math.round(((step + 1) / total) * 100) : 0;
   return (
     <div
-      className="fixed z-[55] right-4 bottom-4 w-[340px] kairos-card p-4 shadow-2xl"
+      className="fixed z-[70] right-4 bottom-4 w-[340px] kairos-card p-4 shadow-2xl"
       style={{
         background: "var(--color-platinum)",
         borderColor: "var(--color-amber)",
@@ -113,10 +114,21 @@ export default function NarratorCorner({
             <button
               type="button"
               onClick={onSkip}
-              className="text-[11px] font-medium text-bone-muted hover:text-oxblood bg-graphite/40 border border-mist/60 rounded-full px-2.5 min-h-[32px]"
-              title="Skip tour"
+              className="text-[11px] font-medium text-bone-muted hover:text-bone bg-graphite/40 border border-mist/60 rounded-full px-2.5 min-h-[32px]"
+              title="Skip to next card"
             >
-              Skip
+              Skip ▸
+            </button>
+          ) : null}
+          {onEnd ? (
+            <button
+              type="button"
+              onClick={onEnd}
+              className="text-[11px] font-medium text-bone-muted hover:text-oxblood bg-graphite/40 border border-mist/60 rounded-full px-2 min-h-[32px]"
+              title="Exit tour"
+              aria-label="Exit tour"
+            >
+              ✕
             </button>
           ) : null}
         </div>
