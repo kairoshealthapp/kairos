@@ -6,6 +6,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { listFixtures } from "@/data/fixtures/encounters";
 import PatientCard from "@/components/PatientCard";
 import TourLauncher from "@/components/TourLauncher";
@@ -60,13 +61,46 @@ function sortInTab(list) {
   });
 }
 
-function CogIcon() {
+function ResetIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 12a9 9 0 1 0 3-6.7" />
+      <path d="M3 4v5h5" />
     </svg>
   );
+}
+
+// Demo-state reset: clears every sessionStorage / localStorage key the
+// dashboard uses to remember per-fixture state (authorized cards, triage
+// responses, tour flags). Then forces a clean reload so /rn renders
+// fixtures in their original starting state. Called both manually
+// (the "Reset demo" affordance in the top nav) and automatically on
+// every /rn mount when the tour is not active — so anyone landing on
+// the demo always sees a fresh dashboard.
+function clearDemoState() {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem("kairos.authorizedCards.v1.backup");
+    // Tour flags — only safe to clear if the tour isn't currently running.
+    if (sessionStorage.getItem("kairos-tour-active") !== "1") {
+      sessionStorage.removeItem("kairos-tour-active");
+      sessionStorage.removeItem("kairos-tour-speed");
+    }
+    // Triage stage responses (per-fixture localStorage) and any other
+    // kairos-namespaced keys.
+    const lsKeysToDrop = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k) continue;
+      if (k.startsWith("kairos.triage.responses.v1.")) lsKeysToDrop.push(k);
+      else if (k.startsWith("kairos-fixture-")) lsKeysToDrop.push(k);
+      else if (k.startsWith("kairos-card-state-")) lsKeysToDrop.push(k);
+    }
+    for (const k of lsKeysToDrop) localStorage.removeItem(k);
+  } catch {
+    /* noop */
+  }
 }
 
 function startTour() {
@@ -96,6 +130,13 @@ export default function DashboardPage() {
   // window.location avoids the Suspense boundary required for useSearchParams
   // during static export.
   useEffect(() => {
+    // Auto-reset on every fresh dashboard mount when no tour is active.
+    // This guarantees viewers (outside the tour) always land on a clean
+    // dashboard regardless of what state earlier clicks left behind.
+    if (typeof window !== "undefined") {
+      const tourLive = sessionStorage.getItem("kairos-tour-active") === "1";
+      if (!tourLive) clearDemoState();
+    }
     const auth = readAuthorized();
     setAuthorized(auth);
     if (typeof window !== "undefined") {
@@ -177,9 +218,13 @@ export default function DashboardPage() {
       <header className="border-b border-mist/60 -mx-6 -mt-8 mb-8">
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6">
           <div className="h-14 flex items-center gap-3 sm:gap-8 justify-between sm:justify-start">
-            <span className="kairos-display text-bone text-xl tracking-tightest shrink-0">
-              Kairos
-            </span>
+            <Link
+              href="/rn"
+              className="kairos-nav-wordmark shrink-0"
+              aria-label="Kairos — dashboard home"
+            >
+              KAIROS
+            </Link>
             <nav className="hidden sm:flex items-center gap-1 ml-4">
               {TABS.map((tab) => {
                 const active = activeTab === tab.key;
@@ -212,10 +257,16 @@ export default function DashboardPage() {
               <span className="hidden sm:inline text-bone-muted">Brandon S., RN BSN</span>
               <button
                 type="button"
-                aria-label="Settings"
-                className="w-8 h-8 grid place-items-center text-bone-muted hover:text-bone hover:bg-platinum rounded-sm transition-colors"
+                aria-label="Reset demo"
+                title="Reset demo — clears any clicks and reloads fixtures in their original state"
+                onClick={() => {
+                  clearDemoState();
+                  window.location.reload();
+                }}
+                className="flex items-center gap-1.5 h-8 px-2 text-bone-muted hover:text-bone hover:bg-platinum rounded-sm transition-colors text-[12px]"
               >
-                <CogIcon />
+                <ResetIcon />
+                <span className="hidden sm:inline">Reset demo</span>
               </button>
             </div>
           </div>

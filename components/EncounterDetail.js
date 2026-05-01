@@ -311,6 +311,14 @@ export default function EncounterDetail({ fixture, fromTab }) {
       const actionId = e.detail && e.detail.actionId;
       const targetFixture = e.detail && e.detail.fixtureId;
       if (targetFixture && targetFixture !== fixture.id) return;
+      // Triage fixtures render via TriageEncounter (its own UI). The 4-pane
+      // grid below is hidden, so running the action script here just types
+      // long content into invisible panes — the tour stalls 15-25s waiting
+      // on action-complete between TRIAGE stages, producing the silences
+      // Brandon heard on his Card 7 walkthrough. TriageEncounter already
+      // listens to auto-action and advances setStage, and now dispatches
+      // action-complete immediately so the tour can move on.
+      if (TRIAGE_FIXTURE_IDS.has(fixture.id)) return;
       if (actionId) runAction(actionId);
     }
     function onAutoAuthorize() {
@@ -347,6 +355,11 @@ export default function EncounterDetail({ fixture, fromTab }) {
 
   // Authorize → auto-clear explanation pane → fly-off → sessionStorage
   // flag → back to dashboard.
+  //
+  // Demo-state guard: outside the tour, the fly-off animation still plays
+  // (so the click feels real) but the card is NOT persisted as authorized.
+  // When the user routes back to /rn, the card reappears in its original
+  // state. Only the tour engine should be permanently dismissing fixtures.
   const handleAuthorize = useCallback(async () => {
     if (isPlaying) return;
     setPaneState((p) => ({ ...p, phoneScript: "" })); // ephemeral pane
@@ -354,9 +367,14 @@ export default function EncounterDetail({ fixture, fromTab }) {
     await sleep(280);
     setCardState("flown-off");
     await sleep(420);
-    const set = readAuthorized();
-    set.add(fixture.id);
-    writeAuthorized(set);
+    const tourLive =
+      typeof window !== "undefined" &&
+      sessionStorage.getItem("kairos-tour-active") === "1";
+    if (tourLive) {
+      const set = readAuthorized();
+      set.add(fixture.id);
+      writeAuthorized(set);
+    }
     if (typeof window !== "undefined") {
       window.dispatchEvent(
         new CustomEvent("kairos-encounter:flown-off", {
