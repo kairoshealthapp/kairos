@@ -1,5 +1,5 @@
 // Pattern 4 — SYNTHESIS + DOSE CHANGE + LAB CLUSTER
-// Source: docs/KAIROS-SESSION-2026-04-29.md Section 5 CASE 3 (MacMillan/Petrosyan)
+// Source: docs/KAIROS-SESSION-2026-04-29.md Section 5 CASE 3 (MacMillan/Bennett)
 
 const fixture = {
   id: "calderwood-crestor",
@@ -18,19 +18,19 @@ const fixture = {
     severity: "green",
   },
   patient: {
-    name: "Petrosyan, Lorelei",
-    displayName: "Lorelei Petrosyan",
+    name: "Bennett, Lisa",
+    displayName: "Lisa Bennett",
     age: 55,
     sex: "F",
     dob: "1971-05-12",
     mrn: "44829137",
     proxyName: null,
-    primary: "Voronova NP, Heart and Vascular Clinic",
+    primary: "Davis NP, Cardiology Associates",
     coverage: "BCBS PPO",
   },
   sourceArtifact: {
     type: "Result Note",
-    author: "Voronova, Cardiology",
+    author: "Davis, Cardiology",
     timestamp: "2026-04-29 07:18",
     body: "Lipid panel and Chem-8 reviewed. LDL 142 (goal <100), HDL 38, TG 198, total 218. Chem-8 unremarkable. Increase Crestor (rosuvastatin) to 40 mg daily from 20 mg daily. Recheck lipid panel and hepatic function panel together in 90 days. Continue all other meds.",
   },
@@ -51,7 +51,7 @@ const fixture = {
         typingSpeedCps: 80,
         delayMsBefore: 600,
         content:
-          "Dr. Voronova reviewed lipid panel and Chem-8 today. LDL 142 (goal <100 in this patient with hyperlipidemia), HDL 38, triglycerides 198, total cholesterol 218. Chem-8 unremarkable. Plan: increase Crestor (rosuvastatin) to 40mg daily from 20mg daily. Repeat lipid panel and hepatic function panel together in 90 days (7/29/2026). Continue all other meds.\n\nPatient notified via MyChart.",
+          "Dr. Davis reviewed lipid panel and Chem-8 today. LDL 142 (goal <100 in this patient with hyperlipidemia), HDL 38, triglycerides 198, total cholesterol 218. Chem-8 unremarkable. Plan: increase Crestor (rosuvastatin) to 40mg daily from 20mg daily. Repeat lipid panel and hepatic function panel together in 90 days (7/29/2026). Continue all other meds.\n\nPatient notified via MyChart.",
       },
       {
         type: "pane-update",
@@ -60,7 +60,7 @@ const fixture = {
         typingSpeedCps: 70,
         delayMsBefore: 400,
         content:
-          "Ms Petrosyan,\n\nDr. Voronova has reviewed your recent labs. Your LDL (bad cholesterol) is 142, above goal for you, while your other basic labs are normal.\n\nWe are increasing your Crestor (rosuvastatin) from 20 mg to 40 mg once daily. Continue all other medications.\n\nWe will recheck your lipid panel and a hepatic (liver) function panel together in about 90 days to make sure the higher dose is working and well tolerated. The lab orders are placed for you.\n\nPlease let us know if you have new muscle aches or dark urine.\n\nBrandon Sterne, RN BSN / Heart and Vascular Clinic",
+          "Ms Bennett,\n\nDr. Davis has reviewed your recent labs. Your LDL (bad cholesterol) is 142, above goal for you, while your other basic labs are normal.\n\nWe are increasing your Crestor (rosuvastatin) from 20 mg to 40 mg once daily. Continue all other medications.\n\nWe will recheck your lipid panel and a hepatic (liver) function panel together in about 90 days to make sure the higher dose is working and well tolerated. The lab orders are placed for you.\n\nPlease let us know if you have new muscle aches or dark urine.\n\nBrandon Sterne, RN BSN / Cardiology Associates",
       },
       { type: "banner", kind: "yellow", text: "Lab cluster detected: lipid + hepatic in 90 days → grouping to single date", durationMs: 1200, delayMsBefore: 200 },
       {
@@ -79,8 +79,8 @@ const fixture = {
               status: "Active",
               expectedDate: "2026-04-29",
               clinicalQuestions: [],
-              cosign: "Voronova",
-              auditTrail: "increasing to 40mg daily from 20mg daily per Voronova",
+              cosign: "Davis",
+              auditTrail: "increasing to 40mg daily from 20mg daily per Davis",
             },
             {
               type: "Crestor (rosuvastatin) 40mg daily (PO)",
@@ -92,7 +92,7 @@ const fixture = {
               expectedDate: "2026-04-29",
               expires: "2027-04-29",
               clinicalQuestions: [],
-              cosign: "Voronova",
+              cosign: "Davis",
             },
             {
               type: "Lipid Panel",
@@ -104,7 +104,7 @@ const fixture = {
               status: "Future",
               expectedDate: "2026-07-29 Approx",
               clinicalQuestions: [{ q: "Fasting?", answered: true, answer: "Yes" }],
-              cosign: "Voronova",
+              cosign: "Davis",
               labCluster: "lipid-hepatic-90d",
             },
             {
@@ -117,7 +117,7 @@ const fixture = {
               status: "Future",
               expectedDate: "2026-07-29 Approx",
               clinicalQuestions: [],
-              cosign: "Voronova",
+              cosign: "Davis",
               labCluster: "lipid-hepatic-90d",
             },
           ],

@@ -1,6 +1,6 @@
 // Pattern 7b — ASYNC PRE-CALL STRUCTURED INQUIRY (skeleton)
 // Source: docs/KAIROS-CONTEXT-ADDENDUM-2026-04-28.md Pattern 7
-// Dimopoulos DOE 4 stents 2025 — 20 chart-aware questions, MRSA discovery via Q16.
+// Bryant DOE 4 stents 2025 — 20 chart-aware questions, MRSA discovery via Q16.
 
 const fixture = {
   id: "phillips-doe",
@@ -19,14 +19,14 @@ const fixture = {
     severity: "amber",
   },
   patient: {
-    name: "Dimopoulos, Calantha",
-    displayName: "Calantha Dimopoulos",
+    name: "Bryant, Harold",
+    displayName: "Harold Bryant",
     age: 78,
     sex: "M",
     dob: "1948-04-01",
     mrn: "82091736",
     proxyName: null,
-    primary: "Voronova NP, Heart and Vascular Clinic",
+    primary: "Davis NP, Cardiology Associates",
     coverage: "Medicare A+B",
   },
   sourceArtifact: {
@@ -67,19 +67,19 @@ const fixture = {
       {
         date: "2025-08-22",
         name: "PCI x4 stents (LAD, LCx, RCA distal, RCA mid)",
-        provider: "Voronova NP / interventional team",
+        provider: "Davis NP / interventional team",
       },
     ],
     recentNotes: [
       {
         date: "2026-04-01",
-        author: "Voronova NP",
+        author: "Davis NP",
         summary:
           "Routine follow-up post-PCI. DAPT continued. No new symptoms reported. Lipids at goal.",
       },
       {
         date: "2026-02-12",
-        author: "Voronova NP",
+        author: "Davis NP",
         summary:
           "Cardiology follow-up. Stable. DOE only with significant exertion. Medication review unchanged.",
       },
@@ -154,15 +154,15 @@ const fixture = {
       "Recommend prompt cardiology evaluation. Considerations: repeat BNP and BMP, ECG, echo for LVEF reassessment, consider stress imaging vs cath given symptom pattern. Awaiting your direction on next steps.",
   },
   routing: {
-    recipient: "Voronova NP",
-    pool: "P Phs Mob Cardiology Support Staff Pool",
+    recipient: "Davis NP",
+    pool: "Lakeside Cardiology Support Pool",
     comment: "DOE workup post-PCI. SBAR attached. Awaiting your clinical direction.",
     priority: "Normal",
   },
   actionScripts: {},
   finalSignedState: {
     nurseNote:
-      "Patient reports DOE despite 4 stents 2025. 20 chart-aware questions deployed (canonical pattern-7 implementation). Surprise data: active MRSA infection from elbow surgery (caught via medication-list cross-check), decreased appetite, weight loss. SBAR forwarded to Voronova urgent.",
+      "Patient reports DOE despite 4 stents 2025. 20 chart-aware questions deployed (canonical pattern-7 implementation). Surprise data: active MRSA infection from elbow surgery (caught via medication-list cross-check), decreased appetite, weight loss. SBAR forwarded to Davis urgent.",
     phoneScript: "[20-question chart-aware inquiry script]",
     orders: [],
     dxAssociated: ["Heart failure, unspecified", "MRSA infection of skin"],

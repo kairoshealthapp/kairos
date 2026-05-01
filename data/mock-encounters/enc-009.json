@@ -10,8 +10,8 @@
   "receivedAt": "2026-04-29T14:11:00Z",
   "investigationState": "AWAITING_NURSE",
   "patient": {
-    "name": "Fitzgerald-Ramos, Winslow",
-    "displayName": "Winslow Fitzgerald-Ramos",
+    "name": "Stewart, Daniel",
+    "displayName": "Daniel Stewart",
     "age": 65,
     "sex": "M",
     "dob": "1961-07-22",
@@ -28,13 +28,13 @@
   "output": {
     "channel": "mychart",
     "mychart": {
-      "recipient": "Winslow Fitzgerald-Ramos",
+      "recipient": "Daniel Stewart",
       "proxyName": null,
       "subject": "Warfarin refill",
       "notifyBy": "2026-05-01",
       "repliesAllowed": "Replies allowed; nurse on alert",
-      "greeting": "Mr Fitzgerald-Ramos,",
-      "body": "Got it — your warfarin 6 mg refill has been sent to your pharmacy. Please continue at the new dose and we will check INR at your next routine draw.\n\nBrandon Sterne, RN BSN / Heart and Vascular Clinic"
+      "greeting": "Mr Stewart,",
+      "body": "Got it — your warfarin 6 mg refill has been sent to your pharmacy. Please continue at the new dose and we will check INR at your next routine draw.\n\nBrandon Sterne, RN BSN / Cardiology Associates"
     }
   },
   "orderPad": {
@@ -51,8 +51,8 @@
         "expires": "2026-07-29",
         "clinicalQuestions": [],
         "releaseToPatient": true,
-        "ccResults": ["Halloran"],
-        "cosign": "Halloran"
+        "ccResults": ["Reynolds"],
+        "cosign": "Reynolds"
       }
     ],
     "hasUnansweredQuestions": false

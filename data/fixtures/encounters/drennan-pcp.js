@@ -1,5 +1,5 @@
 // Pattern 6 — SYNTHESIS + HANDOFF (skeleton, actionScripts not yet written)
-// Source: docs/KAIROS-SESSION-2026-04-29.md Section 5 CASE 4 (McGuirk/Lindqvist)
+// Source: docs/KAIROS-SESSION-2026-04-29.md Section 5 CASE 4 (McGuirk/Reilly)
 
 const fixture = {
   id: "drennan-pcp",
@@ -18,22 +18,22 @@ const fixture = {
     severity: "green",
   },
   patient: {
-    name: "Lindqvist, Cassiel",
-    displayName: "Cassiel Lindqvist",
+    name: "Reilly, Megan",
+    displayName: "Megan Reilly",
     age: 28,
     sex: "F",
     dob: "1998-07-14",
     mrn: "60017802",
     proxyName: null,
-    primary: "Voronova NP, Heart and Vascular Clinic",
+    primary: "Davis NP, Cardiology Associates",
     coverage: "BCBS HMO",
   },
   sourceArtifact: {
     type: "Result Note",
-    author: "Voronova, Cardiology",
+    author: "Davis, Cardiology",
     timestamp: "2026-04-29 08:01",
     body:
-      "CTA abdomen reviewed. Cardiac findings unremarkable. Incidental 1.4 cm simple-appearing pancreatic cyst noted; below standard threshold for cardiology workup. Please forward results to her PCP (Fenella Bjornsen MD) for further follow-up.",
+      "CTA abdomen reviewed. Cardiac findings unremarkable. Incidental 1.4 cm simple-appearing pancreatic cyst noted; below standard threshold for cardiology workup. Please forward results to her PCP (Fenella Olson MD) for further follow-up.",
   },
   initialPaneContent: {
     nurseNote: "",
@@ -44,10 +44,10 @@ const fixture = {
   actionScripts: {},
   finalSignedState: {
     nurseNote:
-      "Dr. Voronova reviewed CTA abdomen. Cardiac findings unremarkable. Incidental 1.4 cm pancreatic cyst — forwarded to PCP (Fenella Bjornsen MD). Patient notified via MyChart.",
+      "Dr. Davis reviewed CTA abdomen. Cardiac findings unremarkable. Incidental 1.4 cm pancreatic cyst — forwarded to PCP (Fenella Olson MD). Patient notified via MyChart.",
     mychartMessage:
-      "Dr. Voronova reviewed your scan — heart side unremarkable. Incidental small pancreatic cyst forwarded to your PCP (Dr. Bjornsen).",
-    orders: ["Route imaging study to PCP — Fenella Bjornsen MD"],
+      "Dr. Davis reviewed your scan — heart side unremarkable. Incidental small pancreatic cyst forwarded to your PCP (Dr. Olson).",
+    orders: ["Route imaging study to PCP — Fenella Olson MD"],
     dxAssociated: ["Other specified disorders of pancreas"],
   },
 };

@@ -10,8 +10,8 @@
   "receivedAt": "2026-04-29T19:32:00Z",
   "investigationState": "IN_PROGRESS",
   "patient": {
-    "name": "Adesanya, Coralina N",
-    "displayName": "Coralina N Adesanya",
+    "name": "Jackson, Tanya N.",
+    "displayName": "Tanya N. Jackson",
     "age": 41,
     "sex": "F",
     "dob": "1985-06-18",
@@ -20,21 +20,21 @@
   },
   "source": {
     "title": "Secure Chat: CTA Coronary denied — peer-to-peer today only",
-    "sender": "Mireia Kovacs (PHS Mobile Cardiology Support Staff)",
+    "sender": "Amanda Wright (Lakeside Cardiology Support Pool)",
     "receivedAt": "2026-04-29 14:32",
     "body": "CTA Coronary Arteries denied. The reason given: \"missing a doctor's note explaining why a heart-walking test (Stress Echocardiogram) cannot be done.\" A peer-to-peer is available today only by calling 800-XXX-XXXX (Member ID# 16337356, Tracking# 098121753502). Resubmission with new documentation also possible. — Leona Petrov (8789)\n\n[8-day cascade preceding this denial: NM SPECT denied 4/21 → exercise stress echo offered → patient unable to walk → Lexiscan Myoview ordered & cancelled → CTA Coronary placed → DENIED today.]"
   },
-  "nurseNote": "Pattern 13 INSURANCE DENIAL CASCADE — second denial in 8-day investigation. Dr. Voronova added to Secure Chat thread for peer-to-peer decision (deadline today only) vs. resubmission vs. moving directly to heart cath given patient's CAD with prior stent + ongoing symptoms.\n\nPatient outreach drafted using denial-acknowledgment frame (NOT default imaging-review frame — auth-state aware). Voicemail attempted concurrently with MyChart send.",
+  "nurseNote": "Pattern 13 INSURANCE DENIAL CASCADE — second denial in 8-day investigation. Dr. Davis added to Secure Chat thread for peer-to-peer decision (deadline today only) vs. resubmission vs. moving directly to heart cath given patient's CAD with prior stent + ongoing symptoms.\n\nPatient outreach drafted using denial-acknowledgment frame (NOT default imaging-review frame — auth-state aware). Voicemail attempted concurrently with MyChart send.",
   "output": {
     "channel": "mychart",
     "mychart": {
-      "recipient": "Coralina N Adesanya",
+      "recipient": "Tanya N. Jackson",
       "proxyName": null,
       "subject": "Update on your heart imaging",
       "notifyBy": "2026-05-01",
       "repliesAllowed": "Replies allowed; nurse on alert",
-      "greeting": "Ms Adesanya,",
-      "body": "Unfortunately, your insurance has denied the heart CT scan that Dr. Voronova ordered. This is the second test they have denied, and we understand how frustrating this is.\n\nDr. Voronova's recommended next step is a heart catheterization (heart cath). This is a procedure where a small tube is guided through a blood vessel to take detailed pictures of the arteries around your heart. Given your history of coronary artery disease with prior stent placement and the symptoms you have been experiencing, this is the best path forward to find answers. We are hopeful insurance will approve this procedure.\n\nBefore we move forward, we need to check in with you:\n\n1. Are you still having chest pain, shortness of breath, nausea, or sweating?\n2. Have your symptoms gotten better, worse, or stayed about the same?\n3. Are you having any new symptoms we should know about?\n\nPlease reply to this message at your earliest convenience so we can update Dr. Voronova and determine next steps.\n\nI also tried to reach you by phone today and left a voicemail. Thank you for your patience as we work through this with your insurance.\n\nBrandon Sterne, RN BSN / Heart and Vascular Clinic"
+      "greeting": "Ms Jackson,",
+      "body": "Unfortunately, your insurance has denied the heart CT scan that Dr. Davis ordered. This is the second test they have denied, and we understand how frustrating this is.\n\nDr. Davis's recommended next step is a heart catheterization (heart cath). This is a procedure where a small tube is guided through a blood vessel to take detailed pictures of the arteries around your heart. Given your history of coronary artery disease with prior stent placement and the symptoms you have been experiencing, this is the best path forward to find answers. We are hopeful insurance will approve this procedure.\n\nBefore we move forward, we need to check in with you:\n\n1. Are you still having chest pain, shortness of breath, nausea, or sweating?\n2. Have your symptoms gotten better, worse, or stayed about the same?\n3. Are you having any new symptoms we should know about?\n\nPlease reply to this message at your earliest convenience so we can update Dr. Davis and determine next steps.\n\nI also tried to reach you by phone today and left a voicemail. Thank you for your patience as we work through this with your insurance.\n\nBrandon Sterne, RN BSN / Cardiology Associates"
     }
   },
   "orderPad": {

@@ -8,17 +8,17 @@
 import { useState } from "react";
 
 const POOLS = [
-  "P Phs Mob Cardiology Support Staff Pool",
-  "P Phs Mob Primary Care Support Staff Pool",
-  "P Phs Mob Endocrinology Support Staff Pool",
-  "P Phs Mob Pulmonology Support Staff Pool",
+  "Lakeside Cardiology Support Pool",
+  "Lakeside Primary Care Support Pool",
+  "Lakeside Endocrinology Support Pool",
+  "Lakeside Pulmonology Support Pool",
 ];
 
 const RECIPIENTS = [
-  "Loxley NP",
+  "Knight NP",
   "Sterne MD",
-  "Dr. Hawkins",
-  "Dr. Loxley",
+  "Dr. Marshall",
+  "Dr. Knight",
 ];
 
 const PRIORITIES = ["Low", "Normal", "High", "Urgent"];

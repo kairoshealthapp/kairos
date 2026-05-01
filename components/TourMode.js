@@ -103,7 +103,10 @@ function preloadFixtureAudio(fx, mode) {
 }
 
 // Wait for a window CustomEvent. Optionally filter by detail predicate.
-function waitForEvent(name, predicate, cancelledRef) {
+// `skipRef` is optional — if provided, setting skipRef.current=true also
+// resolves the promise (used by the Skip button to exit a runAction's
+// action-complete wait without ending the tour).
+function waitForEvent(name, predicate, cancelledRef, skipRef) {
   return new Promise((resolve) => {
     function handler(e) {
       if (cancelledRef.current) {
@@ -117,9 +120,10 @@ function waitForEvent(name, predicate, cancelledRef) {
       }
     }
     window.addEventListener(name, handler);
-    // Allow cancellation to drain the listener.
+    // Allow cancellation (and skip, if a skipRef was passed) to drain
+    // the listener.
     const cancelPoll = setInterval(() => {
-      if (cancelledRef.current) {
+      if (cancelledRef.current || (skipRef && skipRef.current)) {
         clearInterval(cancelPoll);
         window.removeEventListener(name, handler);
         resolve(null);
@@ -172,8 +176,13 @@ export default function TourMode() {
     const lengthAware = READ_BASE_MS + chars * READ_PER_CHAR_MS;
     const authored = data.durationMs || 4000;
     const base = Math.max(authored, lengthAware);
-    const adjusted = speed === 2 ? base * 0.6 : base;
-    return Math.max(DWELL_FLOOR_MS, Math.min(DWELL_CEILING_MS, adjusted));
+    // Speed control: 1x = base; 2x = base/2. Floor and ceiling both scale
+    // so a 2x viewer actually finishes everything in half the time —
+    // including the short bubbles that would otherwise be pinned at the
+    // 3500ms floor.
+    const s = Math.max(1, speed || 1);
+    const adjusted = base / s;
+    return Math.max(DWELL_FLOOR_MS / s, Math.min(DWELL_CEILING_MS / s, adjusted));
   }
 
   // pause-aware wait — caller passes the already-computed dwell ms.
@@ -219,13 +228,19 @@ export default function TourMode() {
       if (audio) {
         audioRef.current = audio;
         audio.muted = mutedRef.current;
+        // Apply current speed to the audio. playbackRate=2 plays the same
+        // MP3 at literal double speed (browsers preserve pitch by default
+        // up to ~4x), and the dwell scales in lockstep so the next beat
+        // doesn't kick before the audio actually finishes.
+        const s = Math.max(1, speedRef.current || 1);
+        audio.playbackRate = s;
         try {
           await audio.play();
         } catch (e) {
           // Browsers can reject autoplay; we still know duration so dwell
           // remains correct, just silent for this bubble.
         }
-        return Math.round(audio.duration * 1000) + AUDIO_TAIL_BUFFER_MS;
+        return Math.round((audio.duration * 1000) / s) + AUDIO_TAIL_BUFFER_MS;
       }
       return computeDwell(data, speedRef.current);
     },
@@ -344,11 +359,16 @@ export default function TourMode() {
         })
       );
 
-      // Wait for action complete.
+      // Wait for action complete. skipBeatRef is honored here so the
+      // Skip button can exit a long-running auto-action mid-flight; the
+      // remaining actions in this fixture also short-circuit because
+      // skipBeatRef stays true until the next showNarrator/showSpotlight
+      // resets it.
       await waitForEvent(
         "kairos-encounter:action-complete",
         (d) => d && d.actionId === actionId,
-        cancelledRef
+        cancelledRef,
+        skipBeatRef
       );
 
       window.removeEventListener("kairos-encounter:banner", bannerHandler);
@@ -389,22 +409,37 @@ export default function TourMode() {
           // Preload the next fixture's audio so its bubbles play gaplessly.
           if (i + 1 < TOUR_SCRIPT.length) preloadFixtureAudio(TOUR_SCRIPT[i + 1], modeRef.current);
 
-          // 1. Pre-arrival narrator on the RN home (/rn)
-          if (window.location.pathname !== "/rn") {
-            router.push("/rn");
+          // Resolve the fixture's basket once — used to drive both the
+          // /rn dashboard tab during pre-arrival narration (so the right
+          // card is rendered when targetCard fires) and the encounter
+          // detail's tab query param.
+          const fxData = getFixture(fx.fixtureId);
+          const fxTab = (fxData && fxData.tab) || "resultsfu";
+
+          // 1. Pre-arrival narrator on the RN home (/rn) with the
+          //    fixture's basket selected so PatientCard pulses on the
+          //    matching card. router.replace alone doesn't re-trigger
+          //    /rn's on-mount tab read, so we also dispatch a
+          //    kairos-tour:set-tab event that /rn listens for.
+          const onRn = window.location.pathname === "/rn";
+          const currentTab = onRn
+            ? new URLSearchParams(window.location.search).get("tab")
+            : null;
+          if (!onRn) {
+            router.push(`/rn?tab=${fxTab}`);
             await pwait(700);
+          } else if (currentTab !== fxTab) {
+            router.replace(`/rn?tab=${fxTab}`);
+            window.dispatchEvent(
+              new CustomEvent("kairos-tour:set-tab", { detail: { tab: fxTab } })
+            );
+            await pwait(250);
           }
           await showNarrator(fx.preArrivalNarrator, TOUR_SCRIPT.length);
           if (cancelledRef.current) break;
           clearOverlay();
 
-          // 2. Navigate into encounter
-          // Pass the fixture's actual basket so the encounter detail
-          // breadcrumb (← Back to dashboard › <CATEGORY>) reflects where
-          // this card lives in Epic. Fallback to resultsfu if the fixture
-          // is not registered.
-          const fxData = getFixture(fx.fixtureId);
-          const fxTab = (fxData && fxData.tab) || "resultsfu";
+          // 2. Navigate into encounter (basket already resolved above).
           router.push(`/encounter/${fx.fixtureId}?tour=1&tab=${fxTab}`);
           // Wait for encounter to declare ready
           await waitForEvent(
@@ -539,11 +574,21 @@ export default function TourMode() {
   }, [active, togglePause]);
 
   // Speed toggle. Persists to sessionStorage so EncounterDetail's typing
-  // animation can scale itself in tandem with the tour cadence.
+  // animation can scale itself in tandem with the tour cadence. Also
+  // applies to whatever audio is currently mid-playback so a mid-bubble
+  // toggle takes effect immediately rather than waiting for the next
+  // bubble to load.
   const toggleSpeed = useCallback(() => {
     const next = speedRef.current === 1 ? 2 : 1;
     speedRef.current = next;
     setSpeedState(next);
+    if (audioRef.current) {
+      try {
+        audioRef.current.playbackRate = next;
+      } catch (e) {
+        // ignore — some browsers throw if the rate is set after end
+      }
+    }
     try {
       sessionStorage.setItem("kairos-tour-speed", String(next));
     } catch {}
@@ -568,9 +613,17 @@ export default function TourMode() {
   // Advance current beat — Skip button. Stops audio for the current bubble,
   // sets skipBeatRef so pwait returns immediately, and the runTour loop
   // moves on to the next bubble/action/fixture without ending the tour.
+  // Also fires a window event so any in-progress typing animation inside
+  // EncounterDetail (the per-character pane-update loop) can fast-forward
+  // to its final state — otherwise the typing keeps running and the next
+  // auto-action gets ignored by EncounterDetail's `if (isPlaying) return`
+  // guard, freezing the tour mid-card.
   const advanceBeat = useCallback(() => {
     skipBeatRef.current = true;
     stopAudio();
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("kairos-tour:skip-beat"));
+    }
   }, [stopAudio]);
 
   // End-tour — cancel + restore. Used by the End button (modal) and

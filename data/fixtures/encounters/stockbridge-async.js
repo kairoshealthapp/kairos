@@ -1,5 +1,5 @@
 // Pattern 7b — ASYNC PRE-CALL STRUCTURED INQUIRY (calm tier — skeleton)
-// Source: docs/KAIROS-SESSION-2026-04-29-AFTERNOON.md CASE 19 (Sharp/Yamashita)
+// Source: docs/KAIROS-SESSION-2026-04-29-AFTERNOON.md CASE 19 (Sharp/Park)
 
 const fixture = {
   id: "stockbridge-async",
@@ -18,19 +18,19 @@ const fixture = {
     severity: "green",
   },
   patient: {
-    name: "Yamashita, Hippolyte",
-    displayName: "Hippolyte Yamashita",
+    name: "Park, Gerald",
+    displayName: "Gerald Park",
     age: 76,
     sex: "M",
     dob: "1949-11-08",
     mrn: "26819073",
     proxyName: null,
-    primary: "Voronova NP, Heart and Vascular Clinic",
+    primary: "Davis NP, Cardiology Associates",
     coverage: "Medicare A+B",
   },
   sourceArtifact: {
     type: "Result Note + provider clinical questions",
-    author: "Voronova, Cardiology",
+    author: "Davis, Cardiology",
     timestamp: "2026-04-29 09:48",
     body:
       "BNP drifting up over last 3 months. Asymptomatic per last visit. Send patient short MyChart inquiry: how is breathing, swelling, weight? If any concerning answer, escalate to URGENT phone callback with full HF triage.",
@@ -45,7 +45,7 @@ const fixture = {
   finalSignedState: {
     nurseNote: "BNP drift detected. Sent 3-question MyChart inquiry. Will reclassify card based on patient reply.",
     mychartMessage:
-      "Dr. Voronova wanted me to check in on a few things since your last visit:\n  1. How is your breathing on your usual walks?\n  2. Any new swelling in legs or ankles?\n  3. Any weight gain in the last week?",
+      "Dr. Davis wanted me to check in on a few things since your last visit:\n  1. How is your breathing on your usual walks?\n  2. Any new swelling in legs or ankles?\n  3. Any weight gain in the last week?",
     orders: [],
     dxAssociated: ["Heart failure, unspecified"],
   },

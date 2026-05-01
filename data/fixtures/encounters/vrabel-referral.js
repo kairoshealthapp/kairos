@@ -18,14 +18,14 @@ const fixture = {
     severity: "amber",
   },
   patient: {
-    name: "Hadjipateras, Olympia",
-    displayName: "Olympia Hadjipateras",
+    name: "Sullivan, Diane",
+    displayName: "Diane Sullivan",
     age: 56,
     sex: "F",
     dob: "1969-10-25",
     mrn: "37029184",
     proxyName: null,
-    primary: "Voronova NP, Heart and Vascular Clinic",
+    primary: "Davis NP, Cardiology Associates",
     coverage: "BCBS PPO",
   },
   sourceArtifact: {
@@ -33,7 +33,7 @@ const fixture = {
     author: "Patient + outside clinician (Wash U scheduling)",
     timestamp: "2026-04-28 12:12",
     body:
-      "Patient: hadn't heard from Wash U about HCM scheduling with Dr. Onwuachi.\nVoronova reply: confirmed 4/18 telephone encounter, no appointment date, asked nurse to call Wash U.\nNurse called Wash U: \"Milly will call patient in ~2 weeks.\" Messaged patient back; patient replied \"Thanks Brandon!\"",
+      "Patient: hadn't heard from Wash U about HCM scheduling with Dr. Williams.\nDavis reply: confirmed 4/18 telephone encounter, no appointment date, asked nurse to call Wash U.\nNurse called Wash U: \"Milly will call patient in ~2 weeks.\" Messaged patient back; patient replied \"Thanks Brandon!\"",
   },
   initialPaneContent: {
     nurseNote: "",
@@ -46,7 +46,7 @@ const fixture = {
     nurseNote:
       "Patient checking Wash U HCM scheduling status. Confirmed with Wash U scheduling — patient will be contacted in ~2 weeks. Patient updated. Thread closed by patient.",
     mychartMessage:
-      "Hi Ms Hadjipateras — I called Wash U scheduling. Their team (Milly) will reach out to you in about 2 weeks. Let us know if you have not heard from them by then.",
+      "Hi Ms Sullivan — I called Wash U scheduling. Their team (Milly) will reach out to you in about 2 weeks. Let us know if you have not heard from them by then.",
     orders: [],
     dxAssociated: ["Hypertrophic cardiomyopathy"],
   },

@@ -18,14 +18,14 @@ const fixture = {
     severity: "amber",
   },
   patient: {
-    name: "Karpinski, Thessaly",
-    displayName: "Thessaly Karpinski",
+    name: "Howard, Janet",
+    displayName: "Janet Howard",
     age: 72,
     sex: "F",
     dob: "1954-02-19",
     mrn: "61204911",
     proxyName: null,
-    primary: "Voronova NP, Heart and Vascular Clinic",
+    primary: "Davis NP, Cardiology Associates",
     coverage: "Medicare A+B + MO HealthNet (dual-eligible)",
   },
   sourceArtifact: {
@@ -52,7 +52,7 @@ const fixture = {
         typingSpeedCps: 80,
         delayMsBefore: 500,
         content:
-          "DME prior auth — Apria CPAP for Karpinski (dual-eligible Medicare A+B + MO HealthNet). Per Apria, PA path is a phone call to MO HealthNet (NOT a form). Three data points needed: ICD-10 (G47.33 OSA), AHI (from sleep study report 1/2026: 22.4), NPI (Voronova 1234567890). Called MO HealthNet PA line, approval # = patient's MO HealthNet member ID. Faxed approval back to Apria for processing. Patient outreach below.\n\nPlaybook captured in Workflow Playbook Library — auto-attaches to next dual-eligible DME PA card for any nurse.",
+          "DME prior auth — Apria CPAP for Howard (dual-eligible Medicare A+B + MO HealthNet). Per Apria, PA path is a phone call to MO HealthNet (NOT a form). Three data points needed: ICD-10 (G47.33 OSA), AHI (from sleep study report 1/2026: 22.4), NPI (Davis 1234567890). Called MO HealthNet PA line, approval # = patient's MO HealthNet member ID. Faxed approval back to Apria for processing. Patient outreach below.\n\nPlaybook captured in Workflow Playbook Library — auto-attaches to next dual-eligible DME PA card for any nurse.",
       },
       {
         type: "pane-update",
@@ -61,7 +61,7 @@ const fixture = {
         typingSpeedCps: 70,
         delayMsBefore: 400,
         content:
-          "Ms Karpinski,\n\nI wanted to update you on your CPAP machine. There was a small holdup with the second-layer authorization (MO HealthNet, in addition to Medicare). I called the authorization line for you today, gave them the details from your sleep study, and the approval has been sent over to the DME company (Apria). They should be reaching out to you in the next several days to schedule delivery.\n\nLet us know if you have not heard from them by next Wednesday.\n\nBrandon Sterne, RN BSN / Heart and Vascular Clinic",
+          "Ms Howard,\n\nI wanted to update you on your CPAP machine. There was a small holdup with the second-layer authorization (MO HealthNet, in addition to Medicare). I called the authorization line for you today, gave them the details from your sleep study, and the approval has been sent over to the DME company (Apria). They should be reaching out to you in the next several days to schedule delivery.\n\nLet us know if you have not heard from them by next Wednesday.\n\nBrandon Sterne, RN BSN / Cardiology Associates",
       },
       { type: "state-transition", target: "card", newState: "drafted", delayMsBefore: 200 },
     ],

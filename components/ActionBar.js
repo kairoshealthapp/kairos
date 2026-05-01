@@ -44,6 +44,7 @@ export default function ActionBar({
   const buttons = (pattern && pattern.actionButtons) || [];
 
   const [pulseTarget, setPulseTarget] = useState(null);
+  const [clickedTarget, setClickedTarget] = useState(null);
   const [toast, setToast] = useState(false);
 
   useEffect(() => {
@@ -57,16 +58,41 @@ export default function ActionBar({
     }
     function onTourEnd() {
       setPulseTarget(null);
+      setClickedTarget(null);
+    }
+    // Click-animation triggers — fire the one-shot scale+glow on whichever
+    // button the auto-action / auto-authorize event names. The animation
+    // is 600ms; we clear the target after 650ms so the class can re-apply
+    // if a subsequent action rapidly fires on the same button.
+    let clickTimer = null;
+    function flashClick(buttonId) {
+      if (!buttonId) return;
+      setClickedTarget(buttonId);
+      if (clickTimer) clearTimeout(clickTimer);
+      clickTimer = setTimeout(() => setClickedTarget(null), 650);
+    }
+    function onAutoAction(e) {
+      const fixtureId = e && e.detail && e.detail.fixtureId;
+      if (fixtureId && cardId && fixtureId !== cardId) return;
+      flashClick(e && e.detail && e.detail.actionId);
+    }
+    function onAutoAuthorize() {
+      flashClick("authorize");
     }
     window.addEventListener("kairos-tour:beat-start", onBeatStart);
     window.addEventListener("kairos-tour:beat-end", onBeatEnd);
     window.addEventListener("kairos-tour:end", onTourEnd);
+    window.addEventListener("kairos-encounter:auto-action", onAutoAction);
+    window.addEventListener("kairos-encounter:auto-authorize", onAutoAuthorize);
     return () => {
       window.removeEventListener("kairos-tour:beat-start", onBeatStart);
       window.removeEventListener("kairos-tour:beat-end", onBeatEnd);
       window.removeEventListener("kairos-tour:end", onTourEnd);
+      window.removeEventListener("kairos-encounter:auto-action", onAutoAction);
+      window.removeEventListener("kairos-encounter:auto-authorize", onAutoAuthorize);
+      if (clickTimer) clearTimeout(clickTimer);
     };
-  }, []);
+  }, [cardId]);
 
   useEffect(() => {
     if (!toast) return;
@@ -116,6 +142,7 @@ export default function ActionBar({
             <span className="kairos-kicker text-bone-muted mr-1">ACTIONS</span>
             {buttons.map((b) => {
               const pulsing = pulseTarget && pulseTarget === b.id;
+              const clicking = clickedTarget && clickedTarget === b.id;
               return (
                 <button
                   key={b.id}
@@ -128,7 +155,8 @@ export default function ActionBar({
                     (isPlaying
                       ? "bg-platinum/40 text-bone-muted cursor-wait"
                       : "bg-platinum/60 text-bone border border-mist/60 hover:bg-platinum hover:border-amber/60") +
-                    (pulsing ? " kairos-action-pulse" : "")
+                    (pulsing ? " kairos-action-pulse" : "") +
+                    (clicking ? " kairos-action-click" : "")
                   }
                 >
                   {b.label}
@@ -151,7 +179,8 @@ export default function ActionBar({
               (isPlaying || blockAuthorize
                 ? "bg-amber/30 text-graphite/60 cursor-not-allowed"
                 : "bg-amber text-graphite hover:bg-amber/90") +
-              (pulseTarget === "authorize" ? " kairos-action-pulse" : "")
+              (pulseTarget === "authorize" ? " kairos-action-pulse" : "") +
+              (clickedTarget === "authorize" ? " kairos-action-click" : "")
             }
           >
             Authorize

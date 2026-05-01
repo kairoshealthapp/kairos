@@ -1,5 +1,5 @@
 // Pattern 5 — SYNTHESIS + CHOICE
-// Source: docs/KAIROS-SESSION-2026-04-29.md Section 5 CASE 2 (Daech/Yamashiro)
+// Source: docs/KAIROS-SESSION-2026-04-29.md Section 5 CASE 2 (Daech/Walker)
 // Notable: simulates the phiGuard placeholder bug (Nexlizet → [Patient Name])
 // then the corrected draft after the cross-output consistency banner fires.
 
@@ -20,19 +20,19 @@ const fixture = {
     severity: "green",
   },
   patient: {
-    name: "Yamashiro, Wynne",
-    displayName: "Wynne Yamashiro",
+    name: "Walker, Susan",
+    displayName: "Susan Walker",
     age: 63,
     sex: "F",
     dob: "1963-02-08",
     mrn: "55129770",
     proxyName: null,
-    primary: "Voronova NP, Heart and Vascular Clinic",
+    primary: "Davis NP, Cardiology Associates",
     coverage: "Aetna PPO",
   },
   sourceArtifact: {
     type: "Result Note",
-    author: "Voronova, Cardiology",
+    author: "Davis, Cardiology",
     timestamp: "2026-04-29 08:32",
     body:
       "Lipid panel today: LDL 138 on Zetia 10mg + atorvastatin 40mg (LDL goal <100). Two options: (A) increase atorvastatin to 80mg daily, continue Zetia; or (B) switch from Zetia + atorvastatin to a single combination tablet — Nexlizet (bempedoic acid 180mg / ezetimibe 10mg) once daily. Ask patient preference.",
@@ -54,7 +54,7 @@ const fixture = {
         typingSpeedCps: 80,
         delayMsBefore: 500,
         content:
-          "Dr. Voronova reviewed lipid panel: LDL 138 on Zetia 10mg + atorvastatin 40mg, above goal of <100. Two options offered:\n  Option A — increase atorvastatin to 80mg daily, continue Zetia.\n  Option B — switch Zetia + atorvastatin to Nexlizet (bempedoic acid 180mg / ezetimibe 10mg) once daily.\n\nAwaiting patient preference via MyChart reply.",
+          "Dr. Davis reviewed lipid panel: LDL 138 on Zetia 10mg + atorvastatin 40mg, above goal of <100. Two options offered:\n  Option A — increase atorvastatin to 80mg daily, continue Zetia.\n  Option B — switch Zetia + atorvastatin to Nexlizet (bempedoic acid 180mg / ezetimibe 10mg) once daily.\n\nAwaiting patient preference via MyChart reply.",
       },
       // FIRST DRAFT — phiGuard misfires on the brand name "Nexlizet"
       {
@@ -64,7 +64,7 @@ const fixture = {
         typingSpeedCps: 70,
         delayMsBefore: 400,
         content:
-          "Ms Yamashiro,\n\nDr. Voronova has reviewed your recent lipid panel. Your LDL (bad cholesterol) is 138, still above your goal of less than 100.\n\nThere are two options, and Dr. Voronova would like your input:\n\n1. Increase your atorvastatin from 40 mg to 80 mg once daily and continue Zetia.\n\n2. Switch your Zetia and atorvastatin to a combination medication called [Patient Name] (180/10 mg daily). This consolidates two pills into one.\n\nPlease reply with your preference.\n\nBrandon Sterne, RN BSN / Heart and Vascular Clinic",
+          "Ms Walker,\n\nDr. Davis has reviewed your recent lipid panel. Your LDL (bad cholesterol) is 138, still above your goal of less than 100.\n\nThere are two options, and Dr. Davis would like your input:\n\n1. Increase your atorvastatin from 40 mg to 80 mg once daily and continue Zetia.\n\n2. Switch your Zetia and atorvastatin to a combination medication called [Patient Name] (180/10 mg daily). This consolidates two pills into one.\n\nPlease reply with your preference.\n\nBrandon Sterne, RN BSN / Cardiology Associates",
       },
       // CONSISTENCY CHECK CATCHES THE LEAK
       {
@@ -82,7 +82,7 @@ const fixture = {
         typingSpeedCps: 85,
         delayMsBefore: 800,
         content:
-          "Ms Yamashiro,\n\nDr. Voronova has reviewed your recent lipid panel. Your LDL (bad cholesterol) is 138, still above your goal of less than 100 even with your current Zetia plus atorvastatin combination.\n\nThere are two reasonable options, and Dr. Voronova would like your input:\n\n1. Increase your atorvastatin from 40 mg to 80 mg once daily and continue Zetia.\n\n2. Switch your Zetia and atorvastatin to a combination medication called Nexlizet (180/10 mg daily). This consolidates two pills into one, and bempedoic acid does not affect muscles the way some statins can.\n\nPlease reply with your preference and we will set it up. Either option is reasonable.\n\nBrandon Sterne, RN BSN / Heart and Vascular Clinic",
+          "Ms Walker,\n\nDr. Davis has reviewed your recent lipid panel. Your LDL (bad cholesterol) is 138, still above your goal of less than 100 even with your current Zetia plus atorvastatin combination.\n\nThere are two reasonable options, and Dr. Davis would like your input:\n\n1. Increase your atorvastatin from 40 mg to 80 mg once daily and continue Zetia.\n\n2. Switch your Zetia and atorvastatin to a combination medication called Nexlizet (180/10 mg daily). This consolidates two pills into one, and bempedoic acid does not affect muscles the way some statins can.\n\nPlease reply with your preference and we will set it up. Either option is reasonable.\n\nBrandon Sterne, RN BSN / Cardiology Associates",
       },
       { type: "banner", kind: "green", text: "Cross-output consistency: drug names + doses match across both panes.", durationMs: 1500, delayMsBefore: 300 },
       {
@@ -100,7 +100,7 @@ const fixture = {
               class: "Medication change",
               status: "Pended (Option A)",
               clinicalQuestions: [],
-              cosign: "Voronova",
+              cosign: "Davis",
               choiceGroup: "lipid-uptitrate",
             },
             {
@@ -111,7 +111,7 @@ const fixture = {
               class: "Medication change",
               status: "Pended (Option B)",
               clinicalQuestions: [],
-              cosign: "Voronova",
+              cosign: "Davis",
               choiceGroup: "lipid-uptitrate",
             },
           ],

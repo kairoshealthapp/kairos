@@ -1,5 +1,5 @@
 // Pattern 2 — SYNTHESIS + NEW ORDER
-// Source: docs/KAIROS-SESSION-2026-04-29.md Section 5 CASE 1 (Boultes/Tunturi TTE)
+// Source: docs/KAIROS-SESSION-2026-04-29.md Section 5 CASE 1 (Boultes/Anderson TTE)
 
 const fixture = {
   id: "aldington-tte",
@@ -18,19 +18,19 @@ const fixture = {
     severity: "green",
   },
   patient: {
-    name: "Tunturi, Aleksanteri",
-    displayName: "Aleksanteri Tunturi",
+    name: "Anderson, Robert",
+    displayName: "Robert Anderson",
     age: 61,
     sex: "M",
     dob: "1965-04-15",
     mrn: "71005544",
-    proxyName: "Talvikki Tunturi",
-    primary: "Voronova NP, Heart and Vascular Clinic",
+    proxyName: "Sarah Anderson",
+    primary: "Davis NP, Cardiology Associates",
     coverage: "Medicare A+B + supplemental",
   },
   sourceArtifact: {
     type: "Result Note",
-    author: "Voronova, Cardiology",
+    author: "Davis, Cardiology",
     timestamp: "2026-04-29 06:41",
     body: "CTA chest reviewed. Findings consistent with mild aortic stenosis and mild aortic regurgitation, possible bicuspid aortic valve. Recommend transthoracic echo (TTE) for reassessment of valve morphology and severity. No immediate change in management. Patient may follow up at his next routine visit if asymptomatic; sooner if symptomatic. Please notify.",
   },
@@ -62,7 +62,7 @@ const fixture = {
         typingSpeedCps: 80,
         delayMsBefore: 600,
         content:
-          "Dr. Voronova reviewed CTA chest from this week. Findings consistent with mild aortic stenosis and mild aortic regurgitation, possible bicuspid aortic valve. TTE ordered for reassessment of valve morphology and severity. No medication changes. Patient to follow up at next routine visit if asymptomatic, sooner if symptomatic.\n\nPatient notified via MyChart. Patient's daughter (Talvikki Tunturi, MyChart proxy) auto-included.",
+          "Dr. Davis reviewed CTA chest from this week. Findings consistent with mild aortic stenosis and mild aortic regurgitation, possible bicuspid aortic valve. TTE ordered for reassessment of valve morphology and severity. No medication changes. Patient to follow up at next routine visit if asymptomatic, sooner if symptomatic.\n\nPatient notified via MyChart. Patient's daughter (Sarah Anderson, MyChart proxy) auto-included.",
       },
       {
         type: "pane-update",
@@ -71,7 +71,7 @@ const fixture = {
         typingSpeedCps: 70,
         delayMsBefore: 400,
         content:
-          "Mr Tunturi,\n\nDr. Voronova has reviewed your recent CTA (a detailed CT scan of the heart and chest). The scan showed mild narrowing (stenosis) and mild leakage (regurgitation) at one of your heart valves, possibly a bicuspid (two-leaflet) valve.\n\nTo take a closer look, we have ordered an echocardiogram (an ultrasound of your heart). The scheduling team will reach out to set a time. There are no changes to your medications.\n\nPlease follow up at your next routine visit, or sooner if you notice new chest pain, shortness of breath, light-headedness, or fainting.\n\nBrandon Sterne, RN BSN / Heart and Vascular Clinic",
+          "Mr Anderson,\n\nDr. Davis has reviewed your recent CTA (a detailed CT scan of the heart and chest). The scan showed mild narrowing (stenosis) and mild leakage (regurgitation) at one of your heart valves, possibly a bicuspid (two-leaflet) valve.\n\nTo take a closer look, we have ordered an echocardiogram (an ultrasound of your heart). The scheduling team will reach out to set a time. There are no changes to your medications.\n\nPlease follow up at your next routine visit, or sooner if you notice new chest pain, shortness of breath, light-headedness, or fainting.\n\nBrandon Sterne, RN BSN / Cardiology Associates",
       },
       {
         type: "pane-update",
@@ -95,8 +95,8 @@ const fixture = {
                 { q: "Saline bubble study?", answered: true, answer: "No" },
               ],
               releaseToPatient: true,
-              ccResults: ["Voronova"],
-              cosign: "Voronova",
+              ccResults: ["Davis"],
+              cosign: "Davis",
             },
           ],
           hasUnansweredQuestions: false,
@@ -112,10 +112,10 @@ const fixture = {
   },
   finalSignedState: {
     nurseNote:
-      "Dr. Voronova reviewed CTA chest. Mild AS, mild AR, possible bicuspid AV. TTE ordered for reassessment. No med changes. Patient notified via MyChart.",
+      "Dr. Davis reviewed CTA chest. Mild AS, mild AR, possible bicuspid AV. TTE ordered for reassessment. No med changes. Patient notified via MyChart.",
     mychartMessage: "[As drafted above]",
     orders: [
-      "Transthoracic echo (TTE) Complete — ECH110 STERNE BR — Future 4/29 First Available — Routine — Voronova cosign",
+      "Transthoracic echo (TTE) Complete — ECH110 STERNE BR — Future 4/29 First Available — Routine — Davis cosign",
     ],
     dxAssociated: ["Mild aortic stenosis", "Mild aortic regurgitation"],
   },
