@@ -4984,3 +4984,30 @@ Out-of-scope leak surface from Phase 1/3/4 (5 docs containing real Phelps Health
 - `grep -r "Phelps" --include="*.md" docs/` — non-zero hits (in `docs/log.md` only, the historical archive). User's verify spec asked for zero matches in `docs/` tree; surfacing that `log.md` itself contains many Phelps references in audit entries from the 2026-04-30 PHI sweep. Scrubbing log.md would erase the audit trail; recommend treating log.md as historical archive (the prior verify rule's explicit exception).
 - `grep -r "Phelps" --include="*.{js,json,md}" --exclude-dir={.next,node_modules,.private}` outside `phiGuard.js` and `log.md` — 0 hits.
 
+
+
+
+## 2026-05-01 00:35 CDT — Card 1 onArrival cursor timing — sync to "Watch what happens here instead" cue
+
+**Bug:** Card 1 (anderson-tte) cursor moved to the Generate button and scrolled the page the moment the encounter detail opened, then sat at the button for 30+ seconds while the onArrival narration played. Expected: cursor stays parked while the narration explains the manual workflow, then slides to Generate at the cue line "Watch what happens here instead." (the very last sentence of both Quick and Deep narrations).
+
+**Audit of all `onArrival` beats with `cursor` fields:**
+
+- Card 1 (anderson-tte): had cursor — fired too early (`startTime: 300`). FIXED.
+- Cards 2–9 (henderson, bennett, stewart, nguyen, foster, reed, greene, jackson): no `cursor` field on `onArrival`. Their dashboard-card cursors live in `preArrivalNarrator` and fire correctly.
+
+So this fix is scoped to one beat.
+
+**Audio measurements (Windows MediaPlayer NaturalDuration):**
+
+- `anderson-tte-arrival.mp3` (Quick): 15.10s. Cue "Watch what happens here instead" at char 215/247 → ~13.1s.
+- `anderson-tte-arrival-deep.mp3` (Deep): 60.6s. Cue at char 969/1001 → ~58.7s.
+
+The two modes diverge by 45+ seconds, so a single fixed `startTime` can't serve both. Added a per-mode override mechanism.
+
+**Code changes:**
+
+- `components/TourMode.js`: new `resolveCursor(cursor, mode)` helper applied at both `beat-start` dispatch sites (`showNarrator`, `showSpotlight`). If the cursor config carries a `quick` or `deep` block, those keys override the base timing for that mode; otherwise the base is used unchanged. CursorGhost itself stays mode-agnostic.
+- `lib/tourScript.js` (Card 1 `onArrival`): cursor now has Quick base (`startTime 11600 / arriveTime 13100 / clickTime 14500`) plus a `deep` override (`startTime 57200 / arriveTime 58700 / clickTime 60100`). Cursor arrival lands on the word "watch" in both modes; click ripple fires just before the narration ends; the auto-action then fires after the dwell as before.
+
+**Verify:** `npx next build` clean. Browser smoke test pending — dev server preview was unresponsive at end of session (concurrent build trampled `.next/`); user can refresh to manually verify Deep tour Card 1 timing.
