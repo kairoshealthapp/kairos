@@ -103,6 +103,17 @@ export default function ExecutivePage() {
             the SBAR for the provider. Two-pass clinical reasoning. Fully
             attributable. Fully editable.
           </p>
+          <p>
+            In April 2026, Harvard Medical School, Beth Israel Deaconess, and
+            Stanford published a study in Science demonstrating that a
+            frontier reasoning model matched or exceeded expert physician
+            performance on text-based emergency triage diagnosis across 76
+            real Boston ER cases. The advantage was strongest where
+            information was most limited and decisions most time-pressured —
+            the exact conditions of outpatient nurse triage. Kairos
+            operationalizes that capability inside a workflow surface the
+            nurse already controls.
+          </p>
 
           <h3 className="ke-subhead">
             The chart is full of answers. The work is the searching.
@@ -218,6 +229,95 @@ export default function ExecutivePage() {
         <section className="ke-section">
           <header className="ke-section-marker">
             <span className="ke-numeral">05</span>
+            <h2 className="ke-section-title">
+              The Landscape Right Now (May 2026)
+            </h2>
+          </header>
+          <p>
+            The clinical AI landscape moves in weeks, not quarters. A model
+            named in this paragraph would be superseded before this page is
+            read. Any informatics program worth running has someone tracking
+            it continuously — not the names, but the capability frontier and
+            what it unlocks.
+          </p>
+          <p>A snapshot of where things stand as of May 2026:</p>
+
+          <h3 className="ke-subhead">
+            Cloud LLMs under BAA — the production default.
+          </h3>
+          <p>
+            Major US providers offer Business Associate Agreements covering
+            clinical use. This is the path every production clinical AI
+            product at major US health systems currently runs on. Lowest
+            operational lift, fastest to deploy, proven at peer institutions.
+          </p>
+
+          <h3 className="ke-subhead">
+            Open-weight models — the sovereignty path is now real.
+          </h3>
+          <p>
+            A category that was a research curiosity twelve months ago. As of
+            this quarter, MIT-licensed and Apache-licensed open-weight models
+            from multiple labs — US, European, and Chinese — track
+            approximately six months behind frontier proprietary models on
+            the workloads outpatient clinical AI actually performs. That gap
+            has held consistently for years. For chart reading, structured
+            drafting, and routine clinical reasoning, six-month-old frontier
+            capability is more than enough. The gap remains larger for the
+            longest-context and most complex agentic workloads, but those are
+            not the daily work of nursing.
+          </p>
+
+          <h3 className="ke-subhead">Hardware floor is dropping fast.</h3>
+          <p>
+            Mixture-of-experts architectures activate only a fraction of
+            total model parameters for any given token. The result:
+            frontier-grade open-weight models that run on a single on-prem
+            GPU server in the $35&ndash;60K range. The &ldquo;you need a
+            supercomputer to self-host&rdquo; objection from two years ago is
+            out of date. A hospital that already runs Epic on-prem hardware
+            can absorb this cost as line-item IT capital, not capital
+            project.
+          </p>
+
+          <h3 className="ke-subhead">
+            Release cadence has changed the planning horizon.
+          </h3>
+          <p>
+            Between mid-March and early May 2026, major labs across the cloud
+            and open-weight ecosystems shipped on the order of fifteen
+            frontier or near-frontier model releases. A planning document
+            written six months ago naming specific vendors is already out of
+            date. A planning document written six weeks ago naming specific
+            vendors may be out of date. The implication for institutional
+            strategy: pick the architectural pattern, not the model. Build
+            for swap-ability at the model layer. That is the only durable
+            design choice.
+          </p>
+
+          <h3 className="ke-subhead">
+            What this means for an informatics program.
+          </h3>
+          <p>
+            The cloud BAA path is the right Phase 1 — fastest to production,
+            lowest operational lift, proven at peer health systems. The
+            self-hosted path is the right Phase 2 or Phase 3 — once a program
+            has wins behind it and a board-level appetite for data
+            sovereignty emerges. The architecture should support both from
+            day one and remain agnostic to specific vendor choices. Kairos
+            does.
+          </p>
+
+          <p>
+            This section is dated May 2026. It will need to be rewritten by
+            Q4. That cadence is the nature of the field, and tracking it is
+            part of the job.
+          </p>
+        </section>
+
+        <section className="ke-section">
+          <header className="ke-section-marker">
+            <span className="ke-numeral">06</span>
             <h2 className="ke-section-title">IT Answers</h2>
           </header>
 
