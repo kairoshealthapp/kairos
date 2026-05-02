@@ -210,17 +210,18 @@ export default function EncounterDetail({ fixture, fromTab }) {
             return;
           }
           // Animated typing: stream characters into pane state.
-          // Tour @ 1x reads slower than realtime for narration legibility
-          // (1.5× slowdown). Tour @ 2x literally halves what's left, so
-          // the toggle observably doubles playback speed across audio,
-          // bubble dwell, and pane-typing in lockstep. Reading
-          // sessionStorage on each event so a mid-action speed toggle
-          // takes effect on the next event.
+          // Pass D Phase 7 — Brandon's smoke-test flagged the typing
+          // animation as too slow ("needs to go at least 4x as fast,
+          // maybe more"). The tour-mode branch now divides by 4, which
+          // takes the prior ~53 cps effective rate at typingSpeedCps=80
+          // up to ~213 cps. The 1.5× legacy slowdown is preserved as
+          // the readability baseline before the 4× kicks in. Speed
+          // toggle still doubles on top.
           let intervalMs = Math.max(8, 1000 / typingSpeedCps);
           if (typeof window !== "undefined" && sessionStorage.getItem("kairos-tour-active") === "1") {
             const ts = sessionStorage.getItem("kairos-tour-speed");
             const speedMul = ts === "2" ? 2 : 1;
-            intervalMs = Math.max(4, (intervalMs * 1.5) / speedMul);
+            intervalMs = Math.max(2, (intervalMs * 1.5) / (speedMul * 4));
           }
           const chars = String(content);
           let acc = mode === "append" ? null : "";
