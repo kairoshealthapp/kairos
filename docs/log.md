@@ -5288,3 +5288,52 @@ The landing's `.kl-hero` has no `max-width` — the wordmark renders against the
 - `npm run build`: clean. 50/50 static pages, `/executive` prerendered.
 
 No changes to `app/page.js` or any landing-scoped CSS.
+
+
+## 2026-05-02 — /executive editorial expansion: triage citation + landscape section
+
+Three coordinated edits to `app/executive/page.js`. No CSS or other-file changes; all new content uses the existing `ke-section` / `ke-numeral` / `ke-section-title` / `ke-subhead` styles.
+
+**Change A — Section 02 ("The Clinical Thesis") · Triage subhead**
+Appended a new body paragraph after the existing "Two-pass clinical reasoning. Fully attributable. Fully editable." paragraph, citing the April 2026 Harvard Medical School / Beth Israel Deaconess / Stanford study in *Science* on frontier-model triage diagnosis across 76 Boston ER cases. Plain `<p>`, same typography as surrounding paragraphs (no italic, no bold, no blockquote, no footnote). Institutions and journal name in the prose are the entire citation by design.
+
+**Change B — New Section 05: "The Landscape Right Now (May 2026)"**
+Inserted between the previous Section 04 ("How This Generalizes") and the IT Answers section. Five subheads in order:
+1. Cloud LLMs under BAA — the production default.
+2. Open-weight models — the sovereignty path is now real.
+3. Hardware floor is dropping fast.
+4. Release cadence has changed the planning horizon.
+5. What this means for an informatics program.
+
+Closes with a dated-snapshot disclaimer paragraph ("This section is dated May 2026. It will need to be rewritten by Q4...") rendered as plain body copy. Section is intentionally model-agnostic — no specific vendor or model names.
+
+**Change C — IT Answers renumbered 05 → 06**
+Numeral updated, section title now reads "06. IT Answers". All subheads and content within IT Answers unchanged. Sections 01–04 untouched. Hero, both CTA links (`https://kairos-tour.firekraker.net/rn`), and footer unchanged.
+
+**Verification**
+- `npm run build`: clean. 50/50 static pages, `/executive` prerendered.
+- DOM check (desktop): six sections in order — `01 Why This, Why Now` · `02 The Clinical Thesis` · `03 Kairos as Architectural Demonstration` · `04 How This Generalizes` · `05 The Landscape Right Now (May 2026)` · `06 IT Answers`.
+- Section 02 DOM check: triage subhead now followed by two `<p>` siblings — original "Most clinical AI documents..." paragraph and new "In April 2026, Harvard Medical School..." paragraph. Computed style: `font-style: normal`, `font-weight: 400`, `font-size: 15.5px`, no class — matches surrounding body text.
+- Section 05 DOM check: title "The Landscape Right Now (May 2026)" with all five subheads in spec order.
+- Section 06 DOM check: title "IT Answers" with all six subheads (Authentication and identity / PHI handling / LLM provider pathway / Audit trail / Implementation lift on the IT side / Vendor stability) unchanged.
+- Mobile (375×812) DOM check: Section 05 renders with no horizontal overflow (`scrollWidth === clientWidth`) at section level and across all paragraphs.
+- CTA links: both `a.ke-cta` and `a.ke-cta-mid` resolve to `https://kairos-tour.firekraker.net/rn` — unchanged.
+- Browser console: zero errors.
+
+Page meta title and description were not modified.
+
+## 2026-05-02 — CLAUDE.md: CC Verification Discipline section added
+
+Added a new section to `CLAUDE.md` formalizing the localhost handoff protocol for verifying interactive UI changes. CC must not use preview eval, in-window Chromium previews, or self-driving screenshot tools to "verify" interactive UI — those produce static renders, not real interaction, and CC cannot launch Brandon's Chrome with the Claude plugin from inside its own session.
+
+Protocol after build passes clean and dev server is running:
+1. Restart dev server cleanly on a stable localhost port.
+2. Output the clickable localhost URL in its own fenced code block.
+3. Output the Chrome computer-use test prompt in a SEPARATE fenced code block, formatted per `docs/computer-use-test-protocol.md` if it exists, with full T1/T2/T3 spec re-pasted (Chrome computer-use sessions are stateless).
+4. Stop. No "verified" claim without Brandon's PASS report.
+
+Brandon drives actual verification by pasting the prompt into the Claude Chrome plugin in his own Chrome. PASS → CC commits. FAIL → CC stops, fixes, restarts the loop.
+
+Build passing remains necessary but not sufficient for interactive UI. Static content changes (pitch pages, marketing copy, footer edits) may still skip Chrome computer-use and use mobile screenshots from Brandon + HTML/CSS fetch as verification.
+
+No code changes; documentation only. No git push.
