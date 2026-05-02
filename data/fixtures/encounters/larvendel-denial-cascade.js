@@ -110,7 +110,7 @@ const fixture = {
         typingSpeedCps: 80,
         delayMsBefore: 500,
         content:
-          "Second denial in 8-day workup. Dr. Pendrelle looped into Secure Chat for peer-to-peer decision (deadline today only) vs. resubmission vs. moving directly to heart cath given patient's CAD with prior stent and ongoing symptoms.\n\nPatient outreach drafted in denial-acknowledgment frame rather than routine imaging-review frame. Voicemail attempted concurrently with MyChart send.",
+          "Second denial in 8-day workup. Dr. Pendrelle looped into Secure Chat for peer-to-peer decision (deadline today only) vs. resubmission vs. moving directly to heart cath given patient's CAD with prior stent and ongoing symptoms.\n\nPatient outreach drafted in denial-acknowledgment frame rather than routine imaging-review frame.",
       },
       {
         type: "pane-update",
@@ -119,9 +119,8 @@ const fixture = {
         typingSpeedCps: 70,
         delayMsBefore: 400,
         content:
-          "Ms Jackson,\n\nUnfortunately, your insurance has denied the heart CT scan that Dr. Pendrelle ordered. This is the second test they have denied, and we understand how frustrating this is.\n\nDr. Pendrelle's recommended next step is a heart catheterization (heart cath). This is a procedure where a small tube is guided through a blood vessel to take detailed pictures of the arteries around your heart. Given your history of coronary artery disease with prior stent placement and the symptoms you have been experiencing, this is the best path forward to find answers. We are hopeful insurance will approve this procedure.\n\nBefore we move forward, we need to check in with you:\n\n1. Are you still having chest pain, shortness of breath, nausea, or sweating?\n2. Have your symptoms gotten better, worse, or stayed about the same?\n3. Are you having any new symptoms we should know about?\n\nPlease reply to this message at your earliest convenience so we can update Dr. Pendrelle and determine next steps.\n\nI also tried to reach you by phone today and left a voicemail. Thank you for your patience as we work through this with your insurance.\n\nBrandon Sterne, RN BSN / Cardiology Associates",
+          "Ms Jackson,\n\nUnfortunately, your insurance has denied the heart CT scan that Dr. Pendrelle ordered. This is the second test they have denied, and we understand how frustrating this is.\n\nDr. Pendrelle's recommended next step is a heart catheterization (heart cath). This is a procedure where a small tube is guided through a blood vessel to take detailed pictures of the arteries around your heart. Given your history of coronary artery disease with prior stent placement and the symptoms you have been experiencing, this is the best path forward to find answers. We are hopeful insurance will approve this procedure.\n\nBefore we move forward, we need to check in with you:\n\n1. Are you still having chest pain, shortness of breath, nausea, or sweating?\n2. Have your symptoms gotten better, worse, or stayed about the same?\n3. Are you having any new symptoms we should know about?\n\nPlease reply to this message at your earliest convenience so we can update Dr. Pendrelle and determine next steps.\n\nThank you for your patience as we work through this with your insurance.\n\nBrandon Sterne, RN BSN / Cardiology Associates",
       },
-      { type: "banner", kind: "green", text: "Multi-channel correlation: voicemail event ≤30min — auto-acknowledgment line included.", durationMs: 1500, delayMsBefore: 300 },
       { type: "state-transition", target: "card", newState: "drafted", delayMsBefore: 200 },
     ],
   },

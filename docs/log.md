@@ -5337,3 +5337,30 @@ Brandon drives actual verification by pasting the prompt into the Claude Chrome 
 Build passing remains necessary but not sufficient for interactive UI. Static content changes (pitch pages, marketing copy, footer edits) may still skip Chrome computer-use and use mobile screenshots from Brandon + HTML/CSS fetch as verification.
 
 No code changes; documentation only. No git push.
+
+## 2026-05-02 — Cinematic tour pacing build (Phases 0-5, autonomous)
+
+Multi-phase build of cinematic tour pacing for Quick + Deep tours. Brandon dispatched a master task and is unavailable for ~4 hours. Build behind `cinematicMode` feature flag (defaulted ON in dev for testing). All commits local; **no git push**. Brandon will smoke-test on return and push manually.
+
+### Phase 0 — voicemail audit + removal (Phelps HIPAA policy update)
+
+**Rule:** voicemails to patients may state only "this is [name] from Phelps Health" — no department, no clinical content. Demo content must not contradict.
+
+Audit found voicemail content in:
+
+- `lib/patterns.js` — Pattern 14 had a "Voicemail Talking Points" action button → removed.
+- `data/fixtures/encounters/wexbury-phone.js` (Card 8 Greene) — `generate-voicemail` action script with full voicemail variant text → removed.
+- `data/fixtures/encounters/larvendel-denial-cascade.js` (Card 9 Jackson) — nurse note line "Voicemail attempted concurrently with MyChart send", banner "Multi-channel correlation: voicemail event ≤30min — auto-acknowledgment line included", MyChart message line "I also tried to reach you by phone today and left a voicemail" → all three removed.
+- `lib/tourScript.js` Card 8 — `generate-voicemail` action annotation block (greene-phone-pa2 audio) → removed.
+- `lib/tourScript.js` Card 9 — `Multi-channel correlation` annotation referencing simultaneous voicemail+MyChart drafting (jackson-denial-cascade-pa3 audio) → removed.
+
+**Not touched:**
+- `app/api/hvc/chat/knowledge.js` — VOICEMAIL POLICY block already states "leave generic callback message only — no clinical details on voicemail." Consistent with new HIPAA rule, no change needed.
+- `components/ExplanationPane.js` `VOICEMAIL_LEFT` callback-state label — dead code (callbackLabel hardcoded to AWAITING_CALL, state machine deferred to 3.4). Leaving alone.
+- `_retired/` paths — out of scope.
+
+**Orphaned audio (harmless, kept for now):** `greene-phone-pa2{,-deep}.mp3`, `jackson-denial-cascade-pa3{,-deep}.mp3`.
+
+**No narration regen needed.** Removed annotations cleanly; remaining narration lines for Cards 8 + 9 do not reference voicemail.
+
+Build passes clean (`npm run build`).

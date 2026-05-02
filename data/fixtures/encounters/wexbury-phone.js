@@ -65,18 +65,6 @@ const fixture = {
       },
       { type: "state-transition", target: "card", newState: "drafted", delayMsBefore: 200 },
     ],
-    "generate-voicemail": [
-      { type: "banner", kind: "green", text: "Drafting voicemail variant (~30-45s spoken)…", durationMs: 700 },
-      {
-        type: "pane-update",
-        target: "phone-script",
-        mode: "append",
-        typingSpeedCps: 70,
-        delayMsBefore: 400,
-        content:
-          "\n\n— VOICEMAIL VARIANT —\n\nHi Mrs. Greene, this is Brandon from the Cardiology Associates, calling about the results of your recent echocardiogram. Dr. Pendrelle has reviewed the test and the news is reassuring — your heart's pumping function is normal and there are no medication changes. Please give us a call back at the clinic number when you have a moment so we can review the details with you. Thank you.",
-      },
-    ],
   },
   finalSignedState: {
     nurseNote: "[As drafted above]",
