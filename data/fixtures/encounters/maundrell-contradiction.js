@@ -7,7 +7,11 @@ const fixture = {
   slug: "maundrell-contradiction",
   patternId: 8,
   patternName: "CONTRADICTION",
-  tab: "results",
+  // Pass D Phase 5 — Brandon's smoke-test: this card lives in PATIENT
+  // ADVICE REQUEST, not Results. The patient sent a MyChart reply to
+  // the INR-overdue template; the inbound is a patient-advice query
+  // (with contradiction), not a fresh result.
+  tab: "patientadvice",
   urgency: "calm",
   sourceChannel: "mychart",
   sourceBox: "pt-advice",
@@ -70,7 +74,7 @@ const fixture = {
         typingSpeedCps: 75,
         delayMsBefore: 500,
         content:
-          "CHART CONTRADICTION FLAG — DO NOT REPLY AUTONOMOUSLY.\n\nPatient replied to outbound INR overdue MyChart template (sent 4/24). Patient states Dr. H (Reynolds) discontinued warfarin and INR monitoring.\n\nChart state at time of message:\n  - Med list: warfarin 6mg daily ACTIVE\n  - Last provider note: 4/21/2026 — no documentation of discontinuation\n  - Last INR: 4/19, therapeutic\n  - Coumadin Clinic still scheduled\n\nForwarded to Reynolds for verification before any patient-facing reply. No MyChart message drafted. No order changes.",
+          "Patient replied to outbound INR overdue MyChart template (sent 4/24). Patient states Dr. H (Reynolds) discontinued warfarin and INR monitoring.\n\nChart state at time of message:\n  - Med list: warfarin 6mg daily ACTIVE\n  - Last provider note: 4/21/2026 — no documentation of discontinuation\n  - Last INR: 4/19, therapeutic\n  - Coumadin Clinic still scheduled\n\nForwarded to Reynolds for verification before any patient-facing reply. No MyChart message drafted. No order changes.",
       },
       { type: "banner", kind: "red", text: "Forwarded to Reynolds — awaiting provider confirmation", durationMs: 1200, delayMsBefore: 300 },
       { type: "state-transition", target: "card", newState: "drafted", delayMsBefore: 200 },

@@ -25,6 +25,7 @@ import ReferralPacketPanel from "./ReferralPacketPanel";
 import KairosFindingPanel from "./KairosFindingPanel";
 import SuggestedReplyPanel from "./SuggestedReplyPanel";
 import RoutingPanel from "./RoutingPanel";
+import ContradictionAlert from "./ContradictionAlert";
 
 // Phase-3.5: breadcrumb labels (six Epic In Basket folders).
 const TAB_LABELS = {
@@ -633,6 +634,7 @@ export default function EncounterDetail({ fixture, fromTab }) {
           )}
         </div>
         <div data-tour-anchor="nurse-note">
+          {fixture && fixture.contradictionHold ? <ContradictionAlert /> : null}
           <NurseNotePane
             content={paneState.nurseNote}
             isTyping={isPlaying}

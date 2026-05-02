@@ -8,7 +8,11 @@ const fixture = {
   slug: "quennell-scope",
   patternId: 12,
   patternName: "SCOPE-CONSTRAINED PATIENT QUESTION",
-  tab: "resultsfu",
+  // Pass D Phase 5 — Brandon's smoke-test: this card lives in PATIENT
+  // ADVICE REQUEST, not Results F/U. The patient sent a MyChart message
+  // asking about H+H and low blood pressure — a patient-advice query,
+  // not a result followup.
+  tab: "patientadvice",
   urgency: "calm",
   sourceChannel: "mychart",
   sourceBox: "pt-advice",
