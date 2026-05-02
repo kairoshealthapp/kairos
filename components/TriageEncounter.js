@@ -17,6 +17,8 @@ import ChartContextPanel from "./ChartContextPanel";
 import PatientAssessmentPanel from "./PatientAssessmentPanel";
 import SBARNotePanel from "./SBARNotePanel";
 import RoutingPanel from "./RoutingPanel";
+import { isCinematicMode } from "@/lib/featureFlags";
+import { cameraGoto } from "@/lib/tourCamera";
 
 const STORAGE_PREFIX = "kairos.triage.responses.v1.";
 
@@ -184,18 +186,35 @@ export default function TriageEncounter({ fixture }) {
       const actionId = e && e.detail && e.detail.actionId;
       const targetFixtureId = e && e.detail && e.detail.fixtureId;
       if (targetFixtureId && targetFixtureId !== fixture.id) return;
+      let cinematicTarget = null;
       if (actionId === "generate-inquiry") {
         setStage(2);
+        // Pass D Phase 2 / Issue 7A — camera scrolls up to the
+        // assessment pane so the freshly-generated questions land in
+        // viewport instead of below the fold next to the action bar
+        // the user just clicked.
+        cinematicTarget = '[data-tour-anchor="patient-assessment"]';
       } else if (actionId === "process-reply") {
         captureMockResponses();
+        // After Send-via-MyChart fires, the responses populate. Frame
+        // the response pane so the viewer's eye lands there.
+        cinematicTarget = '[data-tour-anchor="patient-response"]';
       } else if (actionId === "synthesize-callback") {
         setStage(4);
+        // SBAR pane only renders at stage 4. Camera frames it next.
+        cinematicTarget = '[data-tour-anchor="sbar"]';
       } else {
         return;
       }
       // Close the action loop on the next tick so any pending state
       // commits flush first.
       setTimeout(() => {
+        if (cinematicTarget && isCinematicMode()) {
+          // Fire-and-forget — the tight zoom runs alongside the action-
+          // complete dispatch so the next narration beat already has
+          // the right pane in view.
+          cameraGoto(cinematicTarget, { framing: "tight", holdMs: 0 });
+        }
         window.dispatchEvent(
           new CustomEvent("kairos-encounter:action-complete", {
             detail: { actionId, fixtureId: fixture.id },
@@ -214,25 +233,33 @@ export default function TriageEncounter({ fixture }) {
   return (
     <div className="flex flex-col gap-4 p-4">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-[480px]">
-        <SourcePane fixture={fixture} />
-        <PatientAssessmentPanel
-          assessment={assessment}
-          mode={mode}
-          responses={responses}
-          onResponseChange={handleResponseChange}
-          notes={notes}
-          onNotesChange={setNotes}
-          readOnly={stage >= 3}
-        />
-        <ChartContextPanel chartContext={fixture.chartContext} />
-        <ResponseDisplay assessment={assessment} responses={stage >= 3 ? responses : {}} notes={stage >= 3 ? notes : ""} />
+        <div data-tour-anchor="source-pane">
+          <SourcePane fixture={fixture} />
+        </div>
+        <div data-tour-anchor="patient-assessment">
+          <PatientAssessmentPanel
+            assessment={assessment}
+            mode={mode}
+            responses={responses}
+            onResponseChange={handleResponseChange}
+            notes={notes}
+            onNotesChange={setNotes}
+            readOnly={stage >= 3}
+          />
+        </div>
+        <div data-tour-anchor="chart-context">
+          <ChartContextPanel chartContext={fixture.chartContext} />
+        </div>
+        <div data-tour-anchor="patient-response">
+          <ResponseDisplay assessment={assessment} responses={stage >= 3 ? responses : {}} notes={stage >= 3 ? notes : ""} />
+        </div>
       </div>
 
       {stage >= 4 ? (
-        <>
+        <div data-tour-anchor="sbar">
           <SBARNotePanel sbar={sbar} />
           <RoutingPanel routing={fixture.routing} />
-        </>
+        </div>
       ) : null}
 
       <div className="flex flex-wrap gap-2 items-center">
