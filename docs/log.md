@@ -5605,3 +5605,100 @@ Card 7 (Reed triage) gets gentler treatment per master task: 20-25% reduction ma
 
 Rewrite Quick tour narration card-by-card. Save originals in `lib/tourScript.original.js` for rollback. Per-card commits.
 
+
+### Phase 4 — MP3 regen + timing verification
+
+108 MP3s regenerated via OpenAI TTS-1 onyx voice from the new tightened text. Cost: **$0.4901** total. Audio dir: **45 MB → 39 MB** (~13% smaller). Old MP3s backed up to `.private/tour-audio.passC-backup/` (gitignored, local-only).
+
+Per-card char counts (Quick / Deep), before vs after Pass C:
+
+| Card | Quick before | Quick after | Δ Quick | Deep before | Deep after | Δ Deep |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 Anderson | 1488 | 1172 | -21% | 3448 | 2875 | -17% |
+| 2 Henderson | 912 | 767 | -16% | 2067 | 1685 | -18% |
+| 3 Bennett | 1132 | 924 | -18% | 2410 | 2162 | -10% |
+| 4 Stewart | 1463 | 1257 | -14% | 2851 | 2575 | -10% |
+| 5 Nguyen | 1140 | 1070 | -6% | 2125 | 1931 | -9% |
+| 6 Foster | 1762 | 1511 | -14% | 4144 | 3811 | -8% |
+| 7 Reed (TRIAGE) | 1481 | 1411 | -5% | 3343 | 3229 | -3% |
+| 8 Greene | 987 | 923 | -6% | 1930 | 1827 | -5% |
+| 9 Jackson | 1184 | 1141 | -4% | 2506 | 2403 | -4% |
+| **Total** | **11,549** | **10,176** | **-12%** | **24,824** | **22,498** | **-9%** |
+
+### Estimated runtime delta
+
+At 15.5 chars/sec TTS rate:
+
+| | Pre-Pass-C narration audio | Post-Pass-C narration audio | Audio Δ |
+| --- | --- | --- | --- |
+| Quick | 12:25 | 10:56 | -1:29 |
+| Deep | 26:41 | 24:12 | -2:29 |
+
+Pre-Pass-A measured runtime was Quick 18:41 / Deep 34:33 (CChrome verification). Adding Pass A's ~+50-60s per tour, then subtracting Pass C's narration audio savings:
+
+- **Quick estimated post-everything:** ~18:12 (was target 12-14 min — over)
+- **Deep estimated post-everything:** ~33:04 (was target 22-25 min — over)
+
+### Honest assessment of the runtime gap
+
+Pass C did not hit the master-prompt's 12-14 min Quick / 22-25 min Deep targets. The preservation rules dominated:
+
+- Card 7 (Reed TRIAGE) was capped at 20-25% per the master task; actual cuts ended at 3% Deep and 5% Quick because every clinical sharp on the SBAR card carries the strongest case study.
+- Card 9 (Jackson denial cascade) onAuthorize closer ('Eight days. Two denials. Four Epic surfaces. ... You stay the nurse. Kairos just stops making you the database.') was kept verbatim — every word is load-bearing.
+- Cards with dense clinical specifics (lab values, dose changes, multi-step workups) had limited filler to cut without violating Rule 3 ('Every patient-specific clinical detail').
+
+To actually land 12-14 min Quick, Brandon would need to either:
+1. Approve more aggressive cuts that drop secondary clinical detail (e.g. compressing the AST/ALT trend audit, dropping one of the workflow-step lists, abbreviating the algorithm walkthrough on Card 4).
+2. Reduce `SPOTLIGHT_MIN_MS` in `components/TourMode.js` from 8000 to ~5000-6000ms. That would cut ~3 minutes off Quick because spotlights currently floor to 8s regardless of audio length.
+3. Reduce the Pass A inter-pane beat from 1500ms to ~750ms (Convention 4 cinematic timing).
+
+Recommend (1) on a per-card basis after Brandon listens — not autonomous-safe.
+
+### Pass C commits (chronological, all local)
+
+| Hash | Phase | Title |
+| --- | --- | --- |
+| `92d76b5` | 1 | audit: narration inventory and reduction targets |
+| `e0ca90b` | 2 | feat: tighter narration — Quick tour Card 1 Anderson |
+| `1d70074` | 2 | feat: tighter narration — Quick tour Card 2 Henderson |
+| `fc12317` | 2 | feat: tighter narration — Quick tour Card 3 Bennett |
+| `7ef6fe5` | 2 | feat: tighter narration — Quick tour Card 4 Stewart |
+| `d42fcf6` | 2 | feat: tighter narration — Quick tour Card 5 Nguyen |
+| `e6cbfc7` | 2 | feat: tighter narration — Quick tour Card 6 Foster |
+| `e7a7f72` | 2 | feat: tighter narration — Quick tour Card 7 Reed (TRIAGE) |
+| `4c68c8c` | 2 | feat: tighter narration — Quick tour Card 8 Greene |
+| `d904401` | 2 | feat: tighter narration — Quick tour Card 9 Jackson |
+| `89e5576` | 3 | feat: tighter narration — Deep tour Card 1 Anderson |
+| `6432d7d` | 3 | feat: tighter narration — Deep tour Card 2 Henderson |
+| `938babe` | 3 | feat: tighter narration — Deep tour Card 3 Bennett |
+| `2234e2b` | 3 | feat: tighter narration — Deep tour Card 4 Stewart |
+| `d2b5e11` | 3 | feat: tighter narration — Deep tour Card 5 Nguyen |
+| `168561f` | 3 | feat: tighter narration — Deep tour Card 6 Foster |
+| `95142e8` | 3 | feat: tighter narration — Deep tour Card 7 Reed (TRIAGE) |
+| `3bf04b6` | 3 | feat: tighter narration — Deep tour Card 8 Greene |
+| `dd7f01c` | 3 | feat: tighter narration — Deep tour Card 9 Jackson |
+| `ad94adb` | 4 | feat: regenerate all tour MP3s for tightened narration |
+| (this commit) | 5 | docs: Pass C narration tightening complete |
+
+### Brandon's smoke-test checklist
+
+1. `cd C:\Users\kents\kairos`
+2. `npm run dev`
+3. Open `http://localhost:3000/rn`
+4. Run **Quick tour**. Listen carefully to **Cards 1, 5, 7** specifically — any narration that feels rushed, missing context, or like a clinical concept got dropped is a regression.
+   - Card 1 (Anderson) — TTE workflow + thirteen-fields beat. Listen for: '"Watch what happens here instead"' cue should still arrive on the cursor reaching Generate.
+   - Card 5 (Nguyen) — scope-respecting reply. Listen for: 'Cardiology nursing scope is heart, meds, imaging' framing, hematology distinction, 'Kairos knows when not to think for you' beat.
+   - Card 7 (Reed TRIAGE) — three stages. Conservative cuts here. Listen for: full diagnosis list, three-symptom call, all four stages of clinical reasoning, three SBAR clinical sharps.
+5. Run **Deep tour** (skim — total ~33 min). Listen to **Card 6 Foster** (longest) and **Card 9 Jackson** (closer) closely.
+6. If clean: `git push origin main`.
+7. If a card lost essential meaning: identify which sentences need restoring; we do a surgical fix per-card using `lib/tourScript.original.js` as the rollback reference.
+
+### Rollback path
+
+`lib/tourScript.original.js` is the pre-Pass-C tourScript verbatim. To restore one bubble: cherry-pick that bubble's quickVoiceText / deepVoiceText / cursor block from the original and overwrite in `lib/tourScript.js`, then re-regen that audioKey's MP3s by deleting them from `public/tour-audio/` and running `node scripts/generate-tour-audio.js`.
+
+Old MP3s also archived at `.private/tour-audio.passC-backup/` (local-only, not committed) for direct file-level restore if narration text rollback also wants the original audio bit-for-bit (the regen pass produced new takes of the same text — they're not byte-identical to the originals where text was unchanged).
+
+### No git push performed
+
+Per master task constraint, **all 30 Pass C commits stay local**. Brandon handles the push manually after smoke-testing.
