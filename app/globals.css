@@ -788,10 +788,11 @@ details[open] > summary .drawer-chev { transform: rotate(90deg); }
 }
 
 /* hero ─────────────────────────────────────────────── */
+/* No max-width on the hero — the wordmark needs the full viewport so
+   it can scale via clamp() without clipping. Per-element max-widths
+   below (.ke-lede, .ke-byline) keep prose readable. */
 .ke-hero {
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 96px 32px 80px;
+  padding: 96px 40px 80px;
   text-align: center;
 }
 

@@ -5265,3 +5265,26 @@ Two-line edit to ship the /executive page on the landing tile and finalize the n
 - /executive footer DOM check: text reads "Feb 844 · Mar 1,016 · Apr 698", zero "MTD" occurrences anywhere on the page.
 
 Note: Change 3 (delete `data/mock-encounters/`) was already executed in the previous turn (commit `76d409c`); not re-applied here.
+
+## 2026-05-01 (later) — /executive KAIROS wordmark clipping fix
+
+The KAIROS wordmark on `/executive` was clipping its trailing "S" at desktop viewports. The landing wordmark on `/` rendered correctly at all viewports.
+
+**Root cause** ([app/globals.css:791-796](app/globals.css))
+`.ke-hero` had `max-width: 720px`. Combined with 32px horizontal padding, that left a 656px content area. The wordmark scales to `clamp(64px, 12vw, 152px)` font-size with `letter-spacing: 0.08em` plus `padding: 0 0.05em`. At ≥1024px viewports the natural width of "KAIROS" exceeds 656px and the trailing letter-spacing pushes the "S" past the hero's right edge.
+
+The landing's `.kl-hero` has no `max-width` — the wordmark renders against the full viewport, and per-element max-widths on `.kl-tagline` / `.kl-now` keep prose readable.
+
+**Fix**
+- Removed `max-width: 720px` and `margin: 0 auto` from `.ke-hero`.
+- Bumped horizontal padding from 32px to 40px to match `.kl-hero`.
+- `.ke-lede` (max-width: 600px) and `.ke-byline` (max-width: 560px) already constrain the prose blocks, so dropping the hero cap doesn't widen body copy.
+
+**Verification**
+- 320×700: wordmark 270×55px inside 276px content area, no clip.
+- 375×812: wordmark 325×64px, no clip.
+- 768×1024: wordmark 669×88px inside 688px content area, no clip.
+- 1280×800: wordmark 1175×144px inside 1190px content area, no clip.
+- `npm run build`: clean. 50/50 static pages, `/executive` prerendered.
+
+No changes to `app/page.js` or any landing-scoped CSS.
