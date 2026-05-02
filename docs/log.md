@@ -5065,3 +5065,72 @@ Added a `.kairos-nav-wordmark` class to `app/globals.css` — same gradient, sam
 - Card 7 Reed: `pa1`, `pa2`, `pa3` (Q+D each — defensive regen for cutoff).
 
 **Verify:** `npm run build` clean. `/rn` smoke-tested via preview server: gold KAIROS wordmark renders on Fraunces, Reset demo button title shows correctly, clicking Authorize on a non-tour card no longer persists (`sessionStorage` stays null, card visible after route-back). Tour playback verification deferred to Brandon's manual smoke test.
+
+
+
+
+## 2026-05-01 18:55 CDT — Cursor choreography on Cards 2 through 9
+
+Cards 2-9 had no on-arrival or on-authorize cursor wiring before this session — only the dashboard-card cursor in their preArrivalNarrators (where the cursor highlights which card is about to open) and Card 1's full Generate-button choreography were in place. This session built out per-card cursor moves matching Card 1's pattern: cursor sweeps to the action button at a natural cue phrase near the end of each narration, clicks ~500ms before audio ends so the visual ripple syncs with the auto-action firing.
+
+### Pre-work audit
+
+- All 9 preArrivalNarrators already had cursor on `[data-encounter-id="..."]` (dashboard card) — kept.
+- Card 1 had full onArrival cursor with mode-keyed Quick + Deep timings — left untouched per constraint.
+- Card 3 had an old-pattern onAuthorize cursor (immediate sweep + 3.3s mid-narration click). Replaced with end-of-narration alignment for consistency with Card 1.
+- TriageEncounter.js (Card 7's renderer) had no IDs on its stage buttons. Added `id` prop to the shared ActionButton component and stable IDs on the four primary stage buttons: `kairos-triage-generate-inquiry`, `kairos-triage-process-reply`, `kairos-triage-synthesize-callback`, `kairos-triage-authorize`. No behavior change — just selectors.
+- TTS empirical rate calibrated against Card 1 measurement: 16 chars/sec for OpenAI tts-1 onyx voice. Used for cursor startTime offsets.
+
+### Per-card commits
+
+| Card | Fixture | Patient | Pattern | Action button | Commit |
+|---|---|---|---|---|---|
+| 2 | wood-lipid | Henderson | 1 (synth) | generate-note-mychart | `e68d1ab` |
+| 3 | hesperdale-crestor | Bennett | 4 (dose+labs) | generate-note-mychart | `8e58d77` |
+| 4 | norreys-transactional | Stewart | 9 (transactional) | generate-reply | `9b6875d` |
+| 5 | quennell-scope | Nguyen | 12 (scope) | generate-scope-respecting-reply | `6db49f8` |
+| 6 | maundrell-contradiction | Foster | 8 (contradiction) | forward-to-provider | `fb8483f` |
+| 7 | underwell-full-lifecycle | Reed | 7b (TRIAGE) | 4-stage walk: triage-generate-inquiry → process-reply → synthesize-callback → triage-authorize | `001bf1e` |
+| 8 | wexbury-phone | Greene | 14 (phone) | generate-phone-script | `aa7b91d` |
+| 9 | larvendel-denial-cascade | Jackson | 13 (denial cascade) | generate-denial-aware-outreach | `35b12ad` |
+
+For each card, the cursor cfg uses Card 1's pattern: a top-level Quick base with a `deep: { ... }` override block for the longer Deep narration. Card 4's onAuthorize is a single block (Quick and Deep voiceText are identical). Card 2's onArrival is Deep-only (Quick has no clean cue beat); Quick is disabled via `quick: { target: null }`, which CursorGhost's no-target early-return treats as a no-op.
+
+### Card 7 TRIAGE choreography (heaviest)
+
+Five narration beats, cursor walks Stage 1 → 2 → 3 → 4:
+
+- onArrival → Stage 1 button (Generate Patient Assessment).
+- pa1 (after generate-inquiry fires; stage now 2) → Stage 2 button.
+- pa2 (after process-reply fires; stage now 3) → Stage 3 button.
+- pa3 (after synthesize-callback fires; stage now 4) → Stage 4 Authorize button.
+- onAuthorize → re-fire on Stage 4 Authorize so the click ripple aligns with auto-authorize.
+
+### Verification
+
+Each card verified on localhost preview by dispatching synthesized `kairos-tour:beat-start` events with the cursor cfg, then measuring cursor and target rects:
+
+- Cards 2, 3, 4, 5, 6, 8: cursor lands pixel-perfect (off by <1px from target center) on both Generate-class and Authorize buttons.
+- Card 7 stages 1-2: pixel-perfect.
+- Card 7 stages 3-4 and Card 9: cursor lands within viewport but ~30-1300 px off in y when the page is very tall (scrollY > 3000). Root cause: CursorGhost's `SCROLL_SETTLE_MS = 400` constant is too short for smooth `scrollIntoView({behavior: 'smooth'})` to complete on long pages. CursorGhost reads `getBoundingClientRect()` at 400ms and locks the cursor target there. By the time the smooth scroll actually finishes, the button has moved. With manual instant pre-scroll (block: center) the cursor lands pixel-perfect on these cards too — so the data is right, the timing is wrong.
+
+### Constraint compliance
+
+- CursorGhost.js untouched per constraint.
+- TourMode.js untouched per constraint.
+- EncounterDetail.js wiring untouched per constraint (Part 4 of the prior recovery commit was the last edit).
+- TriageEncounter.js: only added `id` prop to ActionButton and stable IDs on 4 buttons — no behavior change.
+- No fixture/basket/PHI changes.
+- One commit per card.
+- No `git push`.
+
+### Open question for smoke test
+
+The CursorGhost SCROLL_SETTLE_MS = 400 limitation manifests in dev preview on Cards 7 (stages 3-4) and 9. Two routes forward:
+
+1. Production tour build may be smooth enough that the 400ms window is sufficient — Brandon's smoke test will confirm.
+2. If the issue persists in production, bump SCROLL_SETTLE_MS to ~1500ms or listen for the `scrollend` event (Chromium 114+) instead of a fixed timeout. This would be a separate change and requires an explicit nod since CursorGhost was protected during this task.
+
+### No audio regen
+
+Voiceover text was not modified for cue-phrasing — every card already had a natural arc-closing line that worked as a cursor-move cue ("Each lipid review is a one-off", "At hour eight", "the system gives her no scaffolding", "Every. Single. Time.", etc.). MP3s untouched.
