@@ -137,8 +137,17 @@ export default function EncounterDetail({ fixture, fromTab }) {
       switch (event.type) {
         case "pane-update": {
           const { target, content, mode = "replace", typingSpeedCps } = event;
+          const dispatchArtifactComplete = () => {
+            if (typeof window === "undefined") return;
+            window.dispatchEvent(
+              new CustomEvent("kairos-artifact:render-complete", {
+                detail: { target },
+              })
+            );
+          };
           if (mode === "instant" || target === "order-pad" || !typingSpeedCps) {
             applyPaneContent(target, content, mode);
+            dispatchArtifactComplete();
             return;
           }
           // Animated typing: stream characters into pane state.
@@ -181,6 +190,7 @@ export default function EncounterDetail({ fixture, fromTab }) {
             if (skipBeatRef.current) {
               const finalText = mode === "append" ? (acc || "") + chars : chars;
               applyPaneContent(target, finalText, "replace");
+              dispatchArtifactComplete();
               return;
             }
             const partial = chars.slice(0, i);
@@ -188,6 +198,7 @@ export default function EncounterDetail({ fixture, fromTab }) {
             applyPaneContent(target, next, "replace");
             await sleep(intervalMs);
           }
+          dispatchArtifactComplete();
           return;
         }
         case "banner": {
