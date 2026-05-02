@@ -39,15 +39,45 @@ function pickPosition(rect, position, vw, vh) {
 }
 
 // Cinematic Pass A — Fix 3: collision-aware tooltip placement.
-// CChrome diagnostic flagged the tooltip card overlapping the spotlit
-// element (and adjacent panes) on cards 1-7, 9. The legacy pickPosition
-// only flipped on hard viewport clipping; it didn't avoid sitting on
-// top of the artifact whose content the tooltip narrates. This picker
-// computes all four candidate positions with a 24px gap, filters to
-// those that fit the viewport, and chooses the least-overlap with the
-// outlined rect. Falls back to a viewport-clamped bottom placement if
-// no candidate fits cleanly.
-function pickCinematicPlacement(rectWithPadding, vw, vh, w, h) {
+// Cinematic Pass D — Fix 3 v2: score against ALL visible content panes,
+// not just the spotlit element. Brandon's smoke-test confirmed Pass A
+// still failed on Cards 3, 8, 9 because a candidate could have zero
+// overlap with the spotlit anchor and still cover the Order Pad / Nurse
+// Note / Secure Chat thread. v2 reads every [data-tour-anchor] rect on
+// the page and sums overlap area across all of them, with a +500px²
+// penalty if the candidate also overlaps the target itself.
+//
+// Tiebreaker priority (when overlap scores tie): right > bottom > top >
+// left. Right beats bottom because cards usually have rightward whitespace
+// next to a primary spotlit pane.
+
+const TIEBREAK_ORDER = { right: 0, bottom: 1, top: 2, left: 3 };
+const TARGET_OVERLAP_PENALTY = 500;
+
+function getContentPaneRects(activeAnchorName) {
+  if (typeof document === "undefined") return [];
+  const nodes = document.querySelectorAll("[data-tour-anchor]");
+  const out = [];
+  nodes.forEach((node) => {
+    const name = node.getAttribute("data-tour-anchor");
+    // Skip the active anchor — it's the spotlit element, scored separately
+    // via the +500 penalty so the picker still avoids landing on top of
+    // the very thing the bubble is narrating.
+    if (name === activeAnchorName) return;
+    const r = node.getBoundingClientRect();
+    if (r.width <= 0 || r.height <= 0) return;
+    out.push({ left: r.left, top: r.top, right: r.right, bottom: r.bottom, name });
+  });
+  return out;
+}
+
+function rectIntersection(a, b) {
+  const x = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left));
+  const y = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+  return x * y;
+}
+
+function pickCinematicPlacement(rectWithPadding, vw, vh, w, h, activeAnchorName) {
   const target = {
     left: rectWithPadding.x,
     top: rectWithPadding.y,
@@ -61,6 +91,7 @@ function pickCinematicPlacement(rectWithPadding, vw, vh, w, h) {
     { name: "top",    left: target.left, top: target.top - CINEMATIC_GAP - h },
   ];
   const margin = 16;
+  const otherPanes = getContentPaneRects(activeAnchorName);
   const scored = candidates.map((c) => {
     const r = { left: c.left, top: c.top, right: c.left + w, bottom: c.top + h };
     const fits =
@@ -68,22 +99,36 @@ function pickCinematicPlacement(rectWithPadding, vw, vh, w, h) {
       r.top >= margin &&
       r.right <= vw - margin &&
       r.bottom <= vh - margin;
-    const ix = Math.max(0, Math.min(r.right, target.right) - Math.max(r.left, target.left));
-    const iy = Math.max(0, Math.min(r.bottom, target.bottom) - Math.max(r.top, target.top));
-    return { ...c, rect: r, fits, overlap: ix * iy };
+    // Sum overlap with every other content pane.
+    let paneOverlap = 0;
+    for (const pane of otherPanes) {
+      paneOverlap += rectIntersection(r, pane);
+    }
+    // Penalty for sitting on top of the spotlit target itself.
+    const targetOverlap = rectIntersection(r, target);
+    const score = paneOverlap + (targetOverlap > 0 ? TARGET_OVERLAP_PENALTY + targetOverlap : 0);
+    return { ...c, rect: r, fits, score, paneOverlap, targetOverlap };
   });
   const fitting = scored.filter((c) => c.fits);
   if (fitting.length > 0) {
-    fitting.sort((a, b) => a.overlap - b.overlap);
+    fitting.sort((a, b) => {
+      if (a.score !== b.score) return a.score - b.score;
+      return TIEBREAK_ORDER[a.name] - TIEBREAK_ORDER[b.name];
+    });
     const winner = fitting[0];
     return { left: winner.left, top: winner.top, name: winner.name };
   }
-  // None fit cleanly — bottom with viewport clamp.
-  const bottom = scored.find((c) => c.name === "bottom") || scored[0];
+  // No candidate fits the viewport — fall back to the lowest-score
+  // candidate even with edge clipping, then clamp into viewport.
+  scored.sort((a, b) => {
+    if (a.score !== b.score) return a.score - b.score;
+    return TIEBREAK_ORDER[a.name] - TIEBREAK_ORDER[b.name];
+  });
+  const fallback = scored[0];
   return {
-    left: clamp(bottom.left, margin, vw - w - margin),
-    top: clamp(bottom.top, margin, vh - h - margin),
-    name: "bottom-clamp",
+    left: clamp(fallback.left, margin, vw - w - margin),
+    top: clamp(fallback.top, margin, vh - h - margin),
+    name: fallback.name + "-clamp",
   };
 }
 
@@ -172,10 +217,12 @@ export default function SpotlightOverlay({ anchor, position, title, body, onDism
     const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
     const vh = typeof window !== "undefined" ? window.innerHeight : 800;
     if (isCinematicMode()) {
-      // Pass A Fix 3: collision-aware placement. Picks the side with
-      // least overlap against the outlined rect that still fits the
-      // viewport. Falls back to clamped-bottom if every side clips.
-      const placement = pickCinematicPlacement(rect, vw, vh, BUBBLE_W, BUBBLE_H_EST);
+      // Pass A Fix 3 + Pass D Fix 3 v2: collision-aware placement scored
+      // against ALL visible content panes (not just the spotlit
+      // anchor). The active anchor name is passed so it gets excluded
+      // from the per-pane sum and scored via the +500 target-overlap
+      // penalty instead.
+      const placement = pickCinematicPlacement(rect, vw, vh, BUBBLE_W, BUBBLE_H_EST, anchor);
       bubbleStyle = { left: placement.left, top: placement.top };
     } else {
       // Legacy edge-flip placement preserved for cinematicMode=off.
