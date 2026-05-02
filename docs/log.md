@@ -5441,3 +5441,119 @@ The primitives `cursorThenCamera` and `runRevealQueue` are wired and tested at t
 ### No git push performed
 
 Per master task constraint, **all commits stay local**. Brandon handles the push manually after smoke-testing.
+
+## 2026-05-02 — Cinematic Pass A: per-pane framing + beats + tooltip
+
+CChrome diagnostic on the Phase-5 build (commits `5d78abd` … `bc81c4e`)
+verified that the cinematic primitives were built but **not actively
+firing** during card reveals. Three convention failures, plus a tooltip
+overlap issue:
+
+- **Convention 3 (camera holds during render): 0/9 cards.** Nurse Note
+  routinely typed off-screen because nothing held the viewport on the
+  rendering pane.
+- **Convention 4 (sequential reveals with beats): 0/9.** The ~400ms
+  inter-pane delay was the type-engine queue startup, not a viewer-facing
+  beat — too short to register as a transition.
+- **Convention 6 (tight crop on active region): 0/9 strict.** No
+  per-pane tight framing existed.
+- **Tooltip overlap.** SpotlightOverlay's tooltip card overlapped the
+  spotlit element on cards 1-7, 9 (e.g. "AUTONOMOUSLY" partially
+  obscured on Card 6, tooltip over subject/notify-by lines on Card 5).
+
+Pass A targets these directly. CursorGhost.js stays untouched (Pass B
+work). All three fixes gated on the `cinematicMode` flag — flipping it
+to false restores the pre-cinematic behavior bit-for-bit.
+
+### Commits (chronological, all local)
+
+| Hash | Title |
+| --- | --- |
+| `d979479` | feat: per-pane tight framing during artifact reveals (Convention 3, 6) |
+| `8757bf0` | feat: 1500ms beat between artifact reveals (Convention 4) |
+| `96048ff` | feat: collision-aware spotlight tooltip positioning |
+| (this commit) | docs: cinematic Pass A complete |
+
+### Fix 1 — per-pane tight framing (`d979479`)
+
+Before each pane-update typing animation runs, `EncounterDetail`'s
+`applyEvent` now calls `cameraGoto(paneAnchor, { framing: "tight" })`
+so the typewriter lands center-stage. Between consecutive panes,
+`cameraGoto('[data-tour-anchor="patient-header"]', { framing: "wide",
+holdMs: 1500 })` first pulls back to the encounter context. The first
+pane-update in an action skips the wide pull-back (no previous pane to
+pull back from).
+
+`paneAnchorFor()` maps fixture pane-update targets to anchor selectors:
+
+- `nurse-note` → `[data-tour-anchor="nurse-note"]`
+- `mychart` → `[data-tour-anchor="output-pane"]`
+- `phone-script` → `[data-tour-anchor="phone-script"]` (new anchor added in `OutputPane.js`)
+- `order-pad` → `[data-tour-anchor="order-pad"]`
+
+`paneUpdateCountRef` tracks position-in-action so the camera knows which
+reveal is "first" (no pull-back) vs. subsequent. Counter resets at the
+start of every `runAction`. `cancelRef`/`skipBeatRef` short-circuit the
+camera path so tour-end and skip-beat don't strand a transition.
+
+### Fix 2 — 1500ms inter-pane beat (`8757bf0`)
+
+After the wide pull-back's 1500ms hold, an additional `await sleep(1500)`
+fires before the next tight zoom. Total inter-pane breathing room is now
+**3000ms** — enough to function as a real beat. Re-checks `cancelRef`
+and `skipBeatRef` between hold and beat so a mid-transition skip
+fast-forwards instead of stranding the viewer on a black hold.
+
+### Fix 3 — collision-aware tooltip placement (`96048ff`)
+
+`pickCinematicPlacement()` computes all four candidate positions
+(right/left/bottom/top) with a 24px gap from the outlined rect, filters
+to candidates that fit the viewport with 16px margins on every edge,
+and chooses the one with the **least overlap** against the outlined
+rect. Falls back to viewport-clamped bottom when no candidate fits
+cleanly.
+
+Visual styling of the tooltip card (amber border, gold accent, font,
+shadow) is unchanged — only its position changes. Legacy `pickPosition`
++ clamp path is preserved bit-for-bit when `cinematicMode` is off.
+
+### What this changes vs. the prior (Phase-5) build
+
+Per-card, when cinematic mode is on:
+
+- **Each pane-update reveal now runs in three phases:** wide pull-back
+  → 1500ms beat → tight zoom on the pane → typing.
+- **Total inter-pane gap:** ~3 seconds (1500ms wide hold + 1500ms beat),
+  plus camera-scroll travel time on top.
+- **Total card runtime:** roughly +5-10s per multi-artifact card. Card 1
+  (3 panes: Nurse Note → MyChart → Order Pad) gets +10s; Card 2 (1 pane)
+  unchanged at the pane-reveal layer.
+- **Spotlight tooltips** no longer overlap the spotlit element on
+  any card.
+
+### Brandon's smoke-test checklist
+
+1. `cd C:\Users\kents\kairos`
+2. `npm run dev`
+3. Open `http://localhost:3000/rn`
+4. Run **Quick tour**. Watch **Card 1 (Anderson)** specifically:
+   - Nurse Note should be in viewport while it types — not above the
+     fold.
+   - Wide pull-back to patient-header between Nurse Note and MyChart,
+     and again between MyChart and Order Pad. Each gap should feel
+     like ~3 seconds of breathing room.
+5. Watch the spotlight callouts on cards 1-7 and 9. Tooltip should
+   **not** overlap the highlighted element. Card 6 ("AUTONOMOUSLY"),
+   Card 5 (subject / notify-by lines), and Card 1 source-pane reveals
+   are the canaries.
+6. If clean: `git push origin main`.
+7. If issues: `?cinematic=0` in the URL flips the flag at runtime so
+   you can A/B the new pacing against the legacy behavior without a
+   redeploy.
+
+### Pass B is separate
+
+Pass B (CursorGhost inversion for Convention 1 — cursor leads, camera
+trails 200ms) requires editing `components/CursorGhost.js`, which is
+fragile-file flagged. That work is not in this pass and requires
+Brandon driving.
