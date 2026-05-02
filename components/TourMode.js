@@ -20,6 +20,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import TOUR_SCRIPT from "@/lib/tourScript";
 import { getFixture } from "@/data/fixtures/encounters";
+import { isCinematicMode } from "@/lib/featureFlags";
+import { cameraGoto } from "@/lib/tourCamera";
 import SpotlightOverlay from "./SpotlightOverlay";
 import NarratorCorner from "./NarratorCorner";
 import TourEndModal from "./TourEndModal";
@@ -388,12 +390,31 @@ export default function TourMode() {
       window.removeEventListener("kairos-encounter:banner", bannerHandler);
       if (cancelledRef.current) return;
 
-      // Run after-action annotations serially.
-      for (const ann of afterActionAnns) {
+      // Run after-action annotations serially. When cinematic mode is
+      // on, between bubbles we pull the camera back to a wide framing on
+      // the patient-header anchor so the next bubble's tight scroll has
+      // visible travel — the filmic "lift and shift" rhythm.
+      const cinematic = isCinematicMode();
+      for (let aIdx = 0; aIdx < afterActionAnns.length; aIdx++) {
         if (cancelledRef.current) return;
+        const ann = afterActionAnns[aIdx];
+        if (cinematic && aIdx > 0) {
+          await cameraGoto('[data-tour-anchor="patient-header"]', {
+            framing: "wide",
+            holdMs: 250,
+          });
+        }
         await showSpotlight(ann);
         clearOverlay();
         await pwait(200);
+      }
+      // Final pull-back after the last artifact reveal so the cursor's
+      // upcoming move to Authorize starts from a wider frame.
+      if (cinematic && afterActionAnns.length > 0) {
+        await cameraGoto('[data-tour-anchor="patient-header"]', {
+          framing: "wide",
+          holdMs: 400,
+        });
       }
     },
     [pwait, showSpotlight, clearOverlay]
