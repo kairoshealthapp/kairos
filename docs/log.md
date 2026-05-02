@@ -5557,3 +5557,51 @@ Pass B (CursorGhost inversion for Convention 1 — cursor leads, camera
 trails 200ms) requires editing `components/CursorGhost.js`, which is
 fragile-file flagged. That work is not in this pass and requires
 Brandon driving.
+
+## 2026-05-02 — Pass C Phase 1: narration inventory
+
+CChrome verified post-Pass-A runtime:
+- Quick tour: 18:41
+- Deep tour: 34:33
+
+Pass C target: Quick 12-14 min, Deep 22-25 min.
+
+### Inventory (`scripts/inventory-narration.js`)
+
+| fixtureId | Quick chars | Deep chars | Quick min | Deep min |
+| --- | --- | --- | --- | --- |
+| aldington-tte (Card 1) | 1488 | 3448 | 1.60 | 3.71 |
+| wood-lipid (Card 2) | 912 | 2067 | 0.98 | 2.22 |
+| hesperdale-crestor (Card 3) | 1132 | 2410 | 1.22 | 2.59 |
+| norreys-transactional (Card 4) | 1463 | 2851 | 1.57 | 3.07 |
+| quennell-scope (Card 5) | 1140 | 2125 | 1.23 | 2.28 |
+| maundrell-contradiction (Card 6) | 1762 | 4144 | 1.89 | 4.46 |
+| underwell-full-lifecycle (Card 7) | 1481 | 3343 | 1.59 | 3.59 |
+| wexbury-phone (Card 8) | 987 | 1930 | 1.06 | 2.08 |
+| larvendel-denial-cascade (Card 9) | 1184 | 2506 | 1.27 | 2.69 |
+| **TOTAL** | **11,549** | **24,824** | **12.42** | **26.69** |
+
+Audio rate: 15.5 chars/sec (TTS-1 onyx, per prior measurements in `lib/tourScript.js`).
+
+### Visual overhead and the SPOTLIGHT_MIN_MS floor
+
+Total runtime ≠ narration audio length because `components/TourMode.js` enforces `SPOTLIGHT_MIN_MS = 8000` per spotlight bubble — onArrival and after-action annotations hold for 8s minimum regardless of how short their audio is. Narrator-corner bubbles (preArrival, onAuthorize, transition) are NOT floor-bounded.
+
+Implication: cutting a 5-line spotlight narration to 3 lines saves time only if the audio stays above 8s. Below 8s, no time saved on that beat.
+
+### Reduction targets for Phase 2/3
+
+Working backward:
+- Current Quick total: 18:41 = 1121s. Pass A added ~50-60s = ~19:30. Target 14 min = 840s.
+  Need to cut ~280s wall-clock from a budget where ~70% of narration cuts translate (because of floor effects on spotlights).
+  Implies ~30-35% narration reduction (Quick ~3700-4000 chars cut from 11,549).
+- Current Deep total: 34:33 = 2073s + Pass A ~60s = ~35:30. Target 24 min = 1440s.
+  Need to cut ~600s. Same translation factor.
+  Implies ~35-40% narration reduction (Deep ~9000-10,000 chars cut from 24,824).
+
+Card 7 (Reed triage) gets gentler treatment per master task: 20-25% reduction max.
+
+### Plan for Phase 2
+
+Rewrite Quick tour narration card-by-card. Save originals in `lib/tourScript.original.js` for rollback. Per-card commits.
+
