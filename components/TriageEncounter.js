@@ -75,9 +75,10 @@ function ResponseDisplay({ assessment, responses, notes }) {
   );
 }
 
-function ActionButton({ onClick, children, primary, disabled }) {
+function ActionButton({ onClick, children, primary, disabled, id }) {
   return (
     <button
+      id={id}
       type="button"
       onClick={onClick}
       disabled={disabled}
@@ -167,6 +168,16 @@ export default function TriageEncounter({ fixture }) {
   // bubbles. Map each actionId to the matching stage transition so the
   // four-stage UI advances in sync with narration. The manual
   // ActionButton onClick handlers below remain wired for non-tour use.
+  //
+  // Tour timing: TourMode awaits kairos-encounter:auto-action-complete
+  // (via runAction → action-complete on standard fixtures, or this
+  // listener on triage fixtures). EncounterDetail no longer runs the
+  // action script for triage fixtures — its panes are hidden — so this
+  // listener is the only thing that closes the action loop.
+  // We dispatch action-complete immediately after the stage change
+  // commits, which keeps the tour cadence flowing into the next
+  // narration without the 15-25 second silences caused by typing into
+  // invisible panes.
   useEffect(() => {
     if (typeof window === "undefined") return;
     function onAutoAction(e) {
@@ -179,7 +190,18 @@ export default function TriageEncounter({ fixture }) {
         captureMockResponses();
       } else if (actionId === "synthesize-callback") {
         setStage(4);
+      } else {
+        return;
       }
+      // Close the action loop on the next tick so any pending state
+      // commits flush first.
+      setTimeout(() => {
+        window.dispatchEvent(
+          new CustomEvent("kairos-encounter:action-complete", {
+            detail: { actionId, fixtureId: fixture.id },
+          })
+        );
+      }, 0);
     }
     window.addEventListener("kairos-encounter:auto-action", onAutoAction);
     return () =>
@@ -220,7 +242,11 @@ export default function TriageEncounter({ fixture }) {
 
         {stage === 1 ? (
           <>
-            <ActionButton primary onClick={() => setStage(2)}>
+            <ActionButton
+              id="kairos-triage-generate-inquiry"
+              primary
+              onClick={() => setStage(2)}
+            >
               Generate Patient Assessment
             </ActionButton>
             <ActionButton onClick={() => {}}>Defer</ActionButton>
@@ -232,7 +258,11 @@ export default function TriageEncounter({ fixture }) {
           <>
             {mychartActive && mode === "mychart" ? (
               <>
-                <ActionButton primary onClick={captureMockResponses}>
+                <ActionButton
+                  id="kairos-triage-process-reply"
+                  primary
+                  onClick={captureMockResponses}
+                >
                   Send via MyChart
                 </ActionButton>
                 <ActionButton onClick={() => setMode("phone")}>
@@ -241,7 +271,11 @@ export default function TriageEncounter({ fixture }) {
               </>
             ) : (
               <>
-                <ActionButton primary onClick={captureMockResponses}>
+                <ActionButton
+                  id="kairos-triage-process-reply"
+                  primary
+                  onClick={captureMockResponses}
+                >
                   Phone call mode
                 </ActionButton>
                 {mychartActive ? (
@@ -259,7 +293,11 @@ export default function TriageEncounter({ fixture }) {
 
         {stage === 3 ? (
           <>
-            <ActionButton primary onClick={() => setStage(4)}>
+            <ActionButton
+              id="kairos-triage-synthesize-callback"
+              primary
+              onClick={() => setStage(4)}
+            >
               Synthesize SBAR
             </ActionButton>
             <ActionButton onClick={() => {}}>Defer</ActionButton>
@@ -271,7 +309,11 @@ export default function TriageEncounter({ fixture }) {
 
         {stage === 4 ? (
           <>
-            <ActionButton primary onClick={() => {}}>
+            <ActionButton
+              id="kairos-triage-authorize"
+              primary
+              onClick={() => {}}
+            >
               Authorize → forward to provider
             </ActionButton>
             <ActionButton onClick={() => setStage(3)}>Edit</ActionButton>
