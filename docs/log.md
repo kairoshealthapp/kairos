@@ -5218,3 +5218,32 @@ The tablet-breakpoint CSS in `globals.css` pins `.kl-tile:nth-child(4)` to grid-
 - No new packages, fonts, colors, animation libs, or graphics.
 - No `git push`, no commit.
 
+
+## 2026-05-01 — Fixture Name Audit for Phelps Privacy Review
+
+Read-only sweep of every fixture file under `data/fixtures/encounters/`, `data/mock-encounters/`, and `data/patients/` to enumerate all patient, provider, and ancillary names ahead of sharing the URL with Renata Beaucharn at Phelps Health.
+
+Output: `fixture-name-audit.txt` (plain text, alphabetical by last name).
+
+**Counts**
+- Patient names: 31
+- Provider names: 12
+- Other (family/staff) names: 10
+
+**No fixture files were modified.** Audit list is purely for Brandon's visual scan against memory of real Phelps patients.
+
+## 2026-05-01 — Delete data/mock-encounters/ (dead-code cleanup)
+
+Removed the legacy `data/mock-encounters/` directory (15 JSON fixtures + `index.js`, ~45 KB). Confirmed dead code before deletion:
+
+- `grep -r "mock-encounters"` outside the directory: only narrative mentions in `docs/log.md` and one bullet in `docs/ARCHITECTURE.md`. Zero code references.
+- `grep -r "enc-001|...|enc-014"` outside the directory: zero hits.
+- `data/mock-encounters/index.js` was self-contained — nothing imported it.
+
+Live fixtures continue to live at `data/fixtures/encounters/` (28 slug-keyed files, registered through `data/fixtures/encounters/index.js`).
+
+**Verification post-delete**
+- `npm run build`: clean. 50/50 static pages generated, all 28 encounter routes prerendered from `data/fixtures/encounters/`. Zero errors, zero warnings.
+- `npm run dev`: boots clean. `Ready in 3s` on port 3001.
+
+Followup: `docs/ARCHITECTURE.md:22` still says "data/mock-encounters/ — fixture content for simulation mode". Worth a one-line correction in a separate doc-only edit; not bundled here to keep the cleanup commit pure.
