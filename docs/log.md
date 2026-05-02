@@ -5134,3 +5134,87 @@ The CursorGhost SCROLL_SETTLE_MS = 400 limitation manifests in dev preview on Ca
 ### No audio regen
 
 Voiceover text was not modified for cue-phrasing — every card already had a natural arc-closing line that worked as a cursor-move cue ("Each lipid review is a one-off", "At hour eight", "the system gives her no scaffolding", "Every. Single. Time.", etc.). MP3s untouched.
+
+---
+
+## 2026-05-01 — Session: /executive page for Phelps Health Informatics
+
+**Scope:** replace the `/executive` placeholder with a long-scroll editorial readout aimed at Phelps Health's CHCIO ahead of the May 5 interview. Confident-operator tone, no vendor-pitch language, no "Book a meeting" CTA — page exists to arm the CHCIO for forwarding to her boss / CMIO / CFO.
+
+**Files changed:**
+
+- `app/executive/page.js` — full rewrite. Server component (was `"use client"`), pure static page with no JS interactivity. Sections: hero (KAIROS wordmark + lede + byline + Live prototype CTA), 01 Why This Why Now (with Renata Beaucharn pull-quote), 02 The Clinical Thesis (3 subheads), 03 Kairos as Architectural Demonstration (3 subheads + mid-page tour CTA), 04 How This Generalizes, 05 IT Answers (6 subheads: auth, PHI, LLM pathway, audit, IT lift, vendor stability), footer with Brandon's credentials. Both CTAs link to `https://kairos-tour.firekraker.net/rn`.
+- `app/globals.css` — added scoped `.kairos-executive` block (~280 lines) following the same pattern as `.kairos-landing`. Same dark + warm-gold palette, Fraunces wordmark with the existing 4-stop gold gradient (`#FCD681 → #F5B642 → #C0810E → #8C5C08`) and 0.08em letter-spacing, Geist body, scoped CSS variables (`--ke-*`). Numerals (01–05) render large in Fraunces with the same gold gradient. Pull quote uses a left rule + Fraunces italic. `.ke-emphasis` italicizes the architectural-thesis line. Mobile media query at <768px tightens spacing and clamps wordmark + numerals.
+- `components/AppChrome.js` — extended bypass: `if (pathname === "/" || pathname === "/executive") return <>{children}</>;`. Mirrors how the landing page already opts out of Banner / TourMode / VersionStamp / CursorGhost. The "DEMONSTRATION DATA · NO PHI" banner is a tour artifact and is contextually wrong on a strategic readout for executive readership — `/executive` contains no patient data.
+
+**Brand match:**
+
+- Same Fraunces wordmark gold gradient and 0.08em letter-spacing as `.kl-wordmark` and `.kairos-nav-wordmark`.
+- Same `--font-fraunces` / `--font-geist` / `--font-jetbrains` from `app/layout.js`. No new fonts.
+- Same graphite/bone palette via the existing `--kairos-*` tokens. No new colors.
+- Section markers ("01"–"05") use the identical 4-stop gradient as the wordmark.
+
+**Constraints honored:**
+
+- Copy verbatim — no rewrites, no paraphrases.
+- No "Book a meeting" CTA, no calendar link, no email link.
+- No mention of HVC, copy/paste workflows, drafting tools, or anything implying production AI use at Phelps. Cover-story discipline maintained.
+- No stock photos, illustrations, or icon sets.
+- No new packages, no animation libraries, no motion frameworks. Zero JS interactivity beyond native scroll.
+- `[SUBHEAD]` / `[BLOCKQUOTE]` / `[EMPHASIS]` / `[CTA]` markers rendered as semantic HTML (`<h3 className="ke-subhead">`, `<blockquote className="ke-quote">`, `<p className="ke-emphasis">`, `<a className="ke-cta">`). Bracket tags do not appear in output.
+- Meta title `Kairos — for Phelps Health Informatics`; meta description matches hero tagline.
+
+**Verification:**
+
+- `npm run build` → ✓ compiled, 0 errors, 0 warnings. `/executive` is a static (○) prerendered route at 142 B / 87.5 kB First Load JS (down from 754 B / 96.8 kB as a client component).
+- Dev server (`npm run dev`) on port 3000:
+  - HTTP 200, ~27.7 KB HTML.
+  - `<title>` = `Kairos — for Phelps Health Informatics`.
+  - `<meta name="description">` matches the hero tagline.
+  - 5 numerals (01, 02, 03, 04, 05) all present.
+  - 5 `.ke-section` blocks all present.
+  - 2 `<a href="https://kairos-tour.firekraker.net/rn">` links present (hero + mid-page after section 03).
+  - "Renata Beaucharn, CHCIO" pull-quote attribution present.
+  - "DEMONSTRATION DATA" banner absent — AppChrome bypass confirmed working.
+- 375px mobile viewport: no horizontal scroll (scrollWidth === innerWidth === 375), wordmark scales to 67.56px with 0.06em letter-spacing, numerals scale to 44px, single-column layout reads cleanly. Mobile screenshot confirms gold gradient on KAIROS, eyebrow rule with hairlines, gold-bordered "LIVE PROTOTYPE →" CTA, mono URL beneath, and section 01 marker rendering correctly.
+
+**Not done:**
+
+- No `git push` (per task instructions).
+- No git commit yet — leaving for Brandon's review pass.
+
+---
+
+## 2026-05-01 — Session: /executive copy revision + landing tile reorder
+
+**Scope:** revise the `/executive` copy per the new spec (notably: drop the Renata Beaucharn pull-quote from section 01, replace the year-long timeline with "past week after ninety days," add a Scribe surface to make Four roles instead of Three, replace the LLM provider pathway paragraph with the Anthropic-Claude/model-agnostic version, and drop "9-app" from the footer). Also reorder the landing-page role tiles so Executive renders last.
+
+**Files changed:**
+
+- `app/executive/page.js`
+  - Section 01: removed the Renata Beaucharn `<blockquote>` and the "April 28" framing. New paragraph 2 reframes the page as "a technical proposal for what an outpatient clinical informatics program could ship first," and a new short thesis paragraph closes the section ("reduce the mechanical workload, return cognitive bandwidth to clinical judgment, use AI as the lever…"). Closing line updated to "Kairos is one version of how to ship that."
+  - Section 03: "Three roles, one platform" → "Four roles, one platform." Inserted Scribe between Provider and Front Desk, and added the new sentence describing the scribe surface as "currently in early co-development with an IT-savvy science and technology student from the college across the street from Phelps."
+  - Section 04: "Year two: Front Desk surface, third and fourth specialties…" → "Year two: Front Desk and Scribe surfaces, third and fourth specialties…"
+  - Section 05 LLM provider pathway: full paragraph replaced. Old version led with "BAA-covered cloud LLM — the same path Abridge, Ambience, and Suki use." New version leads with "The current implementation runs on Anthropic Claude under a Business Associate Agreement," states "the architecture is deliberately model-agnostic," and frames production redundancy across Anthropic, OpenAI, and Google as a deployment decision, not a rebuild.
+  - Footer: "Sole architect of a 9-app production platform…" → "Sole architect of a production platform…" Numeric claim removed.
+- `app/page.js` (landing) — reordered the `TILES` array. New left-to-right order: Nurse → Provider → Scribe → Front Desk → Executive. No styling, copy, link, or status changes.
+
+**Notes on tablet positioning:**
+
+The tablet-breakpoint CSS in `globals.css` pins `.kl-tile:nth-child(4)` to grid-column `2 / span 2` and `.kl-tile:nth-child(5)` to `4 / span 2` (forming a 3+2 layout). After the reorder, child 4 is now Front Desk and child 5 is Executive — the positional rule still fires correctly because it's order-based, and the second-row centering still reads as designed.
+
+**Verification:**
+
+- `npm run build` → ✓ compiled successfully, 0 errors, 0 warnings, 50/50 static pages. `/executive` static at 142 B / 87.5 kB; `/` static at 175 B / 96.2 kB. Build summary identical in shape to the prior pass — only content changed.
+- Dev server preview verification (running on port 3000):
+  - `/executive`: confirmed `hasOldRenata: false`, `hasNewThesis: true` ("past week after ninety days"), `hasFourRoles: true`, `hasScribeMention: true` (the ambient-capture co-development sentence), `hasYearTwoScribe: true` ("Front Desk and Scribe surfaces"), `hasNewLLM: true` ("Anthropic Claude under a BAA"), `hasOld9App: false`, `hasNewFooter: true`. Demonstration banner still absent (AppChrome bypass intact). Mobile screenshot at 375px shows hero rendering identically — no copy in the hero area changed.
+  - `/`: tile order in DOM reads `["Nurse", "Provider", "Scribe", "Front Desk", "Executive"]`. `executiveLast: true` confirmed.
+  - 375px mobile: tiles stack top-to-bottom in the same order (Nurse → Provider → Scribe → Front Desk → Executive) with no horizontal scroll.
+
+**Constraints honored:**
+
+- All revised copy applied verbatim. No paraphrasing.
+- Cover-story discipline maintained: no clinic AI references, no production-AI-at-Phelps language, no HVC mentions.
+- No new packages, fonts, colors, animation libs, or graphics.
+- No `git push`, no commit.
+
