@@ -187,6 +187,7 @@ export default function TriageEncounter({ fixture }) {
       const targetFixtureId = e && e.detail && e.detail.fixtureId;
       if (targetFixtureId && targetFixtureId !== fixture.id) return;
       let cinematicTarget = null;
+      let cinematicFraming = "tight";
       if (actionId === "generate-inquiry") {
         setStage(2);
         // Pass D Phase 2 / Issue 7A — camera scrolls up to the
@@ -197,8 +198,11 @@ export default function TriageEncounter({ fixture }) {
       } else if (actionId === "process-reply") {
         captureMockResponses();
         // After Send-via-MyChart fires, the responses populate. Frame
-        // the response pane so the viewer's eye lands there.
+        // the response pane TOP so Question 1 lands at the top edge of
+        // the viewport — Brandon flagged Pass D's center-framing as
+        // burying Q1 mid-page on the response reveal.
         cinematicTarget = '[data-tour-anchor="patient-response"]';
+        cinematicFraming = "top";
       } else if (actionId === "synthesize-callback") {
         setStage(4);
         // SBAR pane only renders at stage 4. Camera frames it next.
@@ -210,10 +214,13 @@ export default function TriageEncounter({ fixture }) {
       // commits flush first.
       setTimeout(() => {
         if (cinematicTarget && isCinematicMode()) {
-          // Fire-and-forget — the tight zoom runs alongside the action-
-          // complete dispatch so the next narration beat already has
-          // the right pane in view.
-          cameraGoto(cinematicTarget, { framing: "tight", holdMs: 0 });
+          // Fire-and-forget — the camera move runs alongside the
+          // action-complete dispatch so the next narration beat
+          // already has the right pane in view. Framing varies per
+          // stage: 'tight' centers the pane (Stages 1, 3); 'top' pins
+          // the pane's top edge near the viewport top so Q1 lands at
+          // the top of the screen on Stage 2 response reveal.
+          cameraGoto(cinematicTarget, { framing: cinematicFraming, holdMs: 0 });
         }
         window.dispatchEvent(
           new CustomEvent("kairos-encounter:action-complete", {
