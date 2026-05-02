@@ -119,10 +119,12 @@ function preloadFixtureAudio(fx, mode) {
 }
 
 // Wait for a window CustomEvent. Optionally filter by detail predicate.
-// `skipRef` is optional — if provided, setting skipRef.current=true also
-// resolves the promise (used by the Skip button to exit a runAction's
-// action-complete wait without ending the tour).
-function waitForEvent(name, predicate, cancelledRef, skipRef) {
+// `skipRef` and `jumpRef` are optional — setting either to a truthy value
+// (skipRef.current=true OR jumpRef.current >= 0) resolves the promise
+// early without ending the tour. Used by the Skip button (skipRef) and
+// the card-navigation pills (jumpRef) so a user-driven exit from a wait
+// short-circuits cleanly instead of timing out.
+function waitForEvent(name, predicate, cancelledRef, skipRef, jumpRef) {
   return new Promise((resolve) => {
     function handler(e) {
       if (cancelledRef.current) {
@@ -136,10 +138,10 @@ function waitForEvent(name, predicate, cancelledRef, skipRef) {
       }
     }
     window.addEventListener(name, handler);
-    // Allow cancellation (and skip, if a skipRef was passed) to drain
-    // the listener.
     const cancelPoll = setInterval(() => {
-      if (cancelledRef.current || (skipRef && skipRef.current)) {
+      const skipSet = skipRef && skipRef.current;
+      const jumpSet = jumpRef && jumpRef.current >= 0;
+      if (cancelledRef.current || skipSet || jumpSet) {
         clearInterval(cancelPoll);
         window.removeEventListener(name, handler);
         resolve(null);
@@ -162,6 +164,11 @@ export default function TourMode() {
   const runningRef = useRef(false);
   const audioRef = useRef(null);
   const skipBeatRef = useRef(false);
+  // Pass D Phase 1 — card-navigation pills. When the user clicks pill N,
+  // jumpToCardRef gets the target index (0-based). The running tour loop
+  // checks this ref between beats and at every awaitable wait point so
+  // the jump can happen mid-card. -1 means no pending jump.
+  const jumpToCardRef = useRef(-1);
 
   // state (drives render)
   const [active, setActive] = useState(false);
@@ -209,6 +216,7 @@ export default function TourMode() {
     while (elapsed < ms) {
       if (cancelledRef.current) return;
       if (skipBeatRef.current) return;
+      if (jumpToCardRef.current >= 0) return;
       if (!pausedRef.current) {
         const slice = Math.min(40, ms - elapsed);
         await sleep(slice);
@@ -384,7 +392,8 @@ export default function TourMode() {
         "kairos-encounter:action-complete",
         (d) => d && d.actionId === actionId,
         cancelledRef,
-        skipBeatRef
+        skipBeatRef,
+        jumpToCardRef
       );
 
       window.removeEventListener("kairos-encounter:banner", bannerHandler);
@@ -396,7 +405,7 @@ export default function TourMode() {
       // visible travel — the filmic "lift and shift" rhythm.
       const cinematic = isCinematicMode();
       for (let aIdx = 0; aIdx < afterActionAnns.length; aIdx++) {
-        if (cancelledRef.current) return;
+        if (cancelledRef.current || jumpToCardRef.current >= 0) return;
         const ann = afterActionAnns[aIdx];
         if (cinematic && aIdx > 0) {
           await cameraGoto('[data-tour-anchor="patient-header"]', {
@@ -435,9 +444,24 @@ export default function TourMode() {
       // Preload audio for the very first fixture before we begin.
       preloadFixtureAudio(TOUR_SCRIPT[startStep], modeRef.current);
 
+      // Pass D Phase 1 — converted from a for-loop to a while-loop so the
+      // card-navigation pills can mutate the iteration index. After each
+      // beat we check jumpToCardRef; if set, break out of the per-card
+      // body via the labeled `card:` block, and the outer while-loop
+      // applies the jump and starts the new card from the top.
       try {
-        for (let i = startStep; i < TOUR_SCRIPT.length; i++) {
-          if (cancelledRef.current) break;
+        let i = startStep;
+        while (i < TOUR_SCRIPT.length && !cancelledRef.current) {
+          // Apply any pending jump request that came in between cards.
+          if (jumpToCardRef.current >= 0) {
+            i = jumpToCardRef.current;
+            jumpToCardRef.current = -1;
+            // Reset auth state so the destination card renders fresh.
+            try { sessionStorage.removeItem(AUTH_KEY); } catch {}
+            if (i < 0 || i >= TOUR_SCRIPT.length) {
+              i = 0;
+            }
+          }
           const fx = TOUR_SCRIPT[i];
           setStepIdx(i);
           setProgressLabel(fx.progressLabel);
@@ -451,79 +475,92 @@ export default function TourMode() {
           const fxData = getFixture(fx.fixtureId);
           const fxTab = (fxData && fxData.tab) || "resultsfu";
 
-          // 1. Pre-arrival narrator on the RN home (/rn) with the
-          //    fixture's basket selected so PatientCard pulses on the
-          //    matching card. router.replace alone doesn't re-trigger
-          //    /rn's on-mount tab read, so we also dispatch a
-          //    kairos-tour:set-tab event that /rn listens for.
-          const onRn = window.location.pathname === "/rn";
-          const currentTab = onRn
-            ? new URLSearchParams(window.location.search).get("tab")
-            : null;
-          if (!onRn) {
-            router.push(`/rn?tab=${fxTab}`);
-            await pwait(700);
-          } else if (currentTab !== fxTab) {
-            router.replace(`/rn?tab=${fxTab}`);
-            window.dispatchEvent(
-              new CustomEvent("kairos-tour:set-tab", { detail: { tab: fxTab } })
+          card: {
+            // 1. Pre-arrival narrator on the RN home (/rn) with the
+            //    fixture's basket selected so PatientCard pulses on the
+            //    matching card. router.replace alone doesn't re-trigger
+            //    /rn's on-mount tab read, so we also dispatch a
+            //    kairos-tour:set-tab event that /rn listens for.
+            const onRn = window.location.pathname === "/rn";
+            const currentTab = onRn
+              ? new URLSearchParams(window.location.search).get("tab")
+              : null;
+            if (!onRn) {
+              router.push(`/rn?tab=${fxTab}`);
+              await pwait(700);
+            } else if (currentTab !== fxTab) {
+              router.replace(`/rn?tab=${fxTab}`);
+              window.dispatchEvent(
+                new CustomEvent("kairos-tour:set-tab", { detail: { tab: fxTab } })
+              );
+              await pwait(250);
+            }
+            if (cancelledRef.current || jumpToCardRef.current >= 0) break card;
+
+            await showNarrator(fx.preArrivalNarrator, TOUR_SCRIPT.length);
+            if (cancelledRef.current || jumpToCardRef.current >= 0) break card;
+            clearOverlay();
+
+            // 2. Navigate into encounter (basket already resolved above).
+            router.push(`/encounter/${fx.fixtureId}?tour=1&tab=${fxTab}`);
+            await waitForEvent(
+              "kairos-encounter:ready",
+              (d) => d && d.fixtureId === fx.fixtureId,
+              cancelledRef,
+              null,
+              jumpToCardRef
             );
-            await pwait(250);
+            await pwait(400);
+            if (cancelledRef.current || jumpToCardRef.current >= 0) break card;
+
+            // 3. On-arrival
+            if (fx.onArrival) {
+              await showSpotlight(fx.onArrival);
+              clearOverlay();
+              await pwait(200);
+            }
+            if (cancelledRef.current || jumpToCardRef.current >= 0) break card;
+
+            // 4. Run actions
+            for (const action of fx.actions || []) {
+              if (cancelledRef.current || jumpToCardRef.current >= 0) break;
+              await runAction(action, fx.fixtureId);
+            }
+            if (cancelledRef.current || jumpToCardRef.current >= 0) break card;
+
+            // 5. Post-action narrator (corner)
+            if (fx.onAuthorize) {
+              await showNarrator(fx.onAuthorize, TOUR_SCRIPT.length);
+              clearOverlay();
+            }
+            if (cancelledRef.current || jumpToCardRef.current >= 0) break card;
+
+            // 6. Auto-Authorize
+            window.dispatchEvent(new CustomEvent("kairos-encounter:auto-authorize"));
+            await waitForEvent(
+              "kairos-encounter:flown-off",
+              null,
+              cancelledRef,
+              null,
+              jumpToCardRef
+            );
+            if (cancelledRef.current || jumpToCardRef.current >= 0) break card;
+
+            // 7. Transition narrator (skip on last fixture)
+            if (fx.transitionNarrator && i < TOUR_SCRIPT.length - 1) {
+              await pwait(500);
+              await showNarrator(fx.transitionNarrator, TOUR_SCRIPT.length);
+              clearOverlay();
+            }
           }
-          await showNarrator(fx.preArrivalNarrator, TOUR_SCRIPT.length);
-          if (cancelledRef.current) break;
-          clearOverlay();
-
-          // 2. Navigate into encounter (basket already resolved above).
-          router.push(`/encounter/${fx.fixtureId}?tour=1&tab=${fxTab}`);
-          // Wait for encounter to declare ready
-          await waitForEvent(
-            "kairos-encounter:ready",
-            (d) => d && d.fixtureId === fx.fixtureId,
-            cancelledRef
-          );
-          await pwait(400); // brief settle for spotlight measurement
-          if (cancelledRef.current) break;
-
-          // 3. On-arrival
-          if (fx.onArrival) {
-            await showSpotlight(fx.onArrival);
-            clearOverlay();
-            await pwait(200);
-          }
-
-          // 4. Run actions
-          for (const action of fx.actions || []) {
-            if (cancelledRef.current) break;
-            await runAction(action, fx.fixtureId);
-          }
-
-          // 5. Post-action narrator (corner)
-          if (fx.onAuthorize) {
-            await showNarrator(fx.onAuthorize, TOUR_SCRIPT.length);
-            clearOverlay();
-          }
-          if (cancelledRef.current) break;
-
-          // 6. Auto-Authorize
-          window.dispatchEvent(new CustomEvent("kairos-encounter:auto-authorize"));
-          await waitForEvent(
-            "kairos-encounter:flown-off",
-            null,
-            cancelledRef
-          );
-          if (cancelledRef.current) break;
-
-          // 7. Transition narrator (skip on last fixture)
-          if (fx.transitionNarrator && i < TOUR_SCRIPT.length - 1) {
-            // We're back on dashboard now (auth flow auto-routed).
-            await pwait(500);
-            await showNarrator(fx.transitionNarrator, TOUR_SCRIPT.length);
-            clearOverlay();
+          // End of per-card body. If a jump fired during this card, the
+          // outer loop top will apply it. Otherwise advance normally.
+          if (jumpToCardRef.current < 0) {
+            i++;
           }
         }
 
-        if (!cancelledRef.current) {
+        if (!cancelledRef.current && jumpToCardRef.current < 0) {
           setShowEndModal(true);
         }
       } finally {
@@ -661,6 +698,34 @@ export default function TourMode() {
     }
   }, [stopAudio]);
 
+  // Pass D Phase 1 — card-navigation pill click handler. Sets the jump
+  // target ref, short-circuits any in-flight beat, stops audio, and
+  // restarts runTour from the target if the loop isn't currently active
+  // (e.g. the user clicks a pill from the end-of-tour modal).
+  const jumpToCard = useCallback(
+    (n) => {
+      if (typeof n !== "number" || n < 0 || n >= TOUR_SCRIPT.length) return;
+      jumpToCardRef.current = n;
+      skipBeatRef.current = true;
+      stopAudio();
+      setOverlay(null);
+      // Clear the end-modal in case the jump came from there.
+      setShowEndModal(false);
+      // If the loop isn't running (post-end-modal), start a fresh runTour
+      // at the target. The newly-spawned runTour will see jumpToCardRef
+      // is still set and apply it on the first iteration of its
+      // while-loop.
+      if (!runningRef.current) {
+        // Reset cancellation so a fresh tour can run.
+        cancelledRef.current = false;
+        if (!active) setActive(true);
+        try { sessionStorage.setItem(ACTIVE_KEY, "1"); } catch {}
+        runTour(n);
+      }
+    },
+    [active, runTour, stopAudio]
+  );
+
   // End-tour — cancel + restore. Used by the End button (modal) and
   // Free-Explore exit paths. NOT bound to the Skip button (which advances
   // the current beat instead, per Phase-3.4 quality-fix sprint).
@@ -745,6 +810,7 @@ export default function TourMode() {
           onSkip={advanceBeat}
           onEnd={skipTour}
           onContinue={null}
+          onJumpToCard={jumpToCard}
         />
       ) : null}
 
@@ -767,11 +833,17 @@ export default function TourMode() {
           onSkip={advanceBeat}
           onEnd={skipTour}
           onContinue={null}
+          onJumpToCard={jumpToCard}
         />
       ) : null}
 
       {showEndModal ? (
-        <TourEndModal onFreeExplore={freeExplore} onEnd={endTour} />
+        <TourEndModal
+          onFreeExplore={freeExplore}
+          onEnd={endTour}
+          onJumpToCard={jumpToCard}
+          total={TOUR_SCRIPT.length}
+        />
       ) : null}
     </>
   );

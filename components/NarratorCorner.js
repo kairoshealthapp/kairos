@@ -57,8 +57,10 @@ export default function NarratorCorner({
   onTogglePause,
   muted,
   onToggleMuted,
+  onJumpToCard,
 }) {
   const pct = total > 0 ? Math.round(((step + 1) / total) * 100) : 0;
+  const pillCount = typeof total === "number" && total > 0 ? total : 0;
   return (
     <div
       className="fixed z-[70] right-4 bottom-4 w-[340px] kairos-card p-4 shadow-2xl"
@@ -69,6 +71,35 @@ export default function NarratorCorner({
       }}
       onClick={(e) => e.stopPropagation()}
     >
+      {/* Pass D Phase 1 — card-navigation pills. Renders to the LEFT of
+          the CARD label so the user can jump directly to any card during
+          smoke-testing without watching the tour from start. The pill
+          for the active card is gold; the rest are muted. */}
+      {pillCount > 0 && onJumpToCard ? (
+        <div className="flex items-center gap-1 flex-wrap mb-2">
+          {Array.from({ length: pillCount }, (_, idx) => {
+            const active = idx === step;
+            return (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => onJumpToCard(idx)}
+                className={
+                  "inline-flex items-center justify-center text-[11px] font-semibold rounded-full border min-w-[22px] h-[22px] px-1.5 transition-colors " +
+                  (active
+                    ? "text-graphite bg-amber border-amber"
+                    : "text-bone-muted hover:text-bone bg-graphite/40 border-mist/60 hover:bg-graphite/70")
+                }
+                title={`Jump to Card ${idx + 1}`}
+                aria-label={`Jump to Card ${idx + 1}`}
+                aria-current={active ? "true" : undefined}
+              >
+                {idx + 1}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
       <div className="flex items-center justify-between mb-2 gap-2">
         <span className="kairos-kicker text-amber/80 truncate">
           {progressLabel || "Tour"}
