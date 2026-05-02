@@ -5773,3 +5773,69 @@ Pass B work (cursor-leads-camera-trails 200ms lag) is still queued for Brandon-d
 ### No git push performed
 
 All Pass D commits stay local. Brandon handles the push manually after smoke-testing the 12 fixes.
+
+## 2026-05-02 — Pass E: 7-issue follow-up sprint
+
+Brandon's smoke-test of Pass D surfaced 7 more issues. Per master-task constraint, all commits stay local; no `git push`.
+
+### Commits (chronological, all local)
+
+| Hash | Issue | Title |
+| --- | --- | --- |
+| `5dc14aa` | #1 | feat: typing speed 4× → 10× |
+| `a6d60d5` | #2 | feat: disposition beats for Cards 1, 2, 8 |
+| `be56069` | #3 | feat: Card 7 scroll position + Stage 3→4 narration rewrite |
+| _(audio)_ | regen | feat: Pass E MP3 regen (6 new disposition + 6 Card 7 updates) |
+| _(this)_ | docs | docs: Pass E summary |
+
+### Per-issue resolution
+
+**#1 — typing speed 4× → 10×.** `components/EncounterDetail.js`'s pane-update typing loop intervalMs divisor moved from `(speedMul × 4)` → `(speedMul × 10)`. At `typingSpeedCps=80` and tour @1× the effective rate is now ~533 cps (was ~213); tour @2× ~1066 cps. Floor lowered from 2ms to 1ms.
+
+**#2 — disposition beats for Cards 1, 2, 8.** A new spotlight annotation appended to each card's `actions[].annotations` array, anchored to `action-bar`. SpotlightOverlay's anchor-aware scrollIntoView pulls the camera to the bottom of the encounter, outlines the action-bar in gold, and plays a brief narration confirming what's about to fire. Existing `onAuthorize` narrator-corner still plays after with the cursor-to-Authorize click.
+
+  - Card 1: 'Send the MyChart. Sign the note. Order pended for cosign. One click — all three.'
+  - Card 2: 'Send the MyChart. Sign the note. No orders this card. One click.'
+  - Card 8: 'Sign the note. The phone script stays ephemeral. One click.'
+
+**#3 — Card 7 scroll position + Stage 3→4 narration rewrite.**
+
+Scroll: added a `framing: "top"` option to `lib/tourCamera.js` that uses `window.scrollTo` with the element's top edge ~80px below the viewport top. `TriageEncounter`'s `process-reply` transition now uses `cinematicFraming = "top"` so Question 1 lands at the top of the screen on Stage 2 response reveal. Stages 1 + 3 still use `tight` (centered).
+
+Narration: per master task, stripped Pendrelle / BNP / Holter / two-notes-synthesis specifics from the Stage 3→4 narration. Don't say 'Authorize' — say 'forward to provider' (the button label can say it; narration describes the clinical action).
+
+  - **pa2** (after process-reply): 'The patient's answers are in. Hit Synthesize SBAR.' Cursor → synthesize-callback button.
+  - **pa3** (after synthesize-callback): 'The S-B-A-R is ready. Forward it to the provider for clinical direction.' Cursor → triage-authorize button.
+  - **pa3b** (was 'All three artifacts together'): repurposed as the scroll-to-disposition beat. Anchor `patient-header` → `action-bar`. 'Routed to Pendrelle' → 'forwarded to the provider for clinical direction.'
+
+Cursor timings shortened on pa2 + pa3 to match the new ~3-7s audio (was scaled to old ~14-18s narrations).
+
+### TTS regen log
+
+| audioKey | Status | Reason |
+| --- | --- | --- |
+| `anderson-tte-disposition{,-deep}` | NEW | Pass E #2 disposition beat (Card 1) |
+| `henderson-lipid-disposition{,-deep}` | NEW | Pass E #2 disposition beat (Card 2) |
+| `greene-phone-disposition{,-deep}` | NEW | Pass E #2 disposition beat (Card 8) |
+| `reed-full-lifecycle-pa2{,-deep}` | regen | Card 7 narration rewrite |
+| `reed-full-lifecycle-pa3{,-deep}` | regen | Card 7 narration rewrite |
+| `reed-full-lifecycle-pa3b{,-deep}` | regen | Card 7 disposition repurpose + Pendrelle strip |
+
+12 files. **Cost: $0.0182** (1,215 new chars billed at $15/1M). Voice = onyx, consistent with prior generations.
+
+### What to smoke-test
+
+1. `npm run dev` → `http://localhost:3001/rn` (or whatever port Next.js picks)
+2. Use the card-navigation pills (1-9 in HUD bottom-right) to jump to:
+   - **Cards 1, 2, 8**: after the Generate-flow plays out, watch for the camera scrolling to the bottom action bar with a gold outline and a brief 'Send/Sign/Done' narration BEFORE Authorize fires.
+   - **Card 7**: at Stage 2 (after Send via MyChart), confirm Question 1 lands near the top of the viewport (not mid-page). At Stage 3→4 narration, confirm the lines are short and workflow-focused — no Pendrelle / BNP / Holter mentions, no 'Authorize' in the audio.
+   - **All cards**: typing animation should feel near-instant at 2× speed.
+3. If clean: `git push origin main`.
+
+### CursorGhost.js untouched
+
+Pass B (cursor-leads-camera-trails 200ms lag) still queued for Brandon-driven verification. No edits to `components/CursorGhost.js` in Pass E.
+
+### No git push performed
+
+All Pass E commits stay local. Brandon handles the push manually after smoke-testing.
