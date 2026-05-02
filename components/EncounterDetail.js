@@ -187,6 +187,15 @@ export default function EncounterDetail({ fixture, fromTab }) {
                   framing: "wide",
                   holdMs: 1500,
                 });
+                // Cinematic Pass A — Fix 2: an additional 1500ms beat
+                // on top of the wide pull-back's hold so each artifact
+                // gets a real read-and-breathe interval instead of the
+                // ~400ms type-engine queue delay that has been the
+                // inter-pane gap until now. Total inter-pane breathing:
+                // 1500ms wide hold + 1500ms beat = 3000ms.
+                if (!cancelRef.current && !skipBeatRef.current) {
+                  await sleep(1500);
+                }
               }
               await cameraGoto(cinematicAnchor, {
                 framing: "tight",
