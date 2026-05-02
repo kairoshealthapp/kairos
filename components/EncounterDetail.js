@@ -211,17 +211,17 @@ export default function EncounterDetail({ fixture, fromTab }) {
             return;
           }
           // Animated typing: stream characters into pane state.
-          // Pass E — Brandon's tour-at-2× still feels slow at the Pass D
-          // 4× rate, so bumped to 10× (current ms/char ÷ 2.5). At
-          // typingSpeedCps=80 the tour @1× effective rate is now ~533 cps,
-          // and tour @2× is ~1066 cps — close to instantaneous on most
-          // modern monitors. The 1.5× legacy slowdown is still applied
-          // as the readability baseline before the 10× kicks in.
+          // Pass F — Brandon asked to divide current ms/char by 2.5
+          // again on top of Pass E's 10× bump, so divisor now goes from
+          // (speedMul × 10) → (speedMul × 25). At typingSpeedCps=80 the
+          // tour @1× effective rate is ~1333 cps and tour @2× is
+          // ~2666 cps — effectively instant. The 1.5× legacy slowdown
+          // baseline still applies before the 25× kicks in.
           let intervalMs = Math.max(8, 1000 / typingSpeedCps);
           if (typeof window !== "undefined" && sessionStorage.getItem("kairos-tour-active") === "1") {
             const ts = sessionStorage.getItem("kairos-tour-speed");
             const speedMul = ts === "2" ? 2 : 1;
-            intervalMs = Math.max(1, (intervalMs * 1.5) / (speedMul * 10));
+            intervalMs = Math.max(1, (intervalMs * 1.5) / (speedMul * 25));
           }
           const chars = String(content);
           let acc = mode === "append" ? null : "";
