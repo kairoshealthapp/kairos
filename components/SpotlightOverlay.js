@@ -13,11 +13,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { isCinematicMode } from "@/lib/featureFlags";
 
 const PADDING = 12;
 const BUBBLE_W = 340;
 const BUBBLE_H_EST = 200; // rough bubble height for edge-detection
 const BUBBLE_M = 16; // gap between cutout and bubble
+// Cinematic Pass A — Fix 3 uses a slightly larger gap so the bubble
+// sits visually clear of the amber outline before the collision-aware
+// picker runs.
+const CINEMATIC_GAP = 24;
 
 function clamp(v, lo, hi) {
   return Math.max(lo, Math.min(hi, v));
@@ -31,6 +36,55 @@ function pickPosition(rect, position, vw, vh) {
   if (position === "bottom" && rect.y + rect.h + BUBBLE_M + BUBBLE_H_EST > vh - 16) return "top";
   if (position === "top" && rect.y - BUBBLE_M - BUBBLE_H_EST < 16) return "bottom";
   return position;
+}
+
+// Cinematic Pass A — Fix 3: collision-aware tooltip placement.
+// CChrome diagnostic flagged the tooltip card overlapping the spotlit
+// element (and adjacent panes) on cards 1-7, 9. The legacy pickPosition
+// only flipped on hard viewport clipping; it didn't avoid sitting on
+// top of the artifact whose content the tooltip narrates. This picker
+// computes all four candidate positions with a 24px gap, filters to
+// those that fit the viewport, and chooses the least-overlap with the
+// outlined rect. Falls back to a viewport-clamped bottom placement if
+// no candidate fits cleanly.
+function pickCinematicPlacement(rectWithPadding, vw, vh, w, h) {
+  const target = {
+    left: rectWithPadding.x,
+    top: rectWithPadding.y,
+    right: rectWithPadding.x + rectWithPadding.w,
+    bottom: rectWithPadding.y + rectWithPadding.h,
+  };
+  const candidates = [
+    { name: "right",  left: target.right + CINEMATIC_GAP, top: target.top },
+    { name: "left",   left: target.left - CINEMATIC_GAP - w, top: target.top },
+    { name: "bottom", left: target.left, top: target.bottom + CINEMATIC_GAP },
+    { name: "top",    left: target.left, top: target.top - CINEMATIC_GAP - h },
+  ];
+  const margin = 16;
+  const scored = candidates.map((c) => {
+    const r = { left: c.left, top: c.top, right: c.left + w, bottom: c.top + h };
+    const fits =
+      r.left >= margin &&
+      r.top >= margin &&
+      r.right <= vw - margin &&
+      r.bottom <= vh - margin;
+    const ix = Math.max(0, Math.min(r.right, target.right) - Math.max(r.left, target.left));
+    const iy = Math.max(0, Math.min(r.bottom, target.bottom) - Math.max(r.top, target.top));
+    return { ...c, rect: r, fits, overlap: ix * iy };
+  });
+  const fitting = scored.filter((c) => c.fits);
+  if (fitting.length > 0) {
+    fitting.sort((a, b) => a.overlap - b.overlap);
+    const winner = fitting[0];
+    return { left: winner.left, top: winner.top, name: winner.name };
+  }
+  // None fit cleanly — bottom with viewport clamp.
+  const bottom = scored.find((c) => c.name === "bottom") || scored[0];
+  return {
+    left: clamp(bottom.left, margin, vw - w - margin),
+    top: clamp(bottom.top, margin, vh - h - margin),
+    name: "bottom-clamp",
+  };
 }
 
 export default function SpotlightOverlay({ anchor, position, title, body, onDismiss }) {
@@ -110,33 +164,44 @@ export default function SpotlightOverlay({ anchor, position, title, body, onDism
     };
   }, [anchor, position]);
 
-  // Bubble placement uses the resolved (edge-flipped) position.
+  // Bubble placement.
+  // Default until rect resolves keeps the legacy top-left until measure
+  // completes — bubble is held at opacity 0 anyway in that window.
   let bubbleStyle = { left: 24, top: 24 };
   if (rect) {
     const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
     const vh = typeof window !== "undefined" ? window.innerHeight : 800;
-    const pos = resolvedPosition;
-    if (pos === "right") {
-      bubbleStyle = {
-        left: clamp(rect.x + rect.w + BUBBLE_M, 16, vw - BUBBLE_W - 16),
-        top: clamp(rect.y, 16, vh - BUBBLE_H_EST),
-      };
-    } else if (pos === "left") {
-      bubbleStyle = {
-        left: clamp(rect.x - BUBBLE_W - BUBBLE_M, 16, vw - BUBBLE_W - 16),
-        top: clamp(rect.y, 16, vh - BUBBLE_H_EST),
-      };
-    } else if (pos === "bottom") {
-      bubbleStyle = {
-        left: clamp(rect.x, 16, vw - BUBBLE_W - 16),
-        top: clamp(rect.y + rect.h + BUBBLE_M, 16, vh - BUBBLE_H_EST),
-      };
+    if (isCinematicMode()) {
+      // Pass A Fix 3: collision-aware placement. Picks the side with
+      // least overlap against the outlined rect that still fits the
+      // viewport. Falls back to clamped-bottom if every side clips.
+      const placement = pickCinematicPlacement(rect, vw, vh, BUBBLE_W, BUBBLE_H_EST);
+      bubbleStyle = { left: placement.left, top: placement.top };
     } else {
-      // top
-      bubbleStyle = {
-        left: clamp(rect.x, 16, vw - BUBBLE_W - 16),
-        top: clamp(rect.y - BUBBLE_M - BUBBLE_H_EST, 16, vh - BUBBLE_H_EST),
-      };
+      // Legacy edge-flip placement preserved for cinematicMode=off.
+      const pos = resolvedPosition;
+      if (pos === "right") {
+        bubbleStyle = {
+          left: clamp(rect.x + rect.w + BUBBLE_M, 16, vw - BUBBLE_W - 16),
+          top: clamp(rect.y, 16, vh - BUBBLE_H_EST),
+        };
+      } else if (pos === "left") {
+        bubbleStyle = {
+          left: clamp(rect.x - BUBBLE_W - BUBBLE_M, 16, vw - BUBBLE_W - 16),
+          top: clamp(rect.y, 16, vh - BUBBLE_H_EST),
+        };
+      } else if (pos === "bottom") {
+        bubbleStyle = {
+          left: clamp(rect.x, 16, vw - BUBBLE_W - 16),
+          top: clamp(rect.y + rect.h + BUBBLE_M, 16, vh - BUBBLE_H_EST),
+        };
+      } else {
+        // top
+        bubbleStyle = {
+          left: clamp(rect.x, 16, vw - BUBBLE_W - 16),
+          top: clamp(rect.y - BUBBLE_M - BUBBLE_H_EST, 16, vh - BUBBLE_H_EST),
+        };
+      }
     }
   }
 
