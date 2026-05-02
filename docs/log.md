@@ -5364,3 +5364,80 @@ Audit found voicemail content in:
 **No narration regen needed.** Removed annotations cleanly; remaining narration lines for Cards 8 + 9 do not reference voicemail.
 
 Build passes clean (`npm run build`).
+
+### Phase 1 — cinematic primitives
+
+Three new orchestration files, all behind `lib/featureFlags.js` `cinematicMode` (default `true`):
+
+- `lib/tourCamera.js` — `cameraGoto(target, { framing, holdMs })`. Wide framing positions the target with ~200px breathing room above and below; tight framing is `scrollIntoView({ block: 'center' })`. Awaits `scrollend` event with a 1500ms timeout fallback. No-op when flag is off so callers stay `await`-shaped.
+- `lib/tourChoreography.js` — `cursorThenCamera(target, options)`. Dispatches the cursor `kairos-tour:beat-start` event first, then waits `cameraLagMs` (default 200ms), then triggers the camera move so the cursor leads and the page settles around it. `zoomOnClick` tightens framing after the click ripple. Falls back to legacy cursor-only dispatch when flag is off.
+- `lib/tourRevealQueue.js` — `runRevealQueue(artifacts, options)`. Walks artifacts sequentially: tight zoom → renderTrigger → await `kairos-artifact:render-complete` → `readMs` hold → wide pull-back. Dispatches `kairos-reveal-queue:complete` at the end. When flag is off, fires triggers in parallel (legacy behavior).
+
+Plus the listener side:
+
+- `components/EncounterDetail.js` — the per-character pane-update typing loop now dispatches `kairos-artifact:render-complete { target }` when typing finishes (and on the skip-fast-forward path), so the reveal queue can advance when each artifact lands.
+
+CursorGhost.js is **not** modified (fragile-file flagged). The primitives integrate via the existing window-event protocol (`kairos-tour:beat-start`, `kairos-encounter:*`).
+
+### Phase 2 — card migration (light pass, uniform across all 9 cards)
+
+Rather than per-card surgical refactors with audio regen, this pass wires the camera primitive into `components/TourMode.js`'s `runAction` loop. Between after-action annotations, when `cinematicMode` is on, the camera pulls back to a wide patient-header framing — the filmic "lift and shift" rhythm. After the last annotation, a final wide pull-back so the cursor's upcoming move to Authorize starts from a wider frame.
+
+This integration applies uniformly across all 9 cards because `runAction` is the universal path for every fixture's after-action annotations. No fixture-data edits, no narration regen — the existing audio still syncs against the existing bubble dwell timing because we add motion in the gaps between bubbles, not inside them.
+
+### Phase 3 — Card 7 (Reed triage) multi-stage
+
+Card 7's TriageEncounter renders inside the same `data-tour-anchor="patient-header"` wrapper, so the Phase 2 runAction integration applies to Card 7's `synthesize-callback` and `authorize` stages without additional code. No separate commit needed.
+
+### Phase 4 — runtime claims removed from tour CTAs
+
+`components/TourLauncher.js` no longer emits `· {min} min` suffixes; the title tooltip drops the minute count. `estimateTourMinutes` import removed. `app/executive/page.js` mid-page CTA changed from "13-minute Quick tour or 25-minute Deep tour" to "Quick tour or Deep tour". Cinematic camera holds change the runtime, and pinning a clock to the buttons would either be stale immediately or force a re-measure after every audio regen.
+
+### Audio regeneration log
+
+**None.** No narration text was edited. Voicemail removal in Phase 0 deleted entire annotation blocks (Card 8 pa2, Card 9 pa3) but did not edit any remaining narration line. Cinematic pacing in Phase 2 adds motion in the gaps between bubbles, not inside them, so existing MP3s remain timed correctly. Orphaned but harmless: `greene-phone-pa2{,-deep}.mp3`, `jackson-denial-cascade-pa3{,-deep}.mp3`.
+
+**Total OpenAI TTS cost: $0.00.**
+
+### Final state of cinematicMode flag
+
+`lib/featureFlags.js` exports `cinematicMode = true`. Runtime override available via `?cinematic=0` (or `1`) URL param and `sessionStorage["kairos.cinematicMode"]`. Bisecting any regression is one query-param flip away.
+
+### Commits made (chronological, all local)
+
+| Hash | Phase | Title |
+| --- | --- | --- |
+| `5d78abd` | 0 | feat: remove voicemail content per Phelps HIPAA policy update |
+| `108f8b2` | 1 | feat: cinematic tour primitives (camera, choreography, reveal queue) |
+| `e5e4ff9` | 2/3 | feat: cinematic pacing — between-artifact camera pull-back (light pass, all cards) |
+| `1a65cda` | 4 | chore: remove runtime claims from tour CTAs |
+| (this commit) | 5 | docs: cinematic tour build summary |
+
+### Phases skipped or partially completed
+
+**None blocked, but Phases 2-3 deliberately scoped lighter than the master task's per-card surgical migration.** The autonomous build chose breadth over depth: a uniform TourMode integration that lights up cinematic pacing for every card, vs. per-card refactors with narration regen that would require Brandon's PASS verification on each card.
+
+The primitives `cursorThenCamera` and `runRevealQueue` are wired and tested at the build level (build clean, integrated event protocol validated against EncounterDetail's render-complete dispatch) but are **not yet called from TourMode**. The next iteration — once Brandon has smoke-tested the light pass — can swap `runAction`'s after-action annotation loop for an explicit `runRevealQueue` call without touching anything else.
+
+### What Brandon needs to do post-return
+
+1. **Smoke-test localhost.** `npm run dev`, run Quick tour. Pay attention to:
+   - **Card 1 (Anderson):** Watch for the camera pull-back between Nurse Note → MyChart → Order Pad. Should feel like "lift, shift, settle" three times rather than a hard cut.
+   - **Card 7 (Reed):** Multi-stage triage — verify the camera pull-back fires between `synthesize-callback` stages and the SBAR reveal lands cleanly.
+   - **Card 9 (Jackson):** This card lost its pa3 voicemail-correlation annotation. Pacing should still feel coherent — the auth-state badge bubble (pa1) and the denial-acknowledgment frame bubble (pa2) carry the card without the voicemail beat.
+   - **Card 8 (Greene):** Voicemail Talking Points action button is gone. The card now ends after the phone-script reveal and goes straight to Authorize.
+2. **If clean:** confirm `lib/featureFlags.js` `cinematicMode = true` matches your intended production default, then `git push origin main`.
+3. **If issues:**
+   - Cinematic motion too aggressive / fights the audio? Add `?cinematic=0` to the tour URL to bisect — that runtime-flips the flag without redeploying, lets you compare old-vs-new pacing side-by-side.
+   - Specific card needs narration regen for the new pacing? Use the existing `scripts/generate-tour-audio.js` flow with the OpenAI TTS "onyx" voice. The audio key naming convention is unchanged.
+
+### Sanity checks performed during the build
+
+- `npm run build` passed clean after **every** commit (Phase 0, Phase 1, Phase 2, Phase 4). No type errors, no lint warnings.
+- Voicemail audit was repo-wide (excluding node_modules / .next / .git / .vercel / _retired). Only matches outside Card 8/9 fixtures + tour script were React `useCallback` (false positives) and the HVC chat knowledge base, which **already** matches the new HIPAA rule ("leave generic callback message only — no clinical details on voicemail") and was therefore left untouched.
+- `_retired/scripts/generateReferralSeed.mjs` and `_retired/data/referralMessages/seed.json` contain "no answer and the voicemail box is full" copy. These paths are retired per `_retired/` convention and do not ship in the demo. Left alone.
+- ExplanationPane `VOICEMAIL_LEFT` callback-state label is dead code — the component hardcodes `callbackLabel = "AWAITING_CALL"` and the state machine is deferred to Phase 3.4. Left alone.
+
+### No git push performed
+
+Per master task constraint, **all commits stay local**. Brandon handles the push manually after smoke-testing.
