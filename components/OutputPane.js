@@ -12,14 +12,20 @@ import ExplanationPane from "./ExplanationPane";
 export default function OutputPane({ fixture, route, paneState, isTyping, onDismissExplanation }) {
   const channel = route && route.channel;
   if (channel === "phone") {
+    // Inner data-tour-anchor lets the cinematic camera tight-frame the
+    // phone-script reveal independently of the wider output-pane wrapper
+    // in EncounterDetail. The outer wrapper still carries
+    // data-tour-anchor="output-pane" for legacy callers.
     return (
-      <ExplanationPane
-        fixture={fixture}
-        content={paneState && paneState.phoneScript}
-        typingSpeedCps={paneState && paneState.typingSpeedCps}
-        isTyping={isTyping}
-        onDismiss={onDismissExplanation}
-      />
+      <div data-tour-anchor="phone-script" className="h-full">
+        <ExplanationPane
+          fixture={fixture}
+          content={paneState && paneState.phoneScript}
+          typingSpeedCps={paneState && paneState.typingSpeedCps}
+          isTyping={isTyping}
+          onDismiss={onDismissExplanation}
+        />
+      </div>
     );
   }
   // mychart + flag-for-nurse fall through to MyChartPane.

@@ -9,6 +9,8 @@ import { useRouter } from "next/navigation";
 import dataSource from "@/lib/dataSource";
 import { routeFor } from "@/lib/routing";
 import { getPattern } from "@/lib/patterns";
+import { isCinematicMode } from "@/lib/featureFlags";
+import { cameraGoto } from "@/lib/tourCamera";
 import PatientHeader from "./PatientHeader";
 import SourcePane from "./SourcePane";
 import NurseNotePane from "./NurseNotePane";
@@ -51,6 +53,25 @@ function isInrPattern(fixture) {
 
 const STORAGE_KEY = "kairos.authorizedCards.v1";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Cinematic Pass A — map a pane-update event's target string to the
+// data-tour-anchor selector the camera should tight-frame on. Targets
+// not in this map skip the cinematic camera move (the typing still
+// runs, just without per-pane framing).
+function paneAnchorFor(target) {
+  switch (target) {
+    case "nurse-note":
+      return '[data-tour-anchor="nurse-note"]';
+    case "mychart":
+      return '[data-tour-anchor="output-pane"]';
+    case "phone-script":
+      return '[data-tour-anchor="phone-script"]';
+    case "order-pad":
+      return '[data-tour-anchor="order-pad"]';
+    default:
+      return null;
+  }
+}
 
 function readAuthorized() {
   if (typeof window === "undefined") return new Set();
@@ -103,6 +124,11 @@ export default function EncounterDetail({ fixture, fromTab }) {
   // all check this ref so they fast-forward to a finished state instead of
   // running to completion at normal speed and missing the tour's next beat.
   const skipBeatRef = useRef(false);
+  // Cinematic Pass A — counts pane-updates seen within the current
+  // action so the camera knows whether this pane is the first reveal
+  // (no wide pull-back) or a subsequent reveal (preceded by a wide
+  // pull-back). Reset to 0 at the start of every runAction.
+  const paneUpdateCountRef = useRef(0);
 
   // Set per-pane content. mode: 'replace' | 'append' | 'instant'.
   const applyPaneContent = useCallback((target, content, mode) => {
@@ -145,6 +171,30 @@ export default function EncounterDetail({ fixture, fromTab }) {
               })
             );
           };
+          // Cinematic Pass A — Fix 1: before the typing animation runs,
+          // pull the camera wide between panes (so the viewer reads the
+          // whole encounter context for a beat) and then tight-frame on
+          // the active pane so its typewriter lands center-stage instead
+          // of off-screen. The first pane-update in an action skips the
+          // wide pull-back because there is no previous pane to pull
+          // back from. cancelRef is checked so a tour-end mid-camera
+          // doesn't strand us in a transition.
+          if (isCinematicMode() && !cancelRef.current && !skipBeatRef.current) {
+            const cinematicAnchor = paneAnchorFor(target);
+            if (cinematicAnchor) {
+              if (paneUpdateCountRef.current > 0) {
+                await cameraGoto('[data-tour-anchor="patient-header"]', {
+                  framing: "wide",
+                  holdMs: 1500,
+                });
+              }
+              await cameraGoto(cinematicAnchor, {
+                framing: "tight",
+                holdMs: 0,
+              });
+            }
+          }
+          paneUpdateCountRef.current = (paneUpdateCountRef.current || 0) + 1;
           if (mode === "instant" || target === "order-pad" || !typingSpeedCps) {
             applyPaneContent(target, content, mode);
             dispatchArtifactComplete();
@@ -254,6 +304,7 @@ export default function EncounterDetail({ fixture, fromTab }) {
       if (isPlaying) return;
       cancelRef.current = false;
       skipBeatRef.current = false; // fresh action starts un-skipped
+      paneUpdateCountRef.current = 0; // reset cinematic pane counter
       setIsPlaying(true);
       setEditable(false);
       if (typeof window !== "undefined") {
