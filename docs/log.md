@@ -5247,3 +5247,21 @@ Live fixtures continue to live at `data/fixtures/encounters/` (28 slug-keyed fil
 - `npm run dev`: boots clean. `Ready in 3s` on port 3001.
 
 Followup: `docs/ARCHITECTURE.md:22` still says "data/mock-encounters/ — fixture content for simulation mode". Worth a one-line correction in a separate doc-only edit; not bundled here to keep the cleanup commit pure.
+
+## 2026-05-01 (later) — Executive tile LIVE state + April note volume final
+
+Two-line edit to ship the /executive page on the landing tile and finalize the note-volume stat now that April has closed.
+
+**Landing page** ([app/page.js](app/page.js))
+- Executive tile in `TILES` flipped from `{ status: "Coming soon", live: false }` to `{ status: "Live", live: true }`. Mirrors the Nurse tile's gold pip + clickable styling. Provider, Scribe, Front Desk untouched.
+
+**Executive footer** ([app/executive/page.js:285-286](app/executive/page.js))
+- "Feb 844 · Mar 1,016 · Apr MTD 634" → "Feb 844 · Mar 1,016 · Apr 698". April is no longer month-to-date.
+
+**Verification**
+- `npm run build`: clean. 50/50 static pages.
+- Landing DOM check (desktop): all five tiles enumerated. Executive `isLive=true`, status "Live", href `/executive`, pip background `rgb(245, 158, 11)` — identical to Nurse's gold. Three placeholder tiles unchanged with transparent pip + "Coming soon".
+- Mobile (375×812) DOM check: all five tiles render in order, Executive last with `isLive=true`.
+- /executive footer DOM check: text reads "Feb 844 · Mar 1,016 · Apr 698", zero "MTD" occurrences anywhere on the page.
+
+Note: Change 3 (delete `data/mock-encounters/`) was already executed in the previous turn (commit `76d409c`); not re-applied here.

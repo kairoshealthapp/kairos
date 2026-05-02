@@ -32,7 +32,7 @@ const TILES = [
   { label: "Provider",   href: "/provider",  status: "Coming soon", live: false },
   { label: "Scribe",     href: "/scribe",    status: "Coming soon", live: false },
   { label: "Front Desk", href: "/frontdesk", status: "Coming soon", live: false },
-  { label: "Executive",  href: "/executive", status: "Coming soon", live: false },
+  { label: "Executive",  href: "/executive", status: "Live",        live: true  },
 ];
 
 export default function LandingPage() {

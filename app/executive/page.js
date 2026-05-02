@@ -283,7 +283,7 @@ export default function ExecutivePage() {
         </div>
         <div className="ke-footer-line">
           Highest-output cardiology RN by SlicerDicer note volume — Feb 844 ·
-          Mar 1,016 · Apr MTD 634
+          Mar 1,016 · Apr 698
         </div>
         <div className="ke-footer-line">
           Sole architect of a production platform on Vercel + Cloudflare
