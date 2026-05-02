@@ -190,7 +190,7 @@ export default function ExecutivePage() {
 
           <a className="ke-cta-mid" href={TOUR_URL}>
             <span className="ke-cta-label">
-              13-minute Quick tour or 25-minute Deep tour
+              Quick tour or Deep tour
             </span>
             <span className="ke-cta-arrow" aria-hidden="true">&rarr;</span>
           </a>
