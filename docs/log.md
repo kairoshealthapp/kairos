@@ -5702,3 +5702,74 @@ Old MP3s also archived at `.private/tour-audio.passC-backup/` (local-only, not c
 ### No git push performed
 
 Per master task constraint, **all 30 Pass C commits stay local**. Brandon handles the push manually after smoke-testing.
+
+## 2026-05-02 — Pass D: 12-issue smoke-test fix sprint
+
+Brandon's smoke-test of Pass A + Pass C surfaced 12 issues spread across the cinematic primitives, Card 7 TRIAGE rebuild, narration accuracy, basket categorization, and tooltip collision. Pass D addresses all of them. Per master-task constraint, all commits stay local; no `git push`.
+
+### Commits (chronological, all local)
+
+| Hash | Phase | Title |
+| --- | --- | --- |
+| `493db49` | 1 | feat: card-navigation pill row in tour control bar |
+| `a78d9e4` | 7 | feat: 4× typing speed + tighter inter-pane queue delay |
+| `50e0e21` | 4 | feat: missing cursor cues on Cards 1 (Authorize) and 2 (Generate) |
+| `9626f18` | 6 | feat: Coumadin pronunciation fix via phonetic respelling |
+| `5fe760c` | 5 | feat: basket reassignments + Card 6 contradiction flag relocated to alert banner |
+| `b1b1eae` | 8 | feat: Card 8 Nurse Note spotlight + narration beat |
+| `6101c01` | 3 | feat: spotlight tooltip collision-avoidance v2 — score against all content panes |
+| `4274cd2` | 2 | feat: Card 7 TRIAGE rebuild — camera scroll, response context, spotlight highlights, narration accuracy |
+| _(audio)_ | 9 | feat: regenerate Pass D affected MP3s |
+| _(this)_ | 9 | docs: Pass D 12-issue fix summary |
+
+### Per-issue resolution
+
+- **Phase 1 — card-navigation pills.** Unblocker for smoke-testing. Pill row 1-9 in `NarratorCorner` HUD + `TourEndModal`. `jumpToCardRef` ref in `TourMode` lets jumps happen mid-card via labeled-block early-exit; `pwait` and `waitForEvent` honor the ref the same way they honor `cancelledRef`/`skipBeatRef`.
+- **Phase 2 — Card 7 TRIAGE rebuild (6 sub-issues).** Camera scrolls to the right pane on each stage transition (7A); narration question count corrected 16→6 (7B); new "patient-receives-via-MyChart" clarifying beat between Stage 1 and Stage 2 (7C); spotlight anchors remapped from non-existent `nurse-note` to actual triage panes patient-assessment / patient-response / sbar (7D); cursor cues kept as-is — only fire near end of narration when click is imminent (7E); new "all three artifacts together" wide-shot beat before Authorize (7F).
+- **Phase 3 — tooltip collision v2.** `pickCinematicPlacement` now scores candidates against ALL `[data-tour-anchor]` rects, not just the spotlit element. +500px² penalty for overlapping the target itself. Tiebreaker priority right > bottom > top > left.
+- **Phase 4 — Cards 1+2 cursor cues.** Card 1 onAuthorize gained a cursor block (Authorize button); Card 2 onArrival gained a Quick-tier cursor (was previously `quick.target=null`).
+- **Phase 5 — basket reassignments + contradiction banner.** Card 5 (Nguyen) and Card 6 (Foster) baskets moved to `patientadvice` ("PATIENT ADVICE REQUEST"). Card 6 "CHART CONTRADICTION FLAG" prefix removed from Nurse Note body — relocated to a new `ContradictionAlert` banner above the Nurse Note pane, conditional on `fixture.contradictionHold === true`.
+- **Phase 6 — Coumadin pronunciation.** All `Coumadin`/`coumadin` in narration `voiceText` fields phonetic-respelled to `KOO-muh-din`. Display labels in fixtures / knowledge / docs untouched.
+- **Phase 7 — 4× typing speed.** Engine-side single-knob fix in `EncounterDetail.applyEvent` and `simulationEngine.runScript` instead of editing 14 fixture files. Tour @ 1× moves from ~53 cps effective to ~213 cps. Pane-update `delayMsBefore` cut by 2/3.
+- **Phase 8 — Card 8 Nurse Note beat.** New second annotation on `generate-phone-script` action. Spotlight on `nurse-note` after the phone-script reveal. Reuses orphaned `greene-phone-pa2` audioKey slot.
+
+### TTS regen log
+
+Single batch run after all narration edits. 26 MP3s regenerated, 9,271 new chars billed at \$15/1M = **$0.1391**. Affected audioKey families:
+
+| audioKey family | Files | Reason |
+| --- | --- | --- |
+| `foster-contradiction-*` | 12 | Coumadin → KOO-muh-din (Phase 6) |
+| `stewart-transactional-pre-deep` | 1 | Coumadin in Card 4 Deep |
+| `reed-full-lifecycle-pa1{,-deep}` | 2 | Card 7 narration accuracy + anchor remap |
+| `reed-full-lifecycle-pa2{,-deep}` | 2 | Card 7 'answers captured' reframe |
+| `reed-full-lifecycle-pa3{,-deep}` | 2 | Card 7 sbar anchor (no text change but text edit forced delete-and-regen by accident — same content) |
+| `reed-full-lifecycle-pa1b{,-deep}` | 2 | NEW — Issue 7C clarifying beat |
+| `reed-full-lifecycle-pa3b{,-deep}` | 2 | NEW — Issue 7F wide-shot beat |
+| `greene-phone-pa2{,-deep}` | 2 | NEW — Phase 8 Card 8 nurse-note beat (audioKey reused) |
+
+### Brandon's smoke-test checklist
+
+1. `cd C:\Users\kents\kairos`
+2. `npm run dev`
+3. Open `http://localhost:3000/rn`
+4. Use the new card-navigation pills (1-9 in the tour HUD bottom-right) to jump directly to:
+   - **Card 1**: cursor moves to Authorize, click visible.
+   - **Card 2**: cursor moves to Generate, click visible.
+   - **Card 3**: Lab cluster tooltip no longer covers the Order Pad.
+   - **Card 5**: card lives under PATIENT ADVICE REQUEST basket on `/rn`.
+   - **Card 6**: PATIENT ADVICE REQUEST basket; contradiction flag is a red banner above the Nurse Note (not inside it); KOO-muh-din pronounced as "kuhMA-din" / "KOOmadeen" not "Cow-MAY-din".
+   - **Card 7**: camera scrolls up to questions after Generate; narration says "Six questions" not sixteen; new "Patient receives via MyChart" beat plays between Stage 1 and Stage 2; gold spotlight outlines the assessment pane → response pane → SBAR pane sequentially; final wide-shot before Authorize.
+   - **Card 8**: Nurse Note pane is highlighted with gold spotlight after the phone-script reveal, with new "What enters the chart" narration.
+   - **Card 9**: tooltip doesn't overlap the secure chat thread or the nurse note.
+   - **All cards**: typing animation feels noticeably faster (~4× prior speed).
+5. If clean: `git push origin main`. Total commits since `origin/main`: 39 across Pass A + Pass C + Pass D.
+6. If issues: identify which phase regressed, surgical fix per-card. Original Pass C narrations preserved in `lib/tourScript.original.js`.
+
+### CursorGhost.js untouched
+
+Pass B work (cursor-leads-camera-trails 200ms lag) is still queued for Brandon-driven verification.
+
+### No git push performed
+
+All Pass D commits stay local. Brandon handles the push manually after smoke-testing the 12 fixes.
