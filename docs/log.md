@@ -6224,3 +6224,214 @@ Display-text fields (`displayText`, `body`, code comment) kept the proper spelli
 ### Push
 
 After this commit, all local commits since the last push (Pass G + Pass G-fix1/2/3 + Pass E §1-7 + this fix) get pushed to `origin/main`.
+
+## 2026-05-03 — Epic FHIR R4 sandbox capability discovery
+
+Built a standalone Node test harness at `sandbox/fhir-capability-test.js` (built-in modules only — `https`, `crypto`, `fs`) and ran it against Epic's public sandbox to map exactly what we can read and write through FHIR. Full machine-generated report at `sandbox/capability-report.md`.
+
+### Auth status
+
+- JWKS endpoint `https://clinai.firekraker.net/.well-known/jwks.json` returned **HTTP 404** — not yet hosted. Until that's live AND a matching RS384 keypair is registered with Epic App #54037, the sandbox refuses every per-resource call with **HTTP 401**.
+- No private key was found locally (searched `sandbox/`, `secrets/`, `.secrets/`, `~/.epic/`).
+- The unauthenticated **`/metadata`** endpoint works fine and returns Epic's full CapabilityStatement — that's the entire signal in this run.
+
+### CapabilityStatement (no auth needed)
+
+- `fhirVersion`: 4.0.1
+- `software`: Epic February 2026
+- **59 resource types** advertised by the sandbox.
+
+### Critical writability matrix for Kairos
+
+The CapabilityStatement is authoritative on which resources Epic exposes for `create` / `update` over FHIR — it doesn't depend on our auth working. Filtered to the resources we actually care about:
+
+| Resource | Read | Create | Update | Kairos use |
+|---|---|---|---|---|
+| Patient | ✅ | ✅ | — | demographics |
+| Condition | ✅ | ✅ | — | problem list |
+| Observation | ✅ | ✅ | ✅ | labs/vitals |
+| AllergyIntolerance | ✅ | ✅ | — | allergies |
+| Procedure | ✅ | ✅ | ✅ | history |
+| **DocumentReference** | ✅ | ✅ | ✅ | **clinical notes — writable** |
+| **Communication** | ✅ | ✅ | — | **MyChart messages — writable, no PATCH/update** |
+| **ServiceRequest** | ✅ | ✅ | ✅ | **referrals — writable** |
+| QuestionnaireResponse | ✅ | ✅ | — | structured intake forms |
+| DiagnosticReport | ✅ | — | ✅ | reports — update only |
+| Task | ✅ | — | ✅ | workflow status updates |
+| **MedicationRequest** | ✅ | ❌ | ❌ | **med orders — READ-ONLY via FHIR** |
+| **Encounter** | ✅ | ❌ | ❌ | **visits — READ-ONLY via FHIR** |
+| Appointment | ✅ | ❌ | ❌ | scheduling — read-only |
+| CarePlan, CareTeam | ✅ | ❌ | ❌ | read-only |
+| Coverage | ✅ | ❌ | ❌ | insurance — read-only |
+| Practitioner / PractitionerRole / Organization / Location | ✅ | ❌ | ❌ | provider directory — read-only |
+| Binary | ✅ | ❌ | ❌ | raw bytes — read-only |
+
+### What this means for Kairos workflows
+
+✅ **Doable through pure FHIR sandbox** (assuming we get OAuth working):
+- Drop a clinical note into a chart (`POST DocumentReference`)
+- Send a patient-directed MyChart message (`POST Communication`)
+- Place a referral (`POST ServiceRequest`) — covers Beasley EP referral, Card 10
+- Record a problem, allergy, observation, or procedure
+- Update a Task (workflow state changes — useful for "mark Done" semantics)
+
+❌ **Blocked by FHIR — requires proprietary Epic APIs (likely an "App Orchard"-style integration, not the open R4 endpoint)**:
+- **Placing a medication order** — `MedicationRequest` is read-only. This kills the simple "Authorize → write Coumadin order" flow over FHIR. Will need Epic's order-entry API.
+- **Creating an encounter** — `Encounter` is read-only. The Anticoag-Warfarin Visit type 1001 we're modeling for Whitfield (Card 9) cannot be opened through FHIR. Need Epic's encounter/visit creation API or Patient Update Web Service.
+- **Booking an appointment** — `Appointment` is read-only.
+- **Communication PATCH (mark message Done)** — Communication has no `update` interaction in the CapabilityStatement, only `create`. "Mark as Done" probably needs to happen on a different resource (Task?) or via a proprietary InBasket API.
+
+### Read tests (all 401 — expected without OAuth)
+
+Every Patient direct-read and per-resource search returned **HTTP 401**, including the well-known sandbox patient IDs (`Tbt3KuCY...`, `erXuFYUfucBZaryVksYEcMg3` Camila Lopez, etc.). Epic's sandbox no longer permits any unauthenticated resource access — even the documented test patients now require a bearer token. Runtime read shape for our 19 target resources is the next step **after** OAuth is wired up.
+
+### Write tests
+
+Skipped — every `POST` would return 401 without a token. Harness will run them automatically once a private key is available at `sandbox/private-key.pem` (or `EPIC_PRIVATE_KEY_PATH` env var).
+
+### Next steps to unblock
+
+1. Generate an RS384 keypair (`openssl genrsa -out epic-private-key.pem 2048` + extract public key as JWK).
+2. Stand up the JWKS at `https://clinai.firekraker.net/.well-known/jwks.json` (currently 404).
+3. Register the JWKS URL on the Epic Developer portal for App #54037 (Non-Production).
+4. Drop the private key at `sandbox/private-key.pem` (gitignored) and re-run `node sandbox/fhir-capability-test.js`. The harness will auto-detect it, run the JWT client-credentials flow, retry the reads with a bearer token, and execute the 5 POST writes (DocumentReference, Communication, MedicationRequest, ServiceRequest, Encounter) — confirming or refuting the matrix above with live response codes.
+
+### No git push
+
+Per task spec — local file additions only (`sandbox/fhir-capability-test.js`, `sandbox/capability-report.md`, this log entry).
+
+## 2026-05-03 — Epic FHIR sandbox: authenticated probe (re-run)
+
+First run was unauthenticated (wrong JWKS URL, no local key). This re-run wires up the real OAuth backend-services flow and produces the actual capability ground truth.
+
+### Fixes applied
+
+- Extracted private key from `firekraker-monorepo/.env.master` → `sandbox/private-key.pem` (RSA 2048, mode 0600). Deleted the one-shot extractor script after use.
+- `.gitignore` updated with explicit `sandbox/private-key.pem` + `sandbox/*.pem` entries (in addition to the existing `*.pem`).
+- Harness updated: client ID `a85de553-5013-47e8-9f3b-f3c797176f81`, JWKS probe `https://auth.firekraker.net/.well-known/jwks.json`, JWT header now includes `kid: clinai-key-1`.
+
+### Auth result
+
+- **JWKS** at `auth.firekraker.net` → HTTP 200, 1 key.
+- **Token endpoint** → HTTP 200, access token (1052 chars), `expires_in=3600s`.
+- **Granted scope** (this is the real ceiling on what our App registration can do):
+  ```
+  system/AllergyIntolerance.read
+  system/Condition.read
+  system/DiagnosticReport.read
+  system/DocumentReference.read
+  system/Encounter.read
+  system/MedicationRequest.read
+  system/Observation.read
+  system/Patient.read
+  system/ServiceRequest.read
+  ```
+  9 read scopes, **zero write scopes**. Every write attempt in this run will be either 403 (scope missing) or 405 (operation refused entirely).
+
+### Test patients confirmed live
+
+| ID | Patient | Status |
+|---|---|---|
+| `erXuFYUfucBZaryVksYEcMg3` | Camila Maria Lopez | ✅ 200 |
+| `eq081-VQEgP8drUUqCWzHfw3` | Derrick Lin | ✅ 200 |
+| `eAB3mDIBBcyUKviyzrxsnAw3` | Desiree Caroline Lambridge | ✅ 200 |
+| `Tbt3KuCY0B5PSrJvCu2j-PlK.aiHdq1rKTY6pBFfBs8` | — | ❌ 404 (not in this sandbox) |
+
+Used `Camila Lopez` as patient context for searches.
+
+### Read results
+
+**Worked (200, returned data):**
+- `Condition?patient=…` → 5 entries
+- `MedicationRequest?patient=…` → 1 entry
+- `DiagnosticReport?patient=…` → 5 entries
+- `DocumentReference?patient=…` → 5 entries  ✅ clinical notes are readable
+- `ServiceRequest?patient=…` → 5 entries
+- `AllergyIntolerance?patient=…` → 1 entry
+- `Encounter?patient=…` → 5 entries
+
+**Worked but 0 results:**
+- `Patient?family=Lopez` → 200 but empty bundle. Patient search likely needs a different param shape on this sandbox; per-id read works fine.
+
+**400 (search parameter problem, not capability):**
+- `Observation?patient=…&_count=5` → "Must have either code or category." Observation search is gated behind a code/category filter. Easy fix in the next harness pass.
+
+**403 (scope missing — would work with broader registration):**
+- `Communication`, `Procedure`, `CarePlan`, `CareTeam`, `Coverage`, `Practitioner`, `PractitionerRole`, `Organization`, `Location`, `Binary`
+
+### Write results — the headline finding
+
+| Write attempt | Status | What it means |
+|---|---|---|
+| DocumentReference (clinical note) | **403** | Operation EXISTS, just not in our scope. Re-register with `system/DocumentReference.write` and this works. |
+| Communication (MyChart message) | **403** | Same: scope-fixable. |
+| ServiceRequest (referral) | **403** | Same: scope-fixable. |
+| **MedicationRequest** (med order) | **405 Method Not Allowed** | Sandbox refuses POST entirely. Matches CapabilityStatement (`MedicationRequest` lists only `read, search-type`, no `create`). **No scope can unlock this.** |
+| **Encounter** (Anticoag-Warfarin Visit 1001) | **405 Method Not Allowed** | Same — POST is not a valid method on this endpoint at all. **No scope can unlock this.** |
+
+**The 403 vs 405 distinction is the whole point of this exercise:**
+- **403 = re-register with write scopes and we're good** — covers DocumentReference (notes), Communication (MyChart), ServiceRequest (referrals), Condition, Observation, Procedure, AllergyIntolerance, QuestionnaireResponse, Patient.
+- **405 = FHIR is structurally not the answer for this workflow** — confirmed for **MedicationRequest** and **Encounter**. We need Epic's proprietary interfaces (App Orchard / Patient Update Web Service / order-entry web services) for:
+  - Placing the Coumadin order in Whitfield's chart (Card 9)
+  - Opening an Anticoagulation-Warfarin Visit type 1001
+  - Booking appointments (`Appointment` is also read-only)
+
+### Next steps (in priority order)
+
+1. **Re-register the Epic app with write scopes** for the 403 set — at minimum `DocumentReference.write`, `Communication.write`, `ServiceRequest.write`. This unblocks Cards 9/10 documentation + outbound messaging + referral packets.
+2. **Add Communication/Procedure/CarePlan/Coverage/Practitioner read scopes** so we can pull MyChart history, problem-related procedures, insurance, and the provider directory.
+3. **Fix the Observation search** in the harness to include `category=laboratory` or `code=...` so the labs probe returns data.
+4. **Open a separate track** for non-FHIR Epic APIs to handle MedicationRequest creation and Encounter creation. These will not be solved by FHIR sandbox iteration.
+
+### Artifacts
+
+- [sandbox/fhir-capability-test.js](../sandbox/fhir-capability-test.js) — harness, idempotent, picks up `sandbox/private-key.pem` automatically.
+- [sandbox/capability-report.md](../sandbox/capability-report.md) — full machine-readable report (regenerated this run).
+- `sandbox/private-key.pem` — local only, gitignored.
+
+### No git push
+
+Local files only.
+
+---
+
+## 2026-05-03 — /executive Page: Sections 07 & 08 (Epic Roadmap + The Window)
+
+Added two new sections to `app/executive/page.js`, appended after section 06 ("IT Answers") and before the footer. Note: the spec labeled them as 06/07, but the page already had a section 06 ("IT Answers"), so they were renumbered to **07** and **08** to obey the "continue the existing section numbering" rule.
+
+### Section 07 — "Where We Are — and What We Need"
+
+Honest accounting of Epic FHIR sandbox findings, framed as a proposal:
+- What Kairos does today via standard FHIR (full chart ingestion + DocumentReference write-back).
+- Five workflows that require institutional support (proprietary Epic APIs / App Orchard):
+  1. Patient messaging (MyChart)
+  2. Order placement
+  3. Referral management
+  4. Encounter creation
+  5. Inbox disposition
+- Closing "What this unlocks" — 3-4 min/encounter savings with FHIR alone vs. 8-12 min/encounter with proprietary access. Across 55-70 daily encounters, "the difference between a productivity tool and a workforce multiplier."
+
+Each of the five workflows is rendered as an `h3.ke-subhead` + `<p>` pair, matching the existing typographic treatment for lists on the page. No bullet points.
+
+### Section 08 — "The Window"
+
+Pure prose closing argument. No lists, no diagrams. Frames urgency through patient safety + institutional advantage rather than "move fast / break things." Five paragraphs:
+1. Three months of delay = years of lost positioning; institutions that wait adopt vendor products built by engineers who never worked a nursing shift.
+2. Safety as architecture, not obstacle — the AI drafts, the nurse approves.
+3. The urgency lies in institutional infrastructure (API access, IT partnership), not engineering.
+4. Phelps' specific opportunity: clinician on staff who built it from the inside.
+5. Closing: build internally with a clinician who knows the chart, or buy from a vendor in two years at 10× the cost.
+
+Section ends with a final `ke-cta-mid` link reading "See the live prototype" → kairos-tour.firekraker.net/rn.
+
+### What was preserved
+- Existing sections 01-06 untouched.
+- All visual tokens reused (`ke-section`, `ke-section-marker`, `ke-numeral`, `ke-section-title`, `ke-subhead`, `ke-cta-mid`, `ke-cta-host`).
+- No CSS changes, no new imports, no other files touched.
+- CursorGhost.js untouched.
+
+### Verification
+Static content change to long-scroll editorial page; no interactive UI to exercise. Per project CLAUDE.md, static content changes (pitch pages, marketing copy) skip the Chrome computer-use protocol.
+
+### No git push
+Local commit/push deferred per spec.

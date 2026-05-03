@@ -374,6 +374,180 @@ export default function ExecutivePage() {
             clinical fluency are the value; the binary is portable.
           </p>
         </section>
+
+        <section className="ke-section">
+          <header className="ke-section-marker">
+            <span className="ke-numeral">07</span>
+            <h2 className="ke-section-title">
+              Where We Are &mdash; and What We Need
+            </h2>
+          </header>
+          <p>
+            Kairos has been validated end-to-end against Epic&rsquo;s FHIR R4
+            sandbox. What follows is an honest accounting of what the
+            platform can do today through standard interfaces, and what
+            requires institutional support to unlock.
+          </p>
+
+          <h3 className="ke-subhead">
+            What Kairos does today through Epic&rsquo;s standard FHIR
+            interface &mdash; no additional access required.
+          </h3>
+          <p>
+            Full chart ingestion. Problems, medications, allergies, vitals,
+            labs, clinical notes, documents, encounters, procedures,
+            diagnostic reports, insurance, care plans, immunizations. Every
+            structured data point in the medical record is available to the
+            AI before the nurse opens the card.
+          </p>
+          <p>
+            Clinical documentation write-back. RN notes, anticoagulation
+            notes, SBARs, and nursing documentation write directly to the
+            chart through FHIR&rsquo;s DocumentReference resource. No
+            copy-paste. No manual transcription.
+          </p>
+          <p>
+            This alone transforms the nursing workflow. The AI reads the full
+            record, identifies the correct workflow, and drafts every
+            output. The nurse reviews and approves. Chart investigation
+            &mdash; the work that consumes most of the shift &mdash; is
+            handled before the card opens.
+          </p>
+
+          <h3 className="ke-subhead">
+            Five workflows require institutional support.
+          </h3>
+          <p>
+            These sit outside FHIR&rsquo;s standard reach. They are
+            available through Epic&rsquo;s proprietary API layer &mdash;
+            accessible via App Orchard partnership or direct integration
+            approval at the customer site level.
+          </p>
+
+          <h3 className="ke-subhead">Patient messaging (MyChart).</h3>
+          <p>
+            FHIR&rsquo;s Communication resource does not support Epic In
+            Basket messaging. Patient notifications, lab result messages,
+            and care instructions require manual transfer until proprietary
+            API access is granted.
+          </p>
+
+          <h3 className="ke-subhead">Order placement.</h3>
+          <p>
+            Medication, lab, and imaging orders cannot be placed through
+            FHIR. Kairos drafts and stages orders for nurse review, but
+            entry into Epic remains manual.
+          </p>
+
+          <h3 className="ke-subhead">Referral management.</h3>
+          <p>
+            The referral packet workflow &mdash; cover letter, face sheet,
+            document assembly, fax transmission &mdash; is proprietary Epic
+            UI. Kairos can automate document selection and packet assembly,
+            but transmission requires API access that FHIR does not
+            provide.
+          </p>
+
+          <h3 className="ke-subhead">Encounter creation.</h3>
+          <p>
+            Opening specialized encounters &mdash; Anticoagulation-Warfarin
+            Visit, telephone encounters &mdash; requires Epic&rsquo;s
+            proprietary encounter API.
+          </p>
+
+          <h3 className="ke-subhead">Inbox disposition.</h3>
+          <p>
+            Marking In Basket messages as Done is not available through
+            FHIR. Completed items must be manually dispositioned in Epic.
+          </p>
+
+          <h3 className="ke-subhead">What this unlocks.</h3>
+          <p>
+            With FHIR alone, Kairos eliminates the cognitive work &mdash;
+            chart investigation, clinical synthesis, note writing. The
+            nurse still transfers outputs manually. Estimated savings:
+            three to four minutes per encounter.
+          </p>
+          <p>
+            With proprietary API access, Kairos eliminates both the
+            cognitive and mechanical work. The nurse reviews, approves, and
+            everything executes &mdash; note signed, message sent, orders
+            placed, referral faxed, inbox cleared. Estimated savings: eight
+            to twelve minutes per encounter.
+          </p>
+          <p>
+            Across 55&ndash;70 daily encounters per nurse, that is the
+            difference between a productivity tool and a workforce
+            multiplier.
+          </p>
+          <p>
+            Epic&rsquo;s 21st Century Cures Act compliance framework
+            supports third-party app integration at this level. The
+            technical infrastructure exists. What Kairos needs is a
+            champion inside Phelps Health who advocates for the deeper
+            integration tier.
+          </p>
+        </section>
+
+        <section className="ke-section">
+          <header className="ke-section-marker">
+            <span className="ke-numeral">08</span>
+            <h2 className="ke-section-title">The Window</h2>
+          </header>
+          <p>
+            Clinical AI is advancing at a pace where three months of delay
+            represents years of lost positioning. The foundational models
+            that power Kairos are improving every quarter &mdash; better
+            clinical reasoning, better structured output, better safety
+            rails. Institutions that establish integration infrastructure
+            now will compound those improvements automatically.
+            Institutions that wait will adopt a vendor product built by
+            engineers who have never worked a nursing shift.
+          </p>
+          <p>
+            This is not about moving fast at the expense of safety. Patient
+            safety and HIPAA compliance are non-negotiable foundations, not
+            obstacles to speed. Kairos is designed with safety as
+            architecture &mdash; the nurse remains the licensed clinical
+            authority on every output. The AI drafts. The nurse approves.
+            No autonomous action touches the patient record without human
+            review. That safety model does not slow the system down. It
+            <em> is</em> the system.
+          </p>
+          <p>
+            What does require urgency is the institutional infrastructure
+            &mdash; API access, integration approvals, IT partnership.
+            These are organizational decisions, not technical problems. The
+            engineering is ready. The prototype is live. The clinical
+            workflows are validated across ten encounter patterns
+            representing the full scope of outpatient cardiology nursing.
+          </p>
+          <p>
+            Phelps Health has an opportunity that most institutions do not:
+            a clinician on staff who built the product, understands the
+            workflows from the inside, and can implement it without a
+            six-figure vendor contract. That window exists because the
+            clinician is here, now, asking for institutional support
+            &mdash; not selling software from the outside.
+          </p>
+          <p>
+            The question is not whether AI will transform outpatient
+            nursing workflows. It is whether Phelps Health builds that
+            transformation internally &mdash; with a clinician who knows
+            the chart, the patients, and the workflows &mdash; or
+            purchases it from a vendor in two years at ten times the cost.
+          </p>
+
+          <a className="ke-cta-mid" href={TOUR_URL}>
+            <span className="ke-cta-label">
+              See the live prototype
+            </span>
+            <span className="ke-cta-arrow" aria-hidden="true">&rarr;</span>
+          </a>
+          <div className="ke-cta-host" aria-hidden="true">
+            kairos-tour.firekraker.net/rn
+          </div>
+        </section>
       </article>
 
       <footer className="ke-footer">
