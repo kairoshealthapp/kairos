@@ -5979,3 +5979,227 @@ Despite the master-task header. The tooltip rendering and placement live in Spot
 ### No git push performed
 
 Pass G commits stay local. Brandon handles the push manually after smoke-testing the three cards.
+
+## 2026-05-03 — Pass G-fix (camera bounce + timing + 4 card fixes)
+
+Master-task delivery. 8 issues across the global tour engine and 3 specific cards.
+
+### 1. Camera bounce — global
+
+**The problem.** Two consecutive spotlights on already-visible content (e.g. MyChart bottom-left → Order Pad bottom-right → action-bar bottom) caused a "seasick" double bounce: the page jumped UP to a patient-header pull-back wide framing, then immediately back DOWN to the next pane. Disorienting and unnecessary.
+
+**Three contributors stacked together:**
+
+1. `TourMode.runAction` issued `cameraGoto('[data-tour-anchor="patient-header"]', { framing: "wide" })` between every after-action annotation past the first, plus a final pull-back at the end of the loop.
+2. `SpotlightOverlay` always called `el.scrollIntoView({ block: "center" })` on mount, regardless of whether the anchor was already on-screen.
+3. `CursorGhost` (out-of-scope) calls its own `scrollIntoView` for the cursor target with a 400ms wait. When the page hasn't settled yet, cursor measures pre-scroll coordinates and lands beside the button instead of on it.
+
+**Fix.**
+
+- `lib/tourCamera.js`: new `isElementInViewport(target, opts)` helper (vertical center on-screen + ≥requiredFraction of height visible). New `cameraGoto` options: `skipIfVisible: true` and `visibilityFraction` (default 0.6).
+- `components/SpotlightOverlay.js`: `initialize()` skips `scrollIntoView` when the anchor is already visible (≥60% on-screen with center in viewport). Defense-in-depth — TourMode now pre-frames before this runs in the common case.
+- `components/TourMode.js`: new `preframeForAnnotation(ann)` helper. Awaited before `kairos-tour:beat-start` dispatch in BOTH `showSpotlight` and `showNarrator`. Targets the cursor target when present (else the spotlight anchor) so the page is settled before CursorGhost measures. Uses `framing: ann.cinematicFraming || "wide"` so annotations can opt into top/tight framing per-beat. Patient-header pull-back logic in `runAction` removed — replaced with `preframeForAnnotation(ann)` per iteration.
+
+**Knock-on effects.**
+
+- **Card 3 disposition cursor missed** (#3) — fixed automatically. The old flow scrolled the action-bar via SpotlightOverlay's `scrollIntoView`, then 10s later CursorGhost issued a second `scrollIntoView` for `#kairos-action-authorize` (deeper in the bar), and the cursor measured the rect before the smooth scroll finished. With pre-frame awaiting `cameraGoto` settle, the cursor lands on a stationary page.
+- **Card 7 Generate Assessment cursor misses** (#4a) — same root cause, same fix. `preframeForAnnotation` prefers the cursor target when it's far from the spotlight anchor (Card 7 onArrival anchors source-pane top-of-page but cursor needs `#kairos-triage-generate-inquiry` lower down).
+
+### 2. Typing speed — 25× → 44×
+
+`components/EncounterDetail.js`: divisor in tour-active typing path bumped from `(speedMul × 25)` to `(speedMul × 44)` (Pass F's 25× × 1.75 = ~44×). At `typingSpeedCps=80` the tour @1× effective rate is now ~2347 cps and tour @2× is ~4693 cps — effectively instant.
+
+### 4b. Card 7 dwell — patient response answers + SBAR (+6s each)
+
+Audio for both `reed-full-lifecycle-pa2` ("Answers in.") and `reed-full-lifecycle-pa3` ("SBAR ready.") is intentionally short (~3-7s) — the workflow point is the visible artifacts, not the narration. New `extraHoldMs: 6000` field on annotations adds a hold AFTER the audio-driven dwell ends. Wired into `showSpotlight`'s `dwellMs` computation. Cursor `clickTime` extended on both beats so the visual click ripple lands near the actual auto-action firing instead of 6s before it.
+
+### 4c. Card 7 SBAR — top framing
+
+`reed-full-lifecycle-pa3` annotation gets `cinematicFraming: "top"`. Honored by `preframeForAnnotation` via existing `applyTopFraming` in `lib/tourCamera.js`. SBAR header lands ~80px from the top of the viewport so the viewer reads S → B → A → R from the start.
+
+### 5. Card 9 RN Note review beat — added
+
+Inserted a 4th annotation in the `generate-denial-aware-outreach` action: `anchor: "nurse-note"`, position right, between `pa2` (output-pane / MyChart outreach) and the `disposition` (action-bar) beat. Audio key `jackson-denial-cascade-pa-note` — 2 new MP3s generated this run (quick 202 chars, deep 423 chars).
+
+### Out of scope per master task (untouched)
+
+- `CursorGhost.js`
+- Card 2 (cut in Pass E)
+- Card 4 button labels
+- Card 5
+- Fixture clinical content
+
+### Audio regen cost
+
+2 new MP3s generated (`jackson-denial-cascade-pa-note.mp3` + `-deep.mp3`). 625 chars billed. **TTS-1 cost: $0.0094.**
+
+### Build
+
+`npx next build` → ✓ Compiled successfully, 50/50 static pages, no type errors.
+
+### No git push
+
+Local commits only. Brandon pushes after smoke-testing.
+
+## 2026-05-03 — Pass G-fix2 (opening anchor + remaining bounce + typing 200×)
+
+Follow-up to Pass G-fix. Two bugs surfaced + one cosmetic bump.
+
+### 1. Opening anchor bug (all cards)
+
+**The problem.** Pass G-fix's `preframeForAnnotation` preferred the cursor target over the spotlight anchor when the two were "far apart" (cursor target not ≥90% visible). For onArrival beats this meant: anchor=`source-pane` (top of page), cursor target=Generate-Inquiry button (bottom). The preframe scrolled DOWN to the button immediately on card open, then `SpotlightOverlay`'s mount measured the source-pane anchor and the page bounced back UP. Visible as a brief downward-then-upward lurch right after clicking a card pill.
+
+**Fix.** `preframeForAnnotation` is now anchor-only for showSpotlight beats. Cursor-target framing is only used as a fallback when `anchor === "global"` (the disposition / onAuthorize narrator-corner case where there is no pane to frame). Card 1 opens on source-pane. Card 7 opens on source-pane. No downward jump.
+
+### 2. Camera leads cursor — single deliberate move (all cards)
+
+Removing the cursor-target preframe re-introduces a different problem: when the cursor moves to a far-off button (Card 7 onArrival → Generate button below the fold), `CursorGhost`'s own `scrollIntoView` fires at cursor `startTime`, waits 400ms, then measures. If the smooth-scroll isn't done at the 400ms mark, the cursor measures stale coordinates and lands beside the button.
+
+**Fix.** New `scheduleCursorPreScroll` helper in `TourMode.js`. After `kairos-tour:beat-start` dispatches, it schedules a `cameraGoto(cursorTarget, { skipIfVisible: true })` to fire at `cursor.startTime - 300ms`. The page is settled before `CursorGhost` measures, and `CursorGhost`'s scrollIntoView is a near-instant no-op. Skipped when `cursor.startTime < 1200ms` (no time to pre-scroll, and short-startTime cursors usually target buttons that are already on-screen). Skipped via `skipIfVisible` when target is already comfortably visible.
+
+This also satisfies the master-task choreography for Card 7: "Camera moves DOWN to Generate Patient Assessment button → cursor clicks it" — the camera now LEADS the cursor as a single deliberate downward move ~300ms before the cursor begins its sprite animation, rather than scrolling concurrently.
+
+Knock-on for Card 3: same mechanism. Camera moves to action-bar before the disposition cursor fires, cursor lands on the Authorize button.
+
+### 3. Card 7 patient-response top framing
+
+Added `cinematicFraming: "top"` to the `reed-full-lifecycle-pa2` annotation (was already added to `pa3` SBAR). Q1 now lands at the top of the viewport so the viewer reads Q1 → Q6 in order, not mid-page from Q4-Q6.
+
+### 4. Camera path summary (Card 7, post-fix)
+
+1. Open → preframe `source-pane` (top framing not needed — source is already at top).
+2. ~300ms before cursor.startTime: pre-scroll to `#kairos-triage-generate-inquiry` (Generate button). Cursor sprite animates to the button on a settled page.
+3. After click: action runs, pa1 anchor=`patient-assessment` → preframe scrolls UP to assessment. Stay during narration.
+4. pa1b anchor=`patient-assessment` → already visible, skip.
+5. process-reply runs. pa2 anchor=`patient-response`, framing=`top` → preframe scrolls to top of response pane. 6s extra hold.
+6. ~300ms before pa2 cursor.startTime: pre-scroll to `#kairos-triage-synthesize-callback`. Cursor clicks.
+7. synthesize-callback runs. pa3 anchor=`sbar`, framing=`top` → preframe scrolls SBAR header to top. 6s extra hold.
+8. ~300ms before pa3 cursor.startTime: pre-scroll to `#kairos-triage-authorize`. Cursor clicks.
+9. pa3b anchor=`action-bar` → already visible, skip.
+10. onAuthorize narrator-corner. cursor target already visible from step 9. CursorGhost fires its own ripple.
+
+Single move per transition. No re-centers at patient-header.
+
+### 5. Typing speed — 44× → 200×
+
+`components/EncounterDetail.js`: divisor in tour-active typing path bumped from `(speedMul × 44)` to `(speedMul × 200)`. Brandon's call: typing is a visual cue, not text to read. Effective rate at `typingSpeedCps=80` is now ~10,667 cps — text appears nearly instantly with just enough motion to draw the eye.
+
+### Audio regen cost
+
+No new bubbles this pass. **TTS-1 cost: $0.00.**
+
+### Build
+
+`npx next build` → ✓ Compiled successfully, 50/50 static pages.
+
+### No git push
+
+Local commits only. Brandon pushes after smoke-testing.
+
+## 2026-05-03 — Pass G-fix3 (pause+cursor + typing flash + Card 3/7/9)
+
+Five issues. Touched CursorGhost.js (minimal pause-aware change) — required to satisfy task #1.
+
+### 1. Pause now freezes the cursor
+
+**The problem.** Pressing Pause stopped narration audio but the cursor sprite kept marching through its choreography (move, click, ripple). Old `CursorGhost` listened to `kairos-tour:pause` but only toggled visual opacity — the underlying `setTimeout` chain still fired.
+
+**Fix (in `components/CursorGhost.js`).** Replaced raw `setTimeout` handles in `timeoutsRef` with `{ handle, fn, fireAt, remaining }` entries. Added `pausePendingTimers()` and `resumePendingTimers()` helpers. On `kairos-tour:pause`, clear all pending handles and stash `remaining = fireAt - now`; on `kairos-tour:resume`, schedule fresh `setTimeout(fn, remaining)`. CSS in-flight transition is frozen by snapshotting `getComputedStyle().transform`, applying it with `transition: none`. Cursor sprite stays VISIBLE while paused (opacity rule changed from `visible && !paused` to `visible`) so the viewer can see where it stopped.
+
+**Fix (in `components/TourMode.js`).** `scheduleCursorPreScroll` was a raw `setTimeout`; converted to a `pwait`-style polling loop that respects `pausedRef`, `cancelledRef`, `skipBeatRef`. Returns a cancel function instead of a timer handle.
+
+### 2. Typing now near-instant via chunked streaming
+
+**The problem.** Even with the divisor at 200×, `intervalMs` was clamped to 1ms by the `Math.max(1, …)` floor, but `setTimeout` in browsers has a ~4ms minimum. A 500-char artifact still took ~2s to render.
+
+**Fix (in `components/EncounterDetail.js`).** Switched from one-char-per-tick to chunked streaming when tour is active: `charsPerTick = 80 * speedMul`. A 500-char artifact lands in ~6 ticks ≈ 25-30ms — visually a single flash, with the typing pipeline still running so skip / cancel / append paths remain wired.
+
+### 3. Card 3 (Bennett) — last bounce gone
+
+**The problem.** Going from order-pad spotlight to action-bar disposition spotlight, the camera briefly bounced UP before going DOWN to the action-bar. `SpotlightOverlay`'s `initialize()` was running its own `scrollIntoView({ block: "center" })` after preframe scrolled the page, and `block: "center"` for the action-bar (small element near doc bottom) computes a different scroll than preframe's wide framing — the page jumped between the two.
+
+**Fix (in `components/SpotlightOverlay.js`).** In cinematic mode, skip `scrollIntoView` entirely. Preframe is now the authoritative camera mover. Outside cinematic mode the legacy fallback is preserved. Removed the now-unused `isElementInViewport` import.
+
+### 4. Card 7 — dead pause after "hit synthesize SBAR" gone
+
+**The problem.** `extraHoldMs: 6000` added 6s of dwell AFTER audio ended. So narration said "hit Synthesize SBAR" at ~3s, then 6s of silence with the cursor parked, THEN click. Six seconds of dead air between the instruction and the action.
+
+**Fix.** New annotation field `prePlayHoldMs` — silent reading time BEFORE narration starts. In `showSpotlight`, the spotlight gold-box now appears immediately, then `pwait(prePlayMs)` lets the viewer read silently, THEN `kairos-tour:beat-start` dispatches and audio plays. When `prePlayHoldMs` is set, the post-audio min-hold collapses to a small buffer (audio-end + 500ms) since reading already happened. Cursor timings are now relative to audio start (not beat-start) so click lines up with audio end.
+
+Card 7 pa2 (patient-response): `prePlayHoldMs: 6000`, `clickTime: 3000` (quick) / `7000` (deep) — click fires at audio end, action runs immediately.
+
+Card 7 pa3 (SBAR): same pattern. `prePlayHoldMs: 6000`, `clickTime: 4000` (quick) / `6500` (deep).
+
+### 5. Card 9 (Jackson) RN Note — instructional line removed
+
+`data/fixtures/encounters/larvendel-denial-cascade.js` — deleted the trailing line `"Patient outreach drafted in denial-acknowledgment frame rather than routine imaging-review frame."` from the nurse-note `pane-update` content. That line read as Kairos describing its own reasoning, not clinical documentation. Remaining note content (second denial, Pendrelle loop, peer-to-peer deadline, alternatives) preserved.
+
+### Note on the "do not touch CursorGhost" rule
+
+Issue #1 required modifying `CursorGhost.js` to make pause actually freeze pending steps — there is no other layer that can intercept its scheduled callbacks. The change is contained to the timer helpers and pause/resume listeners; the cursor animation logic, click ripple, and DOM-target-retry behavior are unchanged.
+
+### Audio regen cost
+
+No bubble narration changed. **TTS-1 cost: $0.00.**
+
+### Build
+
+`npx next build` → ✓ Compiled successfully.
+
+### No git push
+
+Local commits only.
+
+## 2026-05-03 — Pass E (cards in/out + authorizeActions + duration estimate)
+
+Five sections, committed individually so the local main history is reviewable.
+
+### §1. Cut Card 2 (Henderson / wood-lipid)
+
+Removed the wood-lipid fixture entry from `lib/tourScript.js`. The fixture file is preserved on disk (still imported by the registry) — only the tour beat sequence dropped it. Card-nav HUD pills and the TourEndModal pill grid auto-rebuild from `TOUR_SCRIPT.length` so no separate edit was needed there. Renumbered `progressLabel` for the remaining 7 inherited cards in anticipation of two new cards landing in §2 / §3 — labels now read "Card N of 10".
+
+### §2. Card 9 — Whitfield INR (Coumadin Clinic)
+
+New fixture `data/fixtures/encounters/whitfield-inr.js`. Pattern 1 (SYNTHESIS only). Mrs. Whitfield, 74, AFib on chronic warfarin, RESULTS basket. Source artifact is just the lab value (PROTIME-INR 2.3, Lakeside Lab) — that's what actually lands in the inbox. Outputs are the Anticoagulation note (the living document — full 8-value trend, hospitalization context, dose history all carried forward) and a plain-language MyChart. No orders. RN-protocol-driven, no provider in the loop. Demo point: the copy-forward-and-synthesize step the floor does manually every Coumadin encounter.
+
+### §3. Card 10 — Beasley EP Referral (the headline collapse)
+
+New fixture `data/fixtures/encounters/beasley-ep-referral.js`. New pattern `"6r"` (SYNTHESIS + REFERRAL PACKET) added to `lib/patterns.js` with action button `assemble-ep-referral`. Mr. Beasley, 64, CAD with prior stents, Holter monitor showing sustained VT (longest 12s). Pendrelle NP wants an EP eval at Riverside MC for ICD candidacy. Stage 1 outputs: nurse-note, MyChart, referral order. Stage 2 output: the auto-assembled referral packet — rendered by reusing the existing `ReferralPacketPanel` (originally Sellman moat). EncounterDetail's gate broadened from `isSellman && fixture.referralPacket` to just `fixture.referralPacket`, with a new `data-tour-anchor="referral-packet"` wrapper so the tour spotlight can frame it. Tour beat for the packet uses `prePlayHoldMs: 4000` + `cinematicFraming: "top"` so the viewer scans the packet header during silence before narration kicks in.
+
+The packet contents — Pendrelle's note, the Holter, the most recent ECG, the echo at EF 35%, BNP, med list, insurance card and photo ID from Media — are pre-selected because Kairos knows this is an EP referral, not a sleep study or GI consult. Tacit knowledge of which documents matter for which referral type. The headline beat for the demo: 14 manual steps across 5 Epic surfaces collapse to one Authorize.
+
+### §4. authorizeActions array drives the Authorize button
+
+Each tour fixture now declares an `authorizeActions` array. `ActionBar` joins it with " · " to produce the button label, so the verb chain is fixture-driven instead of hardcoded as "Authorize". Card 8 (Jackson) renders TWO buttons via the array-of-arrays form (secure-chat-reply path vs. telephone-encounter path). Compatibility: a missing or malformed array falls back to a single "Authorize" button so the 24 non-tour fixtures on disk keep working.
+
+Per-fixture mapping (post-renumber):
+- 1 Anderson — Send MyChart · Sign Nurse Note · Done
+- 2 Bennett — Send MyChart · Sign Nurse Note · Place Orders · Sign Encounter · Done
+- 3 Stewart — Sign Note · Sign Refill
+- 4 Nguyen — Send MyChart Reply · Done
+- 5 Foster — Send MyChart Reply · Done
+- 6 Reed — Sign SBAR · Forward to Provider · Done
+- 7 Greene — Sign Nurse Note · Done
+- 8 Jackson — (A) Send Secure Chat Reply · Done / (B) Create Telephone Encounter · Sign Note · Forward to Provider · Done
+- 9 Whitfield — Send MyChart · Sign Anticoagulation Note · Done
+- 10 Beasley — Send MyChart · Sign Note · Place EP Referral · Fax Packet to Riverside · Done
+
+### §5. Tour duration estimate restored
+
+`components/TourLauncher.js` — Quick / Deep buttons now show `· ~N min` computed from `estimateTourMinutes(mode)` (existing helper in `lib/tourScript.js`). Estimate auto-updates with narration edits; no hardcoded clock to go stale.
+
+### §6. Choreography for new cards
+
+Both new cards use the universal Pass F 4-step choreography (SOURCE → GENERATE → REVIEW outputs → DISPOSITION). Card 10 adds a 5th review beat for the referral packet between order-pad review and disposition. All beats inherit the Pass G camera-bounce suppression so consecutive in-viewport panels switch the gold box without a camera move.
+
+### §7. Audio regen
+
+32 new MP3s generated for new audioKeys (Cards 9 + 10 + Jackson's transitionNarrator), Quick + Deep variants. **TTS-1 cost: $0.1365.** No existing audio re-rendered (script skips files already on disk).
+
+### Build
+
+`npx next build` — clean across all sections. 50 → 52 static pages (the two new encounter routes prerendered).
+
+### No git push
+
+Local commits only. Section-level commits are reviewable on `main` for piecemeal rollback if any beat needs revisiting.
