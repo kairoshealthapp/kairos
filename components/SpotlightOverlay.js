@@ -38,21 +38,35 @@ function pickPosition(rect, position, vw, vh) {
   return position;
 }
 
-// Cinematic Pass A — Fix 3: collision-aware tooltip placement.
-// Cinematic Pass D — Fix 3 v2: score against ALL visible content panes,
-// not just the spotlit element. Brandon's smoke-test confirmed Pass A
-// still failed on Cards 3, 8, 9 because a candidate could have zero
-// overlap with the spotlit anchor and still cover the Order Pad / Nurse
-// Note / Secure Chat thread. v2 reads every [data-tour-anchor] rect on
-// the page and sums overlap area across all of them, with a +500px²
-// penalty if the candidate also overlaps the target itself.
+// Cinematic Pass A → D → G — collision-aware tooltip placement.
 //
-// Tiebreaker priority (when overlap scores tie): right > bottom > top >
-// left. Right beats bottom because cards usually have rightward whitespace
-// next to a primary spotlit pane.
+// Pass A: scored against the spotlit anchor only.
+// Pass D: scored against ALL [data-tour-anchor] panes with a +500
+//         target-overlap penalty.
+// Pass G (v3): the +500 penalty was too small — cards 2/6/7 kept landing
+//         on top of the very content the bubble was describing because
+//         viewport-clamp fallback could push the tooltip back into the
+//         target. v3 promotes target overlap from "small penalty" to a
+//         HARD CONSTRAINT (>100 px² target overlap disqualifies a
+//         candidate), uses overlap FRACTION (overlap_area / pane_area)
+//         instead of raw area so a small banner like the contradiction
+//         alert weighs as heavily as a large grid pane, computes the
+//         clamp BEFORE scoring (so a candidate's "real" final position
+//         drives the verdict), and re-orders the position bias to
+//         top > side > bottom per master task ("ABOVE or to the SIDE").
+//
+// Sort priority among non-target-overlapping candidates:
+//   1. In-viewport (no clipping) before clipping
+//   2. Lower pane-fraction-overlap before higher
+//   3. Smaller off-viewport clip area before larger
+//   4. Position bias: top > right > left > bottom
+//
+// Fallback (all candidates overlap target ≥ 100 px²): pick the one
+// with the smallest target overlap.
 
-const TIEBREAK_ORDER = { right: 0, bottom: 1, top: 2, left: 3 };
-const TARGET_OVERLAP_PENALTY = 500;
+const POSITION_BIAS = { top: 0, right: 1, left: 2, bottom: 3 };
+const TARGET_OVERLAP_HARD_THRESHOLD = 100; // px²
+const PANE_FRACTION_TIE_EPSILON = 0.01;
 
 function getContentPaneRects(activeAnchorName) {
   if (typeof document === "undefined") return [];
@@ -60,13 +74,17 @@ function getContentPaneRects(activeAnchorName) {
   const out = [];
   nodes.forEach((node) => {
     const name = node.getAttribute("data-tour-anchor");
-    // Skip the active anchor — it's the spotlit element, scored separately
-    // via the +500 penalty so the picker still avoids landing on top of
-    // the very thing the bubble is narrating.
     if (name === activeAnchorName) return;
     const r = node.getBoundingClientRect();
     if (r.width <= 0 || r.height <= 0) return;
-    out.push({ left: r.left, top: r.top, right: r.right, bottom: r.bottom, name });
+    out.push({
+      left: r.left,
+      top: r.top,
+      right: r.right,
+      bottom: r.bottom,
+      area: r.width * r.height,
+      name,
+    });
   });
   return out;
 }
@@ -85,50 +103,89 @@ function pickCinematicPlacement(rectWithPadding, vw, vh, w, h, activeAnchorName)
     bottom: rectWithPadding.y + rectWithPadding.h,
   };
   const candidates = [
+    { name: "top",    left: target.left, top: target.top - CINEMATIC_GAP - h },
     { name: "right",  left: target.right + CINEMATIC_GAP, top: target.top },
     { name: "left",   left: target.left - CINEMATIC_GAP - w, top: target.top },
     { name: "bottom", left: target.left, top: target.bottom + CINEMATIC_GAP },
-    { name: "top",    left: target.left, top: target.top - CINEMATIC_GAP - h },
   ];
   const margin = 16;
   const otherPanes = getContentPaneRects(activeAnchorName);
+
   const scored = candidates.map((c) => {
-    const r = { left: c.left, top: c.top, right: c.left + w, bottom: c.top + h };
-    const fits =
-      r.left >= margin &&
-      r.top >= margin &&
-      r.right <= vw - margin &&
-      r.bottom <= vh - margin;
-    // Sum overlap with every other content pane.
-    let paneOverlap = 0;
-    for (const pane of otherPanes) {
-      paneOverlap += rectIntersection(r, pane);
-    }
-    // Penalty for sitting on top of the spotlit target itself.
+    // Pre-clamp original position.
+    const orig = { left: c.left, top: c.top, right: c.left + w, bottom: c.top + h };
+    // Off-viewport clip area (how much of the original tooltip falls
+    // outside viewport bounds before clamping). Treated as a soft
+    // penalty after pane fraction.
+    const overshootLeft = Math.max(0, margin - orig.left);
+    const overshootTop = Math.max(0, margin - orig.top);
+    const overshootRight = Math.max(0, orig.right - (vw - margin));
+    const overshootBottom = Math.max(0, orig.bottom - (vh - margin));
+    const clipArea = (overshootLeft + overshootRight) * h + (overshootTop + overshootBottom) * w;
+    // Clamped final position. The clamp is what the user actually sees,
+    // so all overlap calculations score the clamped rect — not the
+    // pre-clamp position.
+    const left = clamp(orig.left, margin, vw - w - margin);
+    const top = clamp(orig.top, margin, vh - h - margin);
+    const r = { left, top, right: left + w, bottom: top + h };
+    // Hard rule: post-clamp target overlap must be effectively zero.
+    // 100 px² is a 10×10 sliver — anything larger means the tooltip is
+    // sitting ON the very content it's narrating, which is the failure
+    // mode Pass G fixes.
     const targetOverlap = rectIntersection(r, target);
-    const score = paneOverlap + (targetOverlap > 0 ? TARGET_OVERLAP_PENALTY + targetOverlap : 0);
-    return { ...c, rect: r, fits, score, paneOverlap, targetOverlap };
+    const targetInvalid = targetOverlap > TARGET_OVERLAP_HARD_THRESHOLD;
+    // Pane overlap as FRACTION of each pane's area, summed. Using
+    // fraction (not absolute area) means covering 100% of a small but
+    // important banner (like the red CONTRADICTION HOLD alert) costs
+    // as much as covering 100% of a large grid pane — they're both
+    // 1.0. Prevents the picker from cheerfully obliterating a small
+    // critical pane just because its absolute area was small.
+    let paneFraction = 0;
+    for (const pane of otherPanes) {
+      const overlap = rectIntersection(r, pane);
+      if (overlap > 0 && pane.area > 0) {
+        paneFraction += overlap / pane.area;
+      }
+    }
+    return {
+      name: c.name,
+      rect: r,
+      targetOverlap,
+      targetInvalid,
+      paneFraction,
+      clipArea,
+      bias: POSITION_BIAS[c.name] ?? 99,
+    };
   });
-  const fitting = scored.filter((c) => c.fits);
-  if (fitting.length > 0) {
-    fitting.sort((a, b) => {
-      if (a.score !== b.score) return a.score - b.score;
-      return TIEBREAK_ORDER[a.name] - TIEBREAK_ORDER[b.name];
+
+  const valid = scored.filter((c) => !c.targetInvalid);
+  if (valid.length > 0) {
+    valid.sort((a, b) => {
+      // 1. In-viewport candidates beat clipping candidates.
+      const aClip = a.clipArea > 0;
+      const bClip = b.clipArea > 0;
+      if (aClip !== bClip) return aClip ? 1 : -1;
+      // 2. Smaller pane fraction wins (with epsilon to avoid jitter).
+      if (Math.abs(a.paneFraction - b.paneFraction) > PANE_FRACTION_TIE_EPSILON) {
+        return a.paneFraction - b.paneFraction;
+      }
+      // 3. Smaller clip area wins.
+      if (a.clipArea !== b.clipArea) return a.clipArea - b.clipArea;
+      // 4. Position bias: top > right > left > bottom.
+      return a.bias - b.bias;
     });
-    const winner = fitting[0];
-    return { left: winner.left, top: winner.top, name: winner.name };
+    const winner = valid[0];
+    return { left: winner.rect.left, top: winner.rect.top, name: winner.name };
   }
-  // No candidate fits the viewport — fall back to the lowest-score
-  // candidate even with edge clipping, then clamp into viewport.
-  scored.sort((a, b) => {
-    if (a.score !== b.score) return a.score - b.score;
-    return TIEBREAK_ORDER[a.name] - TIEBREAK_ORDER[b.name];
-  });
+  // Every candidate clamps into the target — extreme degenerate case
+  // (target nearly covers the viewport). Pick the one with the smallest
+  // target overlap so we cover the least content possible.
+  scored.sort((a, b) => a.targetOverlap - b.targetOverlap);
   const fallback = scored[0];
   return {
-    left: clamp(fallback.left, margin, vw - w - margin),
-    top: clamp(fallback.top, margin, vh - h - margin),
-    name: fallback.name + "-clamp",
+    left: fallback.rect.left,
+    top: fallback.rect.top,
+    name: fallback.name + "-overlap",
   };
 }
 
