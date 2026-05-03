@@ -6203,3 +6203,24 @@ Both new cards use the universal Pass F 4-step choreography (SOURCE → GENERATE
 ### No git push
 
 Local commits only. Section-level commits are reviewable on `main` for piecemeal rollback if any beat needs revisiting.
+
+## 2026-05-03 — Card 9 Coumadin pronunciation fix
+
+The TTS-1 onyx voice mispronounces "Coumadin." Same fix Card 6 got in Pass D — replace every voice-text instance with the phonetic "KOO-muh-din" so the synthesizer hits the right cadence (KOO-muh-din, not coo-MAY-dyn).
+
+Replaced in 9 voice-text strings across `lib/tourScript.js`:
+- `jackson-denial-cascade-trans` Quick + Deep (the lead-in beat from Card 8 → Card 9)
+- `whitfield-inr-pre` Quick + Deep
+- `whitfield-inr-pa-note` Quick + Deep
+- `whitfield-inr-disposition` Quick + Deep
+- `whitfield-inr-auth-deep` (Quick variant didn't say Coumadin)
+
+Display-text fields (`displayText`, `body`, code comment) kept the proper spelling "Coumadin" — those are visual only and the spotlight tooltip should read correctly.
+
+### Audio regen
+
+9 MP3s deleted and regenerated. **TTS-1 cost: $0.0390** (2598 chars billed). Total project audio cost lifetime: ~$0.65.
+
+### Push
+
+After this commit, all local commits since the last push (Pass G + Pass G-fix1/2/3 + Pass E §1-7 + this fix) get pushed to `origin/main`.
