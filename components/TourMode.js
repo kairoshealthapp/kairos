@@ -21,7 +21,7 @@ import { usePathname, useRouter } from "next/navigation";
 import TOUR_SCRIPT from "@/lib/tourScript";
 import { getFixture } from "@/data/fixtures/encounters";
 import { isCinematicMode } from "@/lib/featureFlags";
-import { cameraGoto } from "@/lib/tourCamera";
+import { cameraGoto, isElementInViewport } from "@/lib/tourCamera";
 import SpotlightOverlay from "./SpotlightOverlay";
 import NarratorCorner from "./NarratorCorner";
 import TourEndModal from "./TourEndModal";
@@ -271,26 +271,133 @@ export default function TourMode() {
     [stopAudio]
   );
 
+  // Pass G-fix2 — Pre-frame the SPOTLIGHT ANCHOR before dispatching
+  // beat-start. Anchor-only (never cursor target) so the opening of
+  // each card lands on the source pane, not on whichever button the
+  // cursor is going to click 10 seconds into the narration. The
+  // cursor's target (typically below the anchor) is handled by a
+  // separately-scheduled secondary scroll — see scheduleCursorPreScroll
+  // below — that fires ~300ms before the cursor's startTime so the
+  // camera leads the cursor as a single downward move.
+  //
+  // Annotations may override framing via
+  // `cinematicFraming: "top" | "tight" | "wide"`. Card 7 pa2 / pa3 use
+  // "top" so the patient-response Q1 and the SBAR header land at the
+  // top of the viewport instead of mid-pane.
+  //
+  // For showNarrator beats with anchor === "global" (corner narrator
+  // with no spotlight pane), fall back to the cursor target so the
+  // page is settled before CursorGhost scrolls. This is the disposition
+  // / onAuthorize case — Card 3 cursor must land on the Authorize
+  // button, and there is no spotlight anchor to frame.
+  const preframeForAnnotation = useCallback(async (ann) => {
+    if (!ann || !isCinematicMode()) return;
+    const anchorSel =
+      ann.anchor && ann.anchor !== "global"
+        ? `[data-tour-anchor="${ann.anchor}"]`
+        : null;
+    const anchorEl =
+      anchorSel && typeof document !== "undefined"
+        ? document.querySelector(anchorSel)
+        : null;
+    const framing = ann.cinematicFraming || "wide";
+    let target = anchorEl;
+    if (!target) {
+      const cursorTarget = ann.cursor && ann.cursor.target;
+      if (cursorTarget && typeof document !== "undefined") {
+        target = document.querySelector(cursorTarget);
+      }
+    }
+    if (!target) return;
+    await cameraGoto(target, {
+      framing,
+      skipIfVisible: true,
+      visibilityFraction: framing === "top" ? 0.9 : 0.6,
+      holdMs: 0,
+    });
+  }, []);
+
+  // Pass G-fix2 — Schedule a secondary camera move that fires ~300ms
+  // BEFORE the cursor's startTime so the page is settled at the cursor
+  // target's position when CursorGhost dispatches its own scrollIntoView.
+  // CursorGhost waits 400ms after scrollIntoView before measuring; if
+  // the page is still mid-smooth-scroll at the 400ms mark, the cursor
+  // measures stale coordinates and lands beside the button. Pre-
+  // scrolling the page first turns CursorGhost's scrollIntoView into a
+  // near-instant no-op so the 400ms wait is sufficient.
+  //
+  // Also matches the master-task choreography: "Camera moves DOWN to
+  // Generate Patient Assessment button → cursor clicks it" — the camera
+  // leads the cursor as a single deliberate downward move, not a
+  // simultaneous double-scroll.
+  //
+  // skipIfVisible suppresses the move when the cursor target is already
+  // on-screen (the common case — usually the cursor target sits inside
+  // the spotlight anchor that was just framed).
+  // Pass G-fix3 #1 — converted from raw setTimeout to pwait-based async
+  // waiter so the pre-scroll respects pause. Returns a cancel function;
+  // callers stash it and invoke on beat-end so an aborted beat doesn't
+  // schedule a stale scroll into the next beat.
+  const scheduleCursorPreScroll = useCallback((cursorCfg) => {
+    if (!isCinematicMode()) return () => {};
+    if (!cursorCfg || !cursorCfg.target) return () => {};
+    const startTime = typeof cursorCfg.startTime === "number" ? cursorCfg.startTime : 0;
+    if (startTime < 1200) return () => {};
+    const delay = Math.max(0, startTime - 300);
+    let cancelled = false;
+    (async () => {
+      let elapsed = 0;
+      while (elapsed < delay && !cancelled) {
+        if (cancelledRef.current) return;
+        if (skipBeatRef.current) return;
+        if (!pausedRef.current) {
+          const slice = Math.min(40, delay - elapsed);
+          await sleep(slice);
+          elapsed += slice;
+        } else {
+          await sleep(50);
+        }
+      }
+      if (cancelled || cancelledRef.current || skipBeatRef.current) return;
+      cameraGoto(cursorCfg.target, {
+        framing: "wide",
+        skipIfVisible: true,
+        visibilityFraction: 0.85,
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const showNarrator = useCallback(
     async (data, total) => {
       if (!data) return;
       skipBeatRef.current = false;
+      // Pass G-fix #1 — pre-frame the cursor target before dispatching
+      // beat-start so CursorGhost's scrollIntoView lands on a settled
+      // page. Skip is automatic when target is already visible.
+      await preframeForAnnotation(data);
       // Notify ActionBar (and other listeners) which button this beat
       // targets — used to drive the pulse animation.
+      const cursorCfg = resolveCursor(data.cursor, modeRef.current);
       if (typeof window !== "undefined") {
         window.dispatchEvent(
           new CustomEvent("kairos-tour:beat-start", {
             detail: {
               targetButton: data.targetButton || null,
               targetCard: data.targetCard || null,
-              cursor: resolveCursor(data.cursor, modeRef.current),
+              cursor: cursorCfg,
             },
           })
         );
       }
+      // Pass G-fix2 — schedule the camera to lead the cursor by ~300ms.
+      const cursorPreScrollHandle = scheduleCursorPreScroll(cursorCfg);
       const dwellMs = await beginBubble(data);
       setOverlay({ kind: "narrator", data, total });
       await pwait(dwellMs);
+      cursorPreScrollHandle();
       stopAudio();
       skipBeatRef.current = false;
       if (typeof window !== "undefined") {
@@ -298,31 +405,51 @@ export default function TourMode() {
       }
       if (cancelledRef.current) return;
     },
-    [pwait, beginBubble, stopAudio]
+    [pwait, beginBubble, stopAudio, preframeForAnnotation, scheduleCursorPreScroll]
   );
 
   const showSpotlight = useCallback(
     async (data) => {
       if (!data) return;
       skipBeatRef.current = false;
+      // Pass G-fix #1 — pre-frame the spotlight target BEFORE beat-start.
+      await preframeForAnnotation(data);
+      // Pass G-fix3 #4 — show the spotlight gold-box BEFORE the audio
+      // narration so the viewer can read the freshly-rendered panel
+      // during the silent prePlayHoldMs. Replaces the old extraHoldMs
+      // (which sat AFTER audio and created dead air between the
+      // narration's "Hit Synthesize SBAR" and the actual click).
+      // prePlayHoldMs is silent reading time BEFORE narration starts;
+      // when set, the post-audio min-hold collapses to a small buffer
+      // since reading already happened.
+      setOverlay({ kind: "spotlight", data });
+      const prePlayMs = data.prePlayHoldMs || 0;
+      if (prePlayMs > 0) {
+        await pwait(prePlayMs);
+      }
+      const cursorCfg = resolveCursor(data.cursor, modeRef.current);
       if (typeof window !== "undefined") {
         window.dispatchEvent(
           new CustomEvent("kairos-tour:beat-start", {
             detail: {
               targetButton: data.targetButton || null,
               targetCard: data.targetCard || null,
-              cursor: resolveCursor(data.cursor, modeRef.current),
+              cursor: cursorCfg,
             },
           })
         );
       }
+      // Pass G-fix2 — schedule the camera to lead the cursor by ~300ms.
+      const cursorPreScrollHandle = scheduleCursorPreScroll(cursorCfg);
       const audioMs = await beginBubble(data);
-      // Spotlight bubbles attach to a panel the viewer needs to read.
-      // Enforce a minimum hold so the next beat can't race the reader,
-      // regardless of how short the audio narration is.
-      const dwellMs = Math.max(SPOTLIGHT_MIN_MS, audioMs);
-      setOverlay({ kind: "spotlight", data });
+      // When prePlayHoldMs already gave the viewer reading time, only
+      // need a small buffer after audio so the next action doesn't race
+      // the click ripple. Otherwise enforce SPOTLIGHT_MIN_MS so short
+      // audio still gives the viewer time to read.
+      const minPostAudio = prePlayMs > 0 ? Math.max(audioMs + 500, 1500) : SPOTLIGHT_MIN_MS;
+      const dwellMs = Math.max(minPostAudio, audioMs) + (data.extraHoldMs || 0);
       await pwait(dwellMs);
+      cursorPreScrollHandle();
       stopAudio();
       skipBeatRef.current = false;
       if (typeof window !== "undefined") {
@@ -330,7 +457,7 @@ export default function TourMode() {
       }
       if (cancelledRef.current) return;
     },
-    [pwait, beginBubble, stopAudio]
+    [pwait, beginBubble, stopAudio, preframeForAnnotation, scheduleCursorPreScroll]
   );
 
   const clearOverlay = useCallback(() => {
@@ -399,32 +526,34 @@ export default function TourMode() {
       window.removeEventListener("kairos-encounter:banner", bannerHandler);
       if (cancelledRef.current) return;
 
-      // Run after-action annotations serially. When cinematic mode is
-      // on, between bubbles we pull the camera back to a wide framing on
-      // the patient-header anchor so the next bubble's tight scroll has
-      // visible travel — the filmic "lift and shift" rhythm.
+      // Run after-action annotations serially. Pass G-fix #1 — replaced
+      // the patient-header pull-back-between-bubbles with a direct
+      // pre-frame on the NEXT annotation's anchor (or its cursor target,
+      // when one is present). The pull-back caused a "seasick" double
+      // bounce: page jumped UP to the header, then back DOWN to the next
+      // pane. With skipIfVisible=true, the move is a no-op when the
+      // upcoming target is already comfortably on-screen — covering the
+      // common case where consecutive spotlights live in the same
+      // viewport region (MyChart → Order Pad → action-bar). Awaiting the
+      // settle BEFORE showSpotlight also fixes the cursor-misses-button
+      // bug on Card 3 / Card 7: by the time CursorGhost fires its own
+      // scrollIntoView, the page has already settled at the right
+      // position so the cursor lands on the button rather than its
+      // pre-scroll coordinates.
       const cinematic = isCinematicMode();
       for (let aIdx = 0; aIdx < afterActionAnns.length; aIdx++) {
         if (cancelledRef.current || jumpToCardRef.current >= 0) return;
         const ann = afterActionAnns[aIdx];
-        if (cinematic && aIdx > 0) {
-          await cameraGoto('[data-tour-anchor="patient-header"]', {
-            framing: "wide",
-            holdMs: 250,
-          });
+        if (cinematic) {
+          await preframeForAnnotation(ann);
         }
         await showSpotlight(ann);
         clearOverlay();
         await pwait(200);
       }
-      // Final pull-back after the last artifact reveal so the cursor's
-      // upcoming move to Authorize starts from a wider frame.
-      if (cinematic && afterActionAnns.length > 0) {
-        await cameraGoto('[data-tour-anchor="patient-header"]', {
-          framing: "wide",
-          holdMs: 400,
-        });
-      }
+      // No post-loop pull-back. The next phase (showNarrator for
+      // onAuthorize, or the next card's pre-arrival) issues its own
+      // pre-frame before the cursor moves.
     },
     [pwait, showSpotlight, clearOverlay]
   );

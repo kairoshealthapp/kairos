@@ -230,17 +230,35 @@ export default function SpotlightOverlay({ anchor, position, title, body, onDism
 
     // Initial pass: scroll the anchor into view so both bubble + pane are
     // visible, then wait ~450ms for smooth-scroll to settle, then measure.
+    //
+    // Pass G-fix #1 — Camera-bounce suppression. If the anchor is
+    // already comfortably visible (≥60% of its height on-screen with
+    // its center in viewport), skip the scrollIntoView entirely. This
+    // is the dominant source of the "seasick" bounce: TourMode now
+    // pre-frames the next anchor before showSpotlight, leaving this
+    // overlay scroll redundant in the common case. Keeping the call
+    // for the off-screen case preserves the safety net.
     async function initialize() {
       const el = findAnchor();
-      if (el && typeof el.scrollIntoView === "function") {
-        try {
-          el.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
-        } catch {
-          el.scrollIntoView();
+      if (el) {
+        // Pass G-fix3 — In cinematic mode, TourMode's preframe runs
+        // BEFORE this overlay mounts and is the authoritative camera
+        // mover. Don't double-scroll here at all in cinematic mode —
+        // even a partial-visibility re-center re-introduces the
+        // bounce on Card 3 disposition (action-bar near doc bottom
+        // can't truly center, so block:"center" computes a different
+        // scroll than preframe's wide framing and the page jumps).
+        // Outside cinematic mode the legacy scrollIntoView fallback
+        // is preserved.
+        if (!isCinematicMode() && typeof el.scrollIntoView === "function") {
+          try {
+            el.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+          } catch {
+            el.scrollIntoView();
+          }
+          await new Promise((r) => setTimeout(r, 450));
         }
       }
-      // Wait for scroll-settle. 450ms covers most smooth-scroll durations.
-      await new Promise((r) => setTimeout(r, 450));
       if (cancelled) return;
       measure();
       // Re-measure periodically while typing animations may grow the anchor.

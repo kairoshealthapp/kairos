@@ -49,21 +49,66 @@ export default function CursorGhost() {
     setPos({ x, y });
   }, []);
 
-  // Helper: clear all pending scheduled steps from the previous beat.
+  // Pass G-fix3 #1 — Pause-aware scheduler. Old version stored raw
+  // setTimeout handles. On pause, callbacks fired anyway (cursor kept
+  // moving even though audio froze). New version stores `{ handle, fn,
+  // fireAt }` so pause can clearTimeout each pending step and stash the
+  // remaining ms; resume reschedules with the leftover delay. Used by
+  // every cursor-move / click-ripple / scroll-settle scheduling site.
+  const pausedRef = useRef(false);
+
   function clearPendingTimers() {
-    for (const t of timeoutsRef.current) clearTimeout(t);
+    for (const t of timeoutsRef.current) {
+      if (t && t.handle) clearTimeout(t.handle);
+    }
     timeoutsRef.current = [];
   }
 
-  // Helper: schedule a callback and remember its handle.
   function scheduleStep(fn, delayMs) {
-    const handle = setTimeout(() => {
-      // Drop self from the pending list so we don't try to clear an
-      // already-fired timer later.
-      timeoutsRef.current = timeoutsRef.current.filter((t) => t !== handle);
+    const delay = Math.max(0, delayMs);
+    if (pausedRef.current) {
+      // Don't actually fire while paused — store the entry with a null
+      // handle and a remaining delay; resume will schedule it.
+      const entry = { handle: null, fn, remaining: delay, fireAt: null };
+      timeoutsRef.current.push(entry);
+      return;
+    }
+    const fireAt = (typeof performance !== "undefined" ? performance.now() : Date.now()) + delay;
+    const entry = { handle: null, fn, remaining: null, fireAt };
+    entry.handle = setTimeout(() => {
+      timeoutsRef.current = timeoutsRef.current.filter((t) => t !== entry);
       fn();
-    }, Math.max(0, delayMs));
-    timeoutsRef.current.push(handle);
+    }, delay);
+    timeoutsRef.current.push(entry);
+  }
+
+  function pausePendingTimers() {
+    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    for (const t of timeoutsRef.current) {
+      if (t.handle != null) {
+        clearTimeout(t.handle);
+        const remaining = Math.max(0, (t.fireAt || now) - now);
+        t.handle = null;
+        t.remaining = remaining;
+        t.fireAt = null;
+      }
+    }
+  }
+
+  function resumePendingTimers() {
+    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    for (const t of timeoutsRef.current) {
+      if (t.handle == null && t.remaining != null) {
+        const delay = t.remaining;
+        const entry = t;
+        entry.fireAt = now + delay;
+        entry.remaining = null;
+        entry.handle = setTimeout(() => {
+          timeoutsRef.current = timeoutsRef.current.filter((x) => x !== entry);
+          entry.fn();
+        }, delay);
+      }
+    }
   }
 
   useEffect(() => {
@@ -212,10 +257,30 @@ export default function CursorGhost() {
     }
 
     function onPause() {
+      // Pass G-fix3 #1 — actually freeze pending steps, not just the
+      // visual opacity. Cursor sprite stays visible so the viewer can
+      // see where it was when paused (was hidden in the legacy code).
+      pausedRef.current = true;
+      pausePendingTimers();
+      // Freeze any in-flight CSS transition by snapshotting the current
+      // computed transform and re-applying it with transition:none.
+      const node = cursorRef.current;
+      if (node) {
+        try {
+          const cs = window.getComputedStyle(node);
+          const t = cs.transform && cs.transform !== "none" ? cs.transform : null;
+          node.style.transition = "none";
+          if (t) node.style.transform = t;
+        } catch {
+          // ignore
+        }
+      }
       setPaused(true);
     }
 
     function onResume() {
+      pausedRef.current = false;
+      resumePendingTimers();
       setPaused(false);
     }
 
@@ -271,7 +336,11 @@ export default function CursorGhost() {
         ? "opacity 200ms ease-out"
         : `${transition}, opacity 200ms ease-out`,
     pointerEvents: "none",
-    opacity: visible && !paused ? 1 : 0,
+    // Pass G-fix3 #1 — cursor stays visible while paused so the viewer
+    // can see where it was when they hit pause. Pending move/click
+    // steps are frozen via pausePendingTimers so the cursor doesn't
+    // advance.
+    opacity: visible ? 1 : 0,
     zIndex: 65,
     willChange: "transform, opacity",
   };
