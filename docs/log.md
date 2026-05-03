@@ -5920,3 +5920,62 @@ Pass B (cursor-leads-camera-trails 200ms lag + tooltip fixes) still queued for s
 ### No git push performed
 
 All Pass F commits stay local. Brandon handles the push manually after smoke-testing.
+
+## 2026-05-02 — Pass G: tooltip placement v3 (SpotlightOverlay, not CursorGhost)
+
+Brandon's smoke-test caught Pass D's tooltip collision-avoidance still failing on Cards 2, 6, 7. Pass G hardens the placement algorithm. Single-file commit; no fixture or narration touches.
+
+### File-naming clarification
+
+The master-task header said "CursorGhost.js ONLY," but the tooltip card with the title/body label (e.g. "Lifestyle counseling, embedded.") is rendered by `components/SpotlightOverlay.js`'s `pickCinematicPlacement` (Pass A → D → G). `components/CursorGhost.js` renders only the moving cursor SVG sprite and is untouched per its fragile-file flag.
+
+### Failure modes Pass D had
+
+- **Card 2 pa1** (anchor `output-pane`): the +500 px² target-overlap penalty was too small. The picker scored a candidate that overlapped output-pane by ~50k px² at 50,500, and if all other candidates had higher absolute overlap with non-target panes, this one won. The viewport-clamp fallback could also push an off-viewport candidate back INTO the target rect.
+- **Card 6 onArrival** (anchor `source-pane`): the contradiction-alert banner is a small (~700×60) but visually critical pane. Pane overlap was scored by absolute area, so covering 100% of the alert was scored as ~42k px² — much smaller than covering 30% of a large grid pane (~50k px²). The picker preferred to obliterate the small banner.
+- **Card 7 pa2** (anchor `patient-response`): same as Card 2 — clamp fallback brought the tooltip back inside the target.
+
+### Pass G v3 changes
+
+1. **HARD constraint** on target overlap. >100 px² target overlap (a 10×10 sliver) disqualifies a candidate from primary selection. Was a +500 soft penalty in Pass D.
+2. **Score on the CLAMPED rect, not the pre-clamp rect.** Clamping is what the viewer sees, so the clamp's effects (clamping back into target, etc.) are evaluated. Fixes the "fallback put it inside the target" bug.
+3. **Pane overlap by FRACTION** (`overlap_area / pane_area`), not absolute area. Covering 100% of a small banner now costs the same as covering 100% of a large grid pane. Fixes Card 6.
+4. **Off-viewport clip area** is now a soft secondary penalty (instead of Pass D's hard filter). Prefer fitting, but accept small clipping when it avoids a worse pane-fraction score.
+5. **Position bias re-ordered**: top > right > left > bottom. Master task: "Prefer positioning the tooltip ABOVE or to the SIDE of the target content."
+
+Sort priority among non-target-overlapping candidates:
+
+1. In-viewport (no clipping) before clipping
+2. Smaller pane-fraction-overlap before larger (epsilon 0.01)
+3. Smaller clip area before larger
+4. Position bias: top > right > left > bottom
+
+Fallback (all candidates overlap target ≥ 100 px²): pick the one with the smallest target overlap.
+
+### What changed in code
+
+`components/SpotlightOverlay.js` — `pickCinematicPlacement` rewritten. New helper rect on each pane carries `area` so fraction can be computed without re-reading. Constants `POSITION_BIAS`, `TARGET_OVERLAP_HARD_THRESHOLD = 100`, `PANE_FRACTION_TIE_EPSILON = 0.01` replace the Pass D `TIEBREAK_ORDER` + `TARGET_OVERLAP_PENALTY = 500`.
+
+### Smoke-test checklist (the three cards Brandon flagged)
+
+1. `npm run dev` → use card-nav pills (1-9 in HUD bottom-right):
+2. **Card 2** Step 3 (output-pane / MyChart): tooltip "Lifestyle counseling, embedded." should sit ABOVE the output-pane (top placement preferred), not on top of the MyChart body.
+3. **Card 6** Step 1 (source-pane): tooltip "Two facts that can't both be right." should NOT cover the red CONTRADICTION HOLD banner. Bottom placement (covering output-pane) is preferred over right placement (covering the alert + nurse-note).
+4. **Card 7** Stage 2 (patient-response): tooltip "Stage 2 — answers captured." should sit OUTSIDE the response pane — top (over chart-context) or left (over patient-assessment). Q1-Q6 + answers should remain readable.
+
+cinematicMode off (URL `?cinematic=0` or sessionStorage flag) still uses the legacy edge-flip path — Pass G changes only affect cinematic mode.
+
+### Commits
+
+| Hash | Title |
+| --- | --- |
+| `4c30c5b` | feat: tooltip placement v3 — hard target-overlap rule + fraction-based pane scoring |
+| _(this)_ | docs: Pass G summary |
+
+### CursorGhost.js untouched
+
+Despite the master-task header. The tooltip rendering and placement live in SpotlightOverlay.js. CursorGhost.js still queued for any future cursor-leads-camera-trails work (Pass B).
+
+### No git push performed
+
+Pass G commits stay local. Brandon handles the push manually after smoke-testing the three cards.
