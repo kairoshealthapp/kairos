@@ -63,8 +63,13 @@ export default function NarratorCorner({
   const pillCount = typeof total === "number" && total > 0 ? total : 0;
   return (
     <div
-      className="fixed z-[70] right-4 bottom-4 w-[340px] kairos-card p-4 shadow-2xl"
+      className="fixed z-[70] right-4 top-4 w-[260px] kairos-card p-3 shadow-2xl"
       style={{
+        // v3.0 Bookends Pass / Fix A1 — HUD footprint trimmed ~30%
+        // (340→260 wide, p-4→p-3, smaller text/buttons) so on Card 5
+        // (Greene phone) the long RN-Note + Call-Script stack no
+        // longer collides with the HUD chrome. Set-and-forget across
+        // every card.
         background: "var(--color-platinum)",
         borderColor: "var(--color-amber)",
         borderWidth: 1,
@@ -76,7 +81,7 @@ export default function NarratorCorner({
           smoke-testing without watching the tour from start. The pill
           for the active card is gold; the rest are muted. */}
       {pillCount > 0 && onJumpToCard ? (
-        <div className="flex items-center gap-1 flex-wrap mb-2">
+        <div className="flex items-center gap-0.5 flex-wrap mb-1.5">
           {Array.from({ length: pillCount }, (_, idx) => {
             const active = idx === step;
             return (
@@ -85,7 +90,7 @@ export default function NarratorCorner({
                 type="button"
                 onClick={() => onJumpToCard(idx)}
                 className={
-                  "inline-flex items-center justify-center text-[11px] font-semibold rounded-full border min-w-[22px] h-[22px] px-1.5 transition-colors " +
+                  "inline-flex items-center justify-center text-[10px] font-semibold rounded-full border min-w-[20px] h-[20px] px-1 transition-colors " +
                   (active
                     ? "text-graphite bg-amber border-amber"
                     : "text-bone-muted hover:text-bone bg-graphite/40 border-mist/60 hover:bg-graphite/70")
@@ -100,17 +105,17 @@ export default function NarratorCorner({
           })}
         </div>
       ) : null}
-      <div className="flex items-center justify-between mb-2 gap-2">
-        <span className="kairos-kicker text-amber/80 truncate">
+      <div className="flex items-center justify-between mb-1.5 gap-1.5">
+        <span className="kairos-kicker text-amber/80 truncate text-[10px]">
           {progressLabel || "Tour"}
         </span>
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
           {onTogglePause ? (
             <button
               type="button"
               onClick={onTogglePause}
               className={
-                "inline-flex items-center gap-1 text-[12px] font-semibold rounded-full border px-2.5 min-h-[32px] transition-colors " +
+                "inline-flex items-center gap-1 text-[11px] font-semibold rounded-full border px-2 min-h-[26px] transition-colors " +
                 (paused
                   ? "text-graphite bg-amber border-amber hover:bg-amber/90"
                   : "text-bone hover:text-bone bg-graphite/50 border-mist/60 hover:bg-graphite/70")
@@ -126,7 +131,7 @@ export default function NarratorCorner({
             <button
               type="button"
               onClick={onToggleMuted}
-              className="inline-flex items-center justify-center text-bone-muted hover:text-bone bg-graphite/40 border border-mist/60 rounded-full min-w-[32px] min-h-[32px] p-1.5"
+              className="inline-flex items-center justify-center text-bone-muted hover:text-bone bg-graphite/40 border border-mist/60 rounded-full min-w-[26px] min-h-[26px] p-1"
               title={muted ? "Voice narration off — click to turn on" : "Voice narration on — click to mute"}
               aria-label={muted ? "Unmute voice narration" : "Mute voice narration"}
             >
@@ -136,7 +141,7 @@ export default function NarratorCorner({
           <button
             type="button"
             onClick={onToggleSpeed}
-            className="inline-flex items-center justify-center text-[11px] font-medium text-bone-muted hover:text-bone bg-graphite/40 border border-mist/60 rounded-full min-w-[32px] min-h-[32px] px-2"
+            className="inline-flex items-center justify-center text-[10px] font-medium text-bone-muted hover:text-bone bg-graphite/40 border border-mist/60 rounded-full min-w-[26px] min-h-[26px] px-1.5"
             title="Toggle playback speed"
           >
             {speed}x
@@ -145,7 +150,7 @@ export default function NarratorCorner({
             <button
               type="button"
               onClick={onSkip}
-              className="text-[11px] font-medium text-bone-muted hover:text-bone bg-graphite/40 border border-mist/60 rounded-full px-2.5 min-h-[32px]"
+              className="text-[10px] font-medium text-bone-muted hover:text-bone bg-graphite/40 border border-mist/60 rounded-full px-2 min-h-[26px]"
               title="Skip to next card"
             >
               Skip ▸
@@ -155,7 +160,7 @@ export default function NarratorCorner({
             <button
               type="button"
               onClick={onEnd}
-              className="text-[11px] font-medium text-bone-muted hover:text-oxblood bg-graphite/40 border border-mist/60 rounded-full px-2 min-h-[32px]"
+              className="text-[10px] font-medium text-bone-muted hover:text-oxblood bg-graphite/40 border border-mist/60 rounded-full px-1.5 min-h-[26px]"
               title="Exit tour"
               aria-label="Exit tour"
             >
@@ -165,12 +170,12 @@ export default function NarratorCorner({
         </div>
       </div>
       {title ? (
-        <h3 className="kairos-display text-bone text-[16px] font-medium leading-snug mb-2">
+        <h3 className="kairos-display text-bone text-[14px] font-medium leading-snug mb-1.5">
           {title}
         </h3>
       ) : null}
       {body ? (
-        <p className="text-[13px] text-bone leading-relaxed mb-3">{body}</p>
+        <p className="text-[12px] text-bone leading-relaxed mb-2">{body}</p>
       ) : null}
       <div className="flex items-center justify-between gap-2">
         <div className="flex-1 h-[3px] bg-graphite/60 rounded-full overflow-hidden">

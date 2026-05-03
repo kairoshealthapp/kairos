@@ -38,8 +38,24 @@ function CheckRow({ id, name, source, rationale, checked, onToggle, glyph, glyph
   );
 }
 
-export default function ReferralPacketPanel({ packet }) {
+export default function ReferralPacketPanel({ packet, completed, completedSummary, tourMode, onTerminate }) {
   if (!packet) return null;
+  if (completed) {
+    return (
+      <section
+        className="kairos-card px-4 py-2.5 flex items-center gap-3"
+        style={{ background: "rgba(110, 153, 124, 0.10)", borderColor: "rgba(110, 153, 124, 0.35)" }}
+      >
+        <span className="text-sage text-[15px] leading-none font-semibold" aria-hidden="true">✓</span>
+        <span className="kairos-kicker text-bone-muted/70 text-[10px] tracking-wider">
+          REFERRAL PACKET
+        </span>
+        <span className="text-[12px] text-bone font-medium">
+          {completedSummary || "Referral packet sent"}
+        </span>
+      </section>
+    );
+  }
 
   // Build a flat id-keyed inclusion map from the fixture defaults.
   const initial = useMemo(() => {
@@ -72,7 +88,7 @@ export default function ReferralPacketPanel({ packet }) {
   const excluded = packet.items?.excludedByDefault || [];
 
   return (
-    <section className="kairos-card p-4 h-full flex flex-col overflow-hidden">
+    <section className="kairos-card p-4 flex flex-col">
       <header className="flex items-center justify-between mb-2">
         <span className="kairos-kicker text-sage/90">REFERRAL PACKET</span>
         <span className="text-[11px] text-bone-muted">{packet.submissionMethod}</span>
@@ -90,7 +106,7 @@ export default function ReferralPacketPanel({ packet }) {
         ) : null}
       </div>
 
-      <div className="flex-1 overflow-auto pr-1">
+      <div className="pr-1">
         {/* Auto-included */}
         <div className="mb-3">
           <div className="kairos-kicker text-bone-muted mb-1">AUTO-INCLUDED</div>
@@ -184,6 +200,29 @@ export default function ReferralPacketPanel({ packet }) {
             ) : null}
           </div>
         ) : null}
+      </div>
+
+      {/* v3.0 Fix 11 — terminal Approve & Send button. Mirrors the
+          OrderPad Approve UX. Disabled in tour mode (tour drives its
+          own flow). */}
+      <div className="mt-4 pt-3 border-t border-mist/40 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            if (tourMode || !onTerminate) return;
+            onTerminate({
+              kind: "referralPacket.approve",
+              recipient: packet.destination || "recipient",
+            });
+          }}
+          data-tour-button="referralPacket.approve"
+          className="text-[12px] font-semibold px-3 py-1.5 rounded-sm transition-colors bg-amber text-graphite hover:bg-amber/90"
+        >
+          Approve & Send Packet
+        </button>
+        <span className="text-[11px] text-bone-muted italic">
+          Sends to {packet.destination || "recipient"} via {packet.submissionMethod || "fax"}.
+        </span>
       </div>
     </section>
   );

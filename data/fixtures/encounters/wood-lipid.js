@@ -35,6 +35,9 @@ const fixture = {
     body:
       "Lipid panel: LDL 67 (at goal), HDL 41 (slightly below goal), triglycerides 182 (slightly above goal), total 139 (at goal). No medication change. Lifestyle counseling for HDL/triglyceride pattern (exercise, diet, alcohol moderation).",
   },
+  // v3.0 — conditional panel declaration. Auto-inferred from
+  // actionScripts / finalSignedState; override here if needed.
+  panels: ["rnNote", "myChart"],
   initialPaneContent: {
     nurseNote: "",
     mychartMessage: "",

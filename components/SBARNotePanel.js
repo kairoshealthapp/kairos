@@ -27,7 +27,7 @@ export default function SBARNotePanel({ sbar }) {
             <div className="kairos-kicker text-bone-muted/80 mb-1">{s.label}</div>
             <div className="text-[13px] text-bone leading-relaxed whitespace-pre-wrap">
               {data[s.key] || (
-                <span className="text-bone-muted/60 italic">— not provided —</span>
+                <span className="text-bone-muted/60 italic">Pending provider review</span>
               )}
             </div>
           </div>

@@ -35,6 +35,9 @@ const fixture = {
     timestamp: "2026-04-29 06:41",
     body: "CTA chest reviewed. Findings consistent with mild aortic stenosis and mild aortic regurgitation, possible bicuspid aortic valve. Recommend transthoracic echo (TTE) for reassessment of valve morphology and severity. No immediate change in management. Patient may follow up at his next routine visit if asymptomatic; sooner if symptomatic. Please notify.",
   },
+  // v3.0 — conditional panel declaration. Auto-inferred from
+  // actionScripts / finalSignedState; override here if needed.
+  panels: ["rnNote", "myChart", "orderPad"],
   initialPaneContent: {
     nurseNote: "",
     mychartMessage: "",
@@ -72,7 +75,7 @@ const fixture = {
         typingSpeedCps: 70,
         delayMsBefore: 400,
         content:
-          "Mr Anderson,\n\nDr. Pendrelle has reviewed your recent CTA (a detailed CT scan of the heart and chest). The scan showed mild narrowing (stenosis) and mild leakage (regurgitation) at one of your heart valves, possibly a bicuspid (two-leaflet) valve.\n\nTo take a closer look, we have ordered an echocardiogram (an ultrasound of your heart). The scheduling team will reach out to set a time. There are no changes to your medications.\n\nPlease follow up at your next routine visit, or sooner if you notice new chest pain, shortness of breath, light-headedness, or fainting.\n\nBrandon Sterne, RN BSN / Cardiology Associates",
+          "Mr. Anderson,\n\nYour provider has reviewed your recent CTA (a detailed CT scan of your heart and chest). The scan showed mild narrowing and mild leakage at one of your heart valves — these are minor findings that don't change anything you're doing today, but we want to take a closer look.\n\nWhat to do: No changes to your medications. Continue everything as you've been taking it.\n\nWhat's next: We've ordered an echocardiogram (an ultrasound of your heart) so we can see the valve in motion and measure the narrowing more precisely. The scheduling team will call you to set a time — usually within a week.\n\nWhat to watch for between now and the echo: New chest pain or pressure, shortness of breath with activity that didn't bother you before, light-headedness or feeling like you might pass out, or actually fainting. If any of those happen, call the clinic the same day. For severe chest pain or fainting, call 911.\n\nIf you don't hear from scheduling within a week, or if you have any questions, reply to this message or call the clinic.\n\nBrandon Sterne, RN BSN / Cardiology Associates",
       },
       {
         type: "pane-update",

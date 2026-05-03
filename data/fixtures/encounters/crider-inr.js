@@ -53,6 +53,9 @@ const fixture = {
   ],
   pendedOrders: false,
   nextAppt: "Cardiology with Rashid Lambridge, MD — 5/4/2026 4:00 PM",
+  // v3.0 — conditional panel declaration. Auto-inferred from
+  // actionScripts / finalSignedState; override here if needed.
+  panels: ["rnNote"],
   initialPaneContent: {
     nurseNote: "",
     mychartMessage: "",

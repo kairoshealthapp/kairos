@@ -45,3 +45,8 @@ docs/.name-scrub-mapping-*.md
 
 # private session records (sensitive context, ThinkPad-local only)
 /.private/
+.private/
+
+# Epic FHIR sandbox private key — NEVER commit (also caught by *.pem above)
+sandbox/private-key.pem
+sandbox/*.pem

@@ -25,6 +25,8 @@ import { cameraGoto, isElementInViewport } from "@/lib/tourCamera";
 import SpotlightOverlay from "./SpotlightOverlay";
 import NarratorCorner from "./NarratorCorner";
 import TourEndModal from "./TourEndModal";
+import TourBookend from "./TourBookend";
+import { TOUR_OPENER, TOUR_CLOSER } from "@/lib/tourBookends";
 
 const AUTH_KEY = "kairos.authorizedCards.v1";
 const BACKUP_KEY = "kairos.tour.authorizedBackup";
@@ -179,6 +181,12 @@ export default function TourMode() {
   const [paused, setPausedState] = useState(false);
   const [muted, setMutedState] = useState(false);
   const [showEndModal, setShowEndModal] = useState(false);
+  // v3.0 Bookends — opener and closer cinematic stages. The opener
+  // runs BEFORE Card 1; the closer runs AFTER Card 7's exit. While a
+  // bookend is rendering, the in-card NarratorCorner HUD is suppressed
+  // (TourBookend has its own minimal Skip / ✕ button).
+  const [bookend, setBookend] = useState(null); // null | "opener" | "closer"
+  const bookendResolveRef = useRef(null);
 
   // Length-aware dwell:
   //   base = max(authored durationMs, 1500 + chars × 50)
@@ -300,7 +308,13 @@ export default function TourMode() {
       anchorSel && typeof document !== "undefined"
         ? document.querySelector(anchorSel)
         : null;
-    const framing = ann.cinematicFraming || "wide";
+    // v3.0 Master Prompt 2 / Bug 2 — default framing changed from
+    // "wide" (centers the target, scrolling past unnarrated content
+    // below) to "top" (pins target near top of viewport with 80px
+    // breathing room). Keeps source pane + first panels above the fold
+    // for the new tour where every card opens with all panels visible.
+    // Spotlights can still opt back into wide/tight via cinematicFraming.
+    const framing = ann.cinematicFraming || "top";
     let target = anchorEl;
     if (!target) {
       const cursorTarget = ann.cursor && ann.cursor.target;
@@ -427,7 +441,29 @@ export default function TourMode() {
       if (prePlayMs > 0) {
         await pwait(prePlayMs);
       }
-      const cursorCfg = resolveCursor(data.cursor, modeRef.current);
+      // v3.0 Master Prompt 2 / Fix 2d Bug 2 — start audio FIRST so we
+      // know its real duration, THEN dispatch beat-start with cursor
+      // timings shifted to the last few seconds of the beat. Previously
+      // beat-start fired immediately and the cursor moved at startTime
+      // ~1000ms — well before the user finished reading panel content.
+      // For button-targeted spotlights, we now hold the cursor until
+      // the audio is ~3500ms from ending, so the user reads the panel
+      // for the bulk of narration before the cursor sweeps in to click.
+      const audioMs = await beginBubble(data);
+      const baseCursorCfg = resolveCursor(data.cursor, modeRef.current);
+      const cursorCfg = (() => {
+        if (!baseCursorCfg || !baseCursorCfg.target) return baseCursorCfg;
+        const isButtonTarget = /\[data-tour-button=/.test(baseCursorCfg.target);
+        if (!isButtonTarget) return baseCursorCfg;
+        // Audio still has ~audioMs remaining since beginBubble returns
+        // immediately after .play() begins. Schedule cursor entry near
+        // the end of the dwell.
+        const totalMs = Math.max(audioMs, 4000);
+        const startTime = Math.max(0, totalMs - 3500);
+        const arriveTime = Math.max(startTime + 800, totalMs - 2000);
+        const clickTime = Math.max(arriveTime + 500, totalMs - 700);
+        return { ...baseCursorCfg, startTime, arriveTime, clickTime };
+      })();
       if (typeof window !== "undefined") {
         window.dispatchEvent(
           new CustomEvent("kairos-tour:beat-start", {
@@ -439,9 +475,6 @@ export default function TourMode() {
           })
         );
       }
-      // Pass G-fix2 — schedule the camera to lead the cursor by ~300ms.
-      const cursorPreScrollHandle = scheduleCursorPreScroll(cursorCfg);
-      const audioMs = await beginBubble(data);
       // When prePlayHoldMs already gave the viewer reading time, only
       // need a small buffer after audio so the next action doesn't race
       // the click ripple. Otherwise enforce SPOTLIGHT_MIN_MS so short
@@ -449,7 +482,6 @@ export default function TourMode() {
       const minPostAudio = prePlayMs > 0 ? Math.max(audioMs + 500, 1500) : SPOTLIGHT_MIN_MS;
       const dwellMs = Math.max(minPostAudio, audioMs) + (data.extraHoldMs || 0);
       await pwait(dwellMs);
-      cursorPreScrollHandle();
       stopAudio();
       skipBeatRef.current = false;
       if (typeof window !== "undefined") {
@@ -503,10 +535,25 @@ export default function TourMode() {
       }
       window.addEventListener("kairos-encounter:banner", bannerHandler);
 
-      // Fire the action.
+      // v3.0 Master Prompt 2 — pre-action spotlight. The new tour walks
+      // the cursor onto each panel button and narrates what AI did
+      // BEFORE the click. The spotlight fires here, with audio+cursor
+      // playing through; when it ends we dispatch auto-action so the
+      // visual click ripple coincides with the actual termination.
+      if (actionDef.spotlight) {
+        if (isCinematicMode()) {
+          await preframeForAnnotation(actionDef.spotlight);
+        }
+        await showSpotlight(actionDef.spotlight);
+        // Keep the spotlight overlay up through auto-action so the
+        // viewer sees the panel collapse without the chrome flashing.
+      }
+
+      // Fire the action. Recipient (for forward actions) is forwarded
+      // to EncounterDetail's panel: handler so the toast carries it.
       window.dispatchEvent(
         new CustomEvent("kairos-encounter:auto-action", {
-          detail: { actionId, fixtureId },
+          detail: { actionId, fixtureId, recipient: actionDef.recipient || null },
         })
       );
 
@@ -525,6 +572,15 @@ export default function TourMode() {
 
       window.removeEventListener("kairos-encounter:banner", bannerHandler);
       if (cancelledRef.current) return;
+
+      // v3.0 Master Prompt 2 — if a pre-action spotlight was up and
+      // there are no after-action annotations to take over the overlay,
+      // pause briefly to let the panel collapse animation play, then
+      // clear the spotlight so the next bubble starts fresh.
+      if (actionDef.spotlight && afterActionAnns.length === 0) {
+        await pwait(700);
+        clearOverlay();
+      }
 
       // Run after-action annotations serially. Pass G-fix #1 — replaced
       // the patient-header pull-back-between-bubbles with a direct
@@ -558,6 +614,17 @@ export default function TourMode() {
     [pwait, showSpotlight, clearOverlay]
   );
 
+  // v3.0 Bookends — run a bookend (opener or closer) and resolve when
+  // it completes (all frames played) or the user clicks Skip / ✕. The
+  // promise also resolves if the tour is cancelled mid-bookend so
+  // skipTour() unwinds cleanly.
+  const runBookend = useCallback((kind) => {
+    return new Promise((resolve) => {
+      bookendResolveRef.current = resolve;
+      setBookend(kind);
+    });
+  }, []);
+
   const runTour = useCallback(
     async (startStep = 0) => {
       if (runningRef.current) return;
@@ -572,6 +639,19 @@ export default function TourMode() {
 
       // Preload audio for the very first fixture before we begin.
       preloadFixtureAudio(TOUR_SCRIPT[startStep], modeRef.current);
+
+      // v3.0 Bookends — opener runs before Card 1. Skipped when the user
+      // jumps mid-tour via pills (startStep > 0) so a smoke-tester
+      // doesn't have to sit through the cinematic each time.
+      if (startStep === 0 && !cancelledRef.current && jumpToCardRef.current < 0) {
+        await runBookend("opener");
+        // If the user clicked Skip during the opener, runBookend
+        // resolves; we just continue into Card 1 without skipping.
+        if (cancelledRef.current) {
+          runningRef.current = false;
+          return;
+        }
+      }
 
       // Pass D Phase 1 — converted from a for-loop to a while-loop so the
       // card-navigation pills can mutate the iteration index. After each
@@ -664,8 +744,16 @@ export default function TourMode() {
             }
             if (cancelledRef.current || jumpToCardRef.current >= 0) break card;
 
-            // 6. Auto-Authorize
-            window.dispatchEvent(new CustomEvent("kairos-encounter:auto-authorize"));
+            // 6. Card fly-off. Two paths:
+            //   • Legacy: fx.onAuthorize present → dispatch
+            //     kairos-encounter:auto-authorize and wait for flown-off.
+            //   • v3.0 Master Prompt 2: fx.skipAutoAuthorize flag means
+            //     the card already finished via its last panel: action
+            //     (handlePanelTerminate → handleAuthorize fires
+            //     flown-off internally), so we just await the event.
+            if (!fx.skipAutoAuthorize) {
+              window.dispatchEvent(new CustomEvent("kairos-encounter:auto-authorize"));
+            }
             await waitForEvent(
               "kairos-encounter:flown-off",
               null,
@@ -690,13 +778,20 @@ export default function TourMode() {
         }
 
         if (!cancelledRef.current && jumpToCardRef.current < 0) {
-          setShowEndModal(true);
+          // v3.0 Bookends — closer cinematic plays after the last card
+          // exits. Hide any lingering overlay and run the closer; when
+          // it completes (or user clicks ✕), proceed to the end modal.
+          setOverlay(null);
+          await runBookend("closer");
+          if (!cancelledRef.current) {
+            setShowEndModal(true);
+          }
         }
       } finally {
         runningRef.current = false;
       }
     },
-    [router, pwait, showNarrator, showSpotlight, runAction, clearOverlay]
+    [router, pwait, showNarrator, showSpotlight, runAction, clearOverlay, runBookend]
   );
 
   // Start handler — exposed via window event.
@@ -865,6 +960,14 @@ export default function TourMode() {
     setOverlay(null);
     setShowEndModal(false);
     setActive(false);
+    // v3.0 Bookends — clear any in-flight bookend so its overlay
+    // unmounts and its audio stops. The promise resolver, if still
+    // pending, runs harmlessly because runTour has already aborted.
+    setBookend(null);
+    if (bookendResolveRef.current) {
+      bookendResolveRef.current();
+      bookendResolveRef.current = null;
+    }
     sessionStorage.removeItem(ACTIVE_KEY);
     sessionStorage.removeItem("kairos-tour-speed");
     // Restore original authorized list.
@@ -891,6 +994,11 @@ export default function TourMode() {
     setOverlay(null);
     setShowEndModal(false);
     setActive(false);
+    setBookend(null);
+    if (bookendResolveRef.current) {
+      bookendResolveRef.current();
+      bookendResolveRef.current = null;
+    }
     sessionStorage.removeItem(ACTIVE_KEY);
     sessionStorage.removeItem("kairos-tour-speed");
     // Do NOT restore the backup — leave all 9 fixtures unauthorized for play.
@@ -898,6 +1006,24 @@ export default function TourMode() {
     window.dispatchEvent(new CustomEvent("kairos-tour:end"));
     router.push("/rn");
   }, [router, stopAudio]);
+
+  // v3.0 Bookends — handlers passed to TourBookend.
+  // `onComplete` resolves the runBookend promise so runTour proceeds to
+  // the next phase. `onSkip` (opener) resolves the same promise — the
+  // viewer fast-forwards into Card 1 without ending the tour. `onEnd`
+  // (closer) calls skipTour to exit entirely.
+  const handleBookendComplete = useCallback(() => {
+    setBookend(null);
+    const r = bookendResolveRef.current;
+    bookendResolveRef.current = null;
+    if (r) r();
+  }, []);
+
+  const handleBookendSkip = useCallback(() => {
+    // Same as complete — the runTour loop just continues to the next
+    // phase (Card 1 for opener, end-modal for closer).
+    handleBookendComplete();
+  }, [handleBookendComplete]);
 
   if (!active && !showEndModal) return null;
 
@@ -947,8 +1073,9 @@ export default function TourMode() {
           including encounter detail pages where the bubble is a spotlight
           (whose body doesn't carry HUD chrome of its own). Render the
           HUD-only NarratorCorner whenever active, except when the narrator
-          variant is already showing it. */}
-      {active && (!overlay || overlay.kind !== "narrator") && !showEndModal ? (
+          variant is already showing it. Suppressed during bookends —
+          TourBookend has its own minimal Skip / ✕ button. */}
+      {active && (!overlay || overlay.kind !== "narrator") && !showEndModal && !bookend ? (
         <NarratorCorner
           progressLabel={progressLabel || "Tour active"}
           step={stepIdx}
@@ -963,6 +1090,34 @@ export default function TourMode() {
           onEnd={skipTour}
           onContinue={null}
           onJumpToCard={jumpToCard}
+        />
+      ) : null}
+
+      {bookend === "opener" ? (
+        <TourBookend
+          config={TOUR_OPENER}
+          mode="opener"
+          muted={muted}
+          onComplete={handleBookendComplete}
+          onSkip={handleBookendSkip}
+          onEnd={null}
+        />
+      ) : null}
+
+      {bookend === "closer" ? (
+        <TourBookend
+          config={TOUR_CLOSER}
+          mode="closer"
+          muted={muted}
+          onComplete={handleBookendComplete}
+          onSkip={null}
+          onEnd={() => {
+            // ✕ during closer = exit tour entirely. Resolve the promise
+            // first so the runTour finally block unwinds, then call
+            // skipTour for full cleanup + dashboard return.
+            handleBookendComplete();
+            skipTour();
+          }}
         />
       ) : null}
 

@@ -130,13 +130,11 @@ export default function DashboardPage() {
   // window.location avoids the Suspense boundary required for useSearchParams
   // during static export.
   useEffect(() => {
-    // Auto-reset on every fresh dashboard mount when no tour is active.
-    // This guarantees viewers (outside the tour) always land on a clean
-    // dashboard regardless of what state earlier clicks left behind.
-    if (typeof window !== "undefined") {
-      const tourLive = sessionStorage.getItem("kairos-tour-active") === "1";
-      if (!tourLive) clearDemoState();
-    }
+    // v3.0 — panel-terminated cards (Done / Reply / Approve / Forward
+    // / Approve & Send Packet) persist for the session and stay hidden
+    // from the inbox until the user clicks "Reset demo". Previously the
+    // dashboard auto-cleared on every mount, which wiped panel
+    // completion the moment the user navigated back from a card.
     const auth = readAuthorized();
     setAuthorized(auth);
     if (typeof window !== "undefined") {

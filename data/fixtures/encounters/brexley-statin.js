@@ -37,6 +37,9 @@ const fixture = {
     body:
       "Lipid panel today: LDL 138 on Zetia 10mg + atorvastatin 40mg (LDL goal <100). Two options: (A) increase atorvastatin to 80mg daily, continue Zetia; or (B) switch from Zetia + atorvastatin to a single combination tablet — Nexlizet (bempedoic acid 180mg / ezetimibe 10mg) once daily. Ask patient preference.",
   },
+  // v3.0 — conditional panel declaration. Auto-inferred from
+  // actionScripts / finalSignedState; override here if needed.
+  panels: ["rnNote", "myChart", "orderPad"],
   initialPaneContent: {
     nurseNote: "",
     mychartMessage: "",
@@ -82,7 +85,7 @@ const fixture = {
         typingSpeedCps: 85,
         delayMsBefore: 800,
         content:
-          "Ms Walker,\n\nDr. Pendrelle has reviewed your recent lipid panel. Your LDL (bad cholesterol) is 138, still above your goal of less than 100 even with your current Zetia plus atorvastatin combination.\n\nThere are two reasonable options, and Dr. Pendrelle would like your input:\n\n1. Increase your atorvastatin from 40 mg to 80 mg once daily and continue Zetia.\n\n2. Switch your Zetia and atorvastatin to a combination medication called Nexlizet (180/10 mg daily). This consolidates two pills into one, and bempedoic acid does not affect muscles the way some statins can.\n\nPlease reply with your preference and we will set it up. Either option is reasonable.\n\nBrandon Sterne, RN BSN / Cardiology Associates",
+          "Ms. Walker,\n\nYour recent lipid panel is in. Your LDL (the \"bad\" cholesterol) is 138. Your goal is under 100, so we have some room to bring it down even with your current Zetia plus atorvastatin combination.\n\nYour provider would like your input on the next step. Two reasonable options:\n\n1. Stronger statin: Increase your atorvastatin from 40 mg to 80 mg once daily and continue Zetia. This is the simpler change — same medications, just a higher dose of one.\n\n2. Switch to a combination pill: Nexlizet (bempedoic acid 180 mg / ezetimibe 10 mg) once daily. This replaces both your atorvastatin and Zetia with a single tablet. Bempedoic acid does not cause the muscle aches that statins sometimes do, so this is a good option if you've ever felt muscle soreness on a statin.\n\nWhat to do: Reply to this message with the option you'd prefer, or with any questions about either one. Either choice is reasonable — there's no wrong answer. Continue your current medications until we make the switch.\n\nWhat to watch for in the meantime: New muscle aches or weakness on your current dose, dark or cola-colored urine, or unusual tiredness. Call the clinic if any of those come up.\n\nWhat's next: Once you reply with your choice, we'll send the prescription to your pharmacy that day. We'll plan a repeat lipid panel about 90 days after you start the new regimen.\n\nBrandon Sterne, RN BSN / Cardiology Associates",
       },
       { type: "banner", kind: "green", text: "Cross-output consistency: drug names + doses match across both panes.", durationMs: 1500, delayMsBefore: 300 },
       {

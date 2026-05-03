@@ -13,11 +13,10 @@ import { isCinematicMode } from "@/lib/featureFlags";
 import { cameraGoto } from "@/lib/tourCamera";
 import PatientHeader from "./PatientHeader";
 import SourcePane from "./SourcePane";
-import NurseNotePane from "./NurseNotePane";
-import OutputPane from "./OutputPane";
-import OrderPadPane from "./OrderPadPane";
-import AddContextRow from "./AddContextRow";
-import ActionBar from "./ActionBar";
+// v3.0 — conditional panel grid + chat bar.
+import ChatBar from "./panels/ChatBar";
+import PanelGrid from "./panels/PanelGrid";
+import { derivePanelContent, inferPanels } from "@/lib/derivePanelContent";
 // Phase-3.6 specialized panels — dispatched by fixture.pattern / id below.
 import TriageEncounter from "./TriageEncounter";
 import INRSourcePanel from "./INRSourcePanel";
@@ -118,7 +117,6 @@ export default function EncounterDetail({ fixture, fromTab }) {
   const [cardState, setCardState] = useState("idle"); // idle | drafting | drafted | authorized | flown-off
   const [isPlaying, setIsPlaying] = useState(false);
   const [banner, setBanner] = useState(null);
-  const [editable, setEditable] = useState(false);
   const cancelRef = useRef(false);
   // Skip-beat signal: TourMode fires kairos-tour:skip-beat when the user
   // hits Skip mid-action. The typing loop, banner hold, and pause events
@@ -324,7 +322,6 @@ export default function EncounterDetail({ fixture, fromTab }) {
       skipBeatRef.current = false; // fresh action starts un-skipped
       paneUpdateCountRef.current = 0; // reset cinematic pane counter
       setIsPlaying(true);
-      setEditable(false);
       if (typeof window !== "undefined") {
         window.dispatchEvent(
           new CustomEvent("kairos-encounter:action-start", {
@@ -390,6 +387,7 @@ export default function EncounterDetail({ fixture, fromTab }) {
     function onAutoAction(e) {
       const actionId = e.detail && e.detail.actionId;
       const targetFixture = e.detail && e.detail.fixtureId;
+      const recipient = e.detail && e.detail.recipient;
       if (targetFixture && targetFixture !== fixture.id) return;
       // Triage fixtures render via TriageEncounter (its own UI). The 4-pane
       // grid below is hidden, so running the action script here just types
@@ -398,6 +396,32 @@ export default function EncounterDetail({ fixture, fromTab }) {
       // Brandon heard on his Card 7 walkthrough. TriageEncounter already
       // listens to auto-action and advances setStage, and now dispatches
       // action-complete immediately so the tour can move on.
+      // v3.0 Master Prompt 2 — new tour drives panel terminal buttons via
+      // actionId === "panel:<kind>". Routed here BEFORE the triage
+      // short-circuit so Reed (triage) can also forward via panel:.
+      if (typeof actionId === "string" && actionId.startsWith("panel:")) {
+        const kind = actionId.slice("panel:".length);
+        if (handlePanelTerminateRef.current) {
+          handlePanelTerminateRef.current({ kind, recipient });
+        }
+        // CRITICAL: dispatch action-complete on the next macrotask so
+        // TourMode.runAction has time to call waitForEvent and register
+        // its listener AFTER returning from dispatchEvent. Without this
+        // delay, action-complete fires synchronously inside the same
+        // dispatchEvent call as auto-action, the listener registers
+        // too late, and the tour stalls indefinitely. setTimeout(...,0)
+        // matches the pattern TriageEncounter already uses for the
+        // legacy generate-inquiry/process-reply/synthesize-callback
+        // chain.
+        setTimeout(() => {
+          window.dispatchEvent(
+            new CustomEvent("kairos-encounter:action-complete", {
+              detail: { actionId, fixtureId: fixture.id },
+            })
+          );
+        }, 0);
+        return;
+      }
       if (TRIAGE_FIXTURE_IDS.has(fixture.id)) return;
       if (actionId) runAction(actionId);
     }
@@ -471,10 +495,130 @@ export default function EncounterDetail({ fixture, fromTab }) {
     handleAuthorizeRef.current = handleAuthorize;
   }, [handleAuthorize]);
 
-  const handleEdit = useCallback(() => {
-    if (tourMode) return; // edit affordance disabled during tour
-    setEditable((v) => !v);
-  }, [tourMode]);
+  // v3.0 — per-panel completion + card-level auto-clear. Tour mode
+  // reuses the existing handleAuthorize fly-off path. Outside the tour:
+  //   1. A panel terminal action collapses just that panel.
+  //   2. When every action panel on the card is collapsed, fire the
+  //      card-level "Encounter complete." toast and nav to /rn after
+  //      ~2.5s (1s read-the-collapse beat + 1.5s toast).
+  // Read-only panels (callScript) don't count toward completion.
+  const [panelToast, setPanelToast] = useState(null);
+  const [completedPanels, setCompletedPanels] = useState({}); // { panelId: "summary text" }
+  const declaredPanels =
+    Array.isArray(fixture.panels) && fixture.panels.length > 0
+      ? fixture.panels
+      : null;
+
+  const handlePanelTerminate = useCallback(
+    (event) => {
+      const summaryByKind = {
+        "rnNote.done": "Note signed",
+        "rnNote.forward":
+          event && event.recipient ? `Forwarded to ${event.recipient}` : "Forwarded",
+        "myChart.reply": "Reply sent to patient",
+        "myChart.replyCc":
+          event && Array.isArray(event.cc) && event.cc.length
+            ? `Reply sent · CC ${event.cc.join(", ")}`
+            : "Reply sent with CC",
+        "myChart.forward":
+          event && event.recipient ? `Forwarded to ${event.recipient}` : "Forwarded",
+        "orderPad.approve": "Orders placed",
+        "referralPacket.approve":
+          event && event.recipient
+            ? `Referral packet sent to ${event.recipient}`
+            : "Referral packet sent",
+      };
+      const panelByKind = {
+        "rnNote.done": "rnNote",
+        "rnNote.forward": "rnNote",
+        "myChart.reply": "myChart",
+        "myChart.replyCc": "myChart",
+        "myChart.forward": "myChart",
+        "orderPad.approve": "orderPad",
+        "referralPacket.approve": "referralPacket",
+      };
+      const kind = event && event.kind;
+      const panelId = panelByKind[kind];
+      const summary = summaryByKind[kind] || "Done";
+      if (!panelId) {
+        // Triage cards (Reed / Strathorne / Underwell) terminate via
+        // kinds like "triage.forward" — no per-panel completion to
+        // collapse, so the card finishes immediately. Route to
+        // handleAuthorize so the flown-off event still dispatches and
+        // the tour engine can advance.
+        if (typeof kind === "string" && kind.startsWith("triage.")) {
+          handleAuthorize();
+        }
+        return;
+      }
+      setCompletedPanels((prev) => ({ ...prev, [panelId]: summary }));
+    },
+    [handleAuthorize]
+  );
+
+  // v3.0 Master Prompt 2 — keep handlePanelTerminate accessible from the
+  // auto-action listener via a ref so the latest closure is always used.
+  const handlePanelTerminateRef = useRef(null);
+  useEffect(() => {
+    handlePanelTerminateRef.current = handlePanelTerminate;
+  }, [handlePanelTerminate]);
+
+  // Watch for card-level completion (every action panel collapsed).
+  useEffect(() => {
+    const ids = declaredPanels || [];
+    // callScript is read-only and doesn't count. referralPacket counts
+    // when the fixture has a referralPacket and the panel rendered an
+    // Approve button.
+    const actionIds = ids.filter((id) => id !== "callScript");
+    const hasReferral = !!(fixture && fixture.referralPacket);
+    const totalActionPanels = actionIds.length + (hasReferral ? 1 : 0);
+    if (totalActionPanels === 0) return;
+    const completedCount = Object.keys(completedPanels).filter((k) =>
+      actionIds.includes(k) || k === "referralPacket"
+    ).length;
+    if (completedCount < totalActionPanels) return;
+    // All done — fire the card-level finish. In tour mode, route through
+    // handleAuthorize so the flown-off event dispatches and the tour
+    // engine can advance to the next card. Outside tour mode, show the
+    // toast and nav back after 1.5s.
+    const tourLive =
+      typeof window !== "undefined" &&
+      sessionStorage.getItem("kairos-tour-active") === "1";
+    if (tourLive) {
+      const beat = setTimeout(() => {
+        if (handleAuthorizeRef.current) handleAuthorizeRef.current();
+      }, 700);
+      return () => clearTimeout(beat);
+    }
+    const beat = setTimeout(() => {
+      setPanelToast("Encounter complete.");
+      const set = readAuthorized();
+      set.add(fixture.id);
+      writeAuthorized(set);
+      const nav = setTimeout(() => {
+        const q = fromTab ? `?tab=${encodeURIComponent(fromTab)}` : "";
+        router.push(`/rn${q}`);
+      }, 1500);
+      // Clean up timer if unmounted.
+      return () => clearTimeout(nav);
+    }, 1000);
+    return () => clearTimeout(beat);
+  }, [completedPanels, declaredPanels, fixture, fromTab, router]);
+
+  // v3.0 — direct-URL guard. If the user lands on this fixture's URL but
+  // the fixture is already in the authorized set (panel-terminated or
+  // tour-authorized this session), redirect back to /rn.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const tourLive = sessionStorage.getItem("kairos-tour-active") === "1";
+    if (tourLive) return;
+    const set = readAuthorized();
+    if (set.has(fixture.id)) {
+      const q = fromTab ? `?tab=${encodeURIComponent(fromTab)}` : "";
+      router.replace(`/rn${q}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fixture.id]);
 
   function handleBack() {
     const q = fromTab ? `?tab=${encodeURIComponent(fromTab)}` : "";
@@ -514,7 +658,52 @@ export default function EncounterDetail({ fixture, fromTab }) {
         <div data-tour-anchor="patient-header">
           <PatientHeader fixture={fixture} route={route} />
         </div>
-        <TriageEncounter fixture={fixture} />
+        <TriageEncounter
+          fixture={fixture}
+          onCardTerminate={(event) => {
+            const tourLive =
+              typeof window !== "undefined" &&
+              sessionStorage.getItem("kairos-tour-active") === "1";
+            if (tourLive) {
+              handleAuthorize();
+              return;
+            }
+            const summaryByKind = {
+              "triage.forward":
+                event && event.recipient ? `SBAR forwarded to ${event.recipient}` : "SBAR forwarded",
+              "myChart.reply": "Reply sent to patient",
+              "myChart.replyCc":
+                event && Array.isArray(event.cc) && event.cc.length
+                  ? `Reply sent · CC ${event.cc.join(", ")}`
+                  : "Reply sent with CC",
+              "myChart.forward":
+                event && event.recipient ? `Forwarded to ${event.recipient}` : "Forwarded",
+            };
+            const text = (event && summaryByKind[event.kind]) || "Encounter complete.";
+            setPanelToast(`${text}.`);
+            const set = readAuthorized();
+            set.add(fixture.id);
+            writeAuthorized(set);
+            setTimeout(() => {
+              const q = fromTab ? `?tab=${encodeURIComponent(fromTab)}` : "";
+              router.push(`/rn${q}`);
+            }, 1500);
+          }}
+        />
+        {panelToast ? (
+          <div
+            role="status"
+            aria-live="polite"
+            className="fixed left-1/2 -translate-x-1/2 bottom-6 z-[80] kairos-card px-4 py-3 shadow-2xl text-[12px] text-bone leading-snug max-w-[420px] text-center"
+            style={{
+              background: "var(--color-platinum)",
+              borderColor: "var(--color-amber)",
+              borderWidth: 1,
+            }}
+          >
+            {panelToast}
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -559,18 +748,6 @@ export default function EncounterDetail({ fixture, fromTab }) {
             <RoutingPanel routing={fixture.routing} />
           </div>
         ) : null}
-        <div className="mt-4">
-          <ActionBar
-            cardId={fixture.id}
-            pattern={pattern}
-            isPlaying={false}
-            blockAuthorize={false}
-            onRunAction={() => {}}
-            onAuthorize={handleAuthorize}
-            onEdit={handleEdit}
-            fromTab={fromTab}
-          />
-        </div>
       </div>
     );
   }
@@ -631,8 +808,25 @@ export default function EncounterDetail({ fixture, fromTab }) {
         <PatientHeader fixture={fixture} route={route} />
       </div>
 
-      {/* 4-pane grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* v3.0 chat bar — non-functional UI shell at top of detail view */}
+      <div className="mt-3">
+        <ChatBar />
+      </div>
+
+      {/* v3.0 layout: source pane (left ~38%) + conditional panel grid
+          (right ~62%). On narrow screens the source pane stacks above
+          the panel grid.
+          Bookends Pass / A1: when tour is active, reserve a 280px gutter
+          on the right so the fixed top-right Tour HUD (260px wide +
+          16px from edge) never overlaps panel content. Applied to the
+          outer grid so both columns shrink proportionally — keeps the
+          source/panel ratio identical to free-explore mode. */}
+      <div
+        className={
+          "mt-4 grid grid-cols-1 lg:grid-cols-[minmax(0,38fr)_minmax(0,62fr)] gap-4 items-start" +
+          (tourMode ? " lg:pr-[280px]" : "")
+        }
+      >
         <div data-tour-anchor="source-pane">
           {useInrSource ? (
             <INRSourcePanel fixture={fixture} />
@@ -640,26 +834,23 @@ export default function EncounterDetail({ fixture, fromTab }) {
             <SourcePane fixture={fixture} />
           )}
         </div>
-        <div data-tour-anchor="nurse-note">
-          {fixture && fixture.contradictionHold ? <ContradictionAlert /> : null}
-          <NurseNotePane
-            content={paneState.nurseNote}
-            isTyping={isPlaying}
-            editable={editable && !tourMode}
-            onChange={(v) => setPaneState((p) => ({ ...p, nurseNote: v }))}
-          />
-        </div>
-        <div data-tour-anchor="output-pane">
-          <OutputPane
+        <div>
+          {/* v3.0 Fix 2 — contradiction warning now lives inside the
+              MyChartMessagePanel itself (banner above the drafted
+              message), so the outer ContradictionAlert wrapper is no
+              longer rendered here. */}
+          <PanelGrid
+            panels={Array.isArray(fixture.panels) && fixture.panels.length > 0
+              ? fixture.panels
+              : inferPanels(fixture)}
             fixture={fixture}
-            route={route}
             paneState={paneState}
+            derived={derivePanelContent(fixture)}
             isTyping={isPlaying}
-            onDismissExplanation={dismissExplanation}
+            tourMode={tourMode}
+            onTerminate={handlePanelTerminate}
+            completedPanels={completedPanels}
           />
-        </div>
-        <div data-tour-anchor="order-pad">
-          <OrderPadPane orderPad={paneState.orderPad} />
         </div>
       </div>
 
@@ -670,35 +861,42 @@ export default function EncounterDetail({ fixture, fromTab }) {
           tour spotlight gold-box the panel. */}
       {fixture.referralPacket ? (
         <div className="mt-4" data-tour-anchor="referral-packet">
-          <ReferralPacketPanel packet={fixture.referralPacket} />
+          <ReferralPacketPanel
+            packet={fixture.referralPacket}
+            tourMode={tourMode}
+            onTerminate={handlePanelTerminate}
+            completed={!!completedPanels.referralPacket}
+            completedSummary={completedPanels.referralPacket}
+          />
         </div>
       ) : null}
 
-      <AddContextRow />
-
-      {/* Phase-3.6 — routing surface for any fixture whose primary action
-          is a forward (Lockner / Kvalheim / Strathorne / Maundrell / Sellman /
-          Pelc). Renders above the action bar so the nurse can review or
-          edit recipient/pool/comment/priority before clicking Authorize. */}
-      {fixture.routing ? (
+      {/* v3.0 Master Prompt 2 / A2 — routing surface for forward-only
+          fixtures (Lockner / Kvalheim / Strathorne / Pelc). Referral
+          packets carry their routing baked in (destination + fax method
+          on the packet header), so the Routing section is suppressed
+          whenever a referralPacket is present — Approve & Send Packet
+          is the only control needed. */}
+      {fixture.routing && !fixture.referralPacket ? (
         <div className="mt-4">
           <RoutingPanel routing={fixture.routing} />
         </div>
       ) : null}
 
-      <div data-tour-anchor="action-bar">
-        <ActionBar
-          cardId={fixture.id}
-          pattern={pattern}
-          isPlaying={isPlaying}
-          blockAuthorize={blockAuthorize}
-          onRunAction={runAction}
-          onAuthorize={handleAuthorize}
-          onEdit={handleEdit}
-          fromTab={fromTab}
-          authorizeActions={fixture.authorizeActions}
-        />
-      </div>
+      {panelToast ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed left-1/2 -translate-x-1/2 bottom-6 z-[80] kairos-card px-4 py-3 shadow-2xl text-[12px] text-bone leading-snug max-w-[420px] text-center"
+          style={{
+            background: "var(--color-platinum)",
+            borderColor: "var(--color-amber)",
+            borderWidth: 1,
+          }}
+        >
+          {panelToast}
+        </div>
+      ) : null}
     </div>
   );
 }

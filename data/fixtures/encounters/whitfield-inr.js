@@ -39,6 +39,9 @@ const fixture = {
     timestamp: "2026-05-03 08:42",
     body: "PROTIME-INR\nValue: INR 2.3\nReference range: n/a (therapeutic range maintained in Anticoagulation note)\nSpecimen collected: 2026-05-03 07:14\nResulted: 2026-05-03 08:42\nPerforming lab: Lakeside Lab",
   },
+  // v3.0 — conditional panel declaration. Auto-inferred from
+  // actionScripts / finalSignedState; override here if needed.
+  panels: ["rnNote", "myChart"],
   initialPaneContent: {
     nurseNote: "",
     mychartMessage: "",
@@ -76,7 +79,7 @@ const fixture = {
         typingSpeedCps: 70,
         delayMsBefore: 400,
         content:
-          "Mrs Whitfield,\n\nYour INR blood test result is 2.3 — this is in your target range of 2.0 to 3.0.\n\nContinue taking your warfarin 5mg every evening as prescribed. No changes to your dose.\n\nYour next INR blood draw is in 4 weeks. You'll receive a reminder through MyChart.\n\nIf you notice any unusual bleeding or bruising, contact the clinic.\n\nBrandon Sterne, RN BSN / Lakeside Cardiology Associates",
+          "Mrs. Whitfield,\n\nYour INR blood test came back at 2.3. This is right in your target range of 2.0 to 3.0, which means your warfarin is working exactly the way we want.\n\nWhat to do:\n- No change to your dose. Continue warfarin 5 mg every evening as you've been taking it.\n- Continue your other medications as prescribed.\n\nWhat to watch for: While on warfarin, watch for unusual bleeding or bruising — bleeding gums, nosebleeds that won't stop, blood in urine or stool, dark or tarry stools, severe headache after a bump to the head, or any cut that doesn't stop bleeding within 10-15 minutes. If any of these happen, call the clinic right away. For severe bleeding or any head injury, go to the ER.\n\nWhat's next: Your next INR blood draw is in 4 weeks. You'll get an automatic reminder through MyChart a few days before. Please use the same lab so we can keep your trend consistent.\n\nReply to this message or call the clinic with any questions.\n\nBrandon Sterne, RN BSN / Lakeside Cardiology Associates",
       },
       {
         type: "state-transition",

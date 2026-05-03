@@ -37,11 +37,23 @@ const fixture = {
     timestamp: "2026-04-29 09:11",
     body: "\"Need refill 6mg warfrin\"",
   },
+  // v3.0 — conditional panel declaration. v3.0 Master Prompt 2 / Fix 2b
+  // Bug 4 — refill workflow surfaces only the RN Note (no patient
+  // message for a routine confirmation; orders auto-place per Rx Request
+  // rule). Tour spec for Card 4 walks the RN Note alone.
+  panels: ["rnNote"],
   initialPaneContent: {
     nurseNote: "",
     mychartMessage: "",
     phoneScript: "",
     orderPad: { orders: [], hasUnansweredQuestions: false, note: "" },
+  },
+  // v3.0 Master Prompt 2 / Fix 2b Bug 4 — explicit panelContent so the
+  // skeleton fixture renders a populated RN Note in the static demo
+  // view (and in the new tour where panels are pre-filled).
+  panelContent: {
+    rnNote:
+      "Refill request received via Surescripts. Patient seen 4/21/2026 in Coumadin Clinic, follow-up appointment scheduled 7/22/2026. Atrial fibrillation dx active. Both Rx Request rule criteria met (recent visit + scheduled follow-up).\n\nApproved warfarin 6mg daily, 90-day supply, 3 refills. Routed to pharmacy via Surescripts.\n\nEncounter closed.",
   },
   actionScripts: {
     "generate-reply": [
@@ -63,7 +75,7 @@ const fixture = {
         typingSpeedCps: 70,
         delayMsBefore: 400,
         content:
-          "Mr Stewart,\n\nGot it — your warfarin 6 mg refill has been sent to your pharmacy. Please continue taking 6 mg once daily as discussed on 4/21.\n\nYour next INR check is on the schedule. Reach out if anything changes.\n\nBrandon Sterne, RN BSN / Cardiology Associates (Coumadin Clinic)",
+          "Mr. Stewart,\n\nGot your refill request — your warfarin 6 mg prescription has been sent to your pharmacy. It should be ready for pickup today.\n\nWhat to do:\n- Pick up the refill and continue warfarin 6 mg once daily, exactly as we discussed at your 4/21 visit\n- Take it at the same time every evening\n- Don't stop or change the dose without checking with us\n\nWhat to watch for: While on warfarin, watch for unusual bleeding or bruising — bleeding gums, nosebleeds that won't stop, blood in urine or stool, dark or tarry stools, or any cut that doesn't stop bleeding within 10-15 minutes. If any of those happen, call the Coumadin Clinic. For severe bleeding or any head injury, go to the ER.\n\nWhat's next: Your next INR blood draw is already on the schedule — you'll get a reminder a few days before. Use the same lab so we can keep your trend consistent.\n\nReply here or call the Coumadin Clinic with any questions.\n\nBrandon Sterne, RN BSN / Cardiology Associates (Coumadin Clinic)",
       },
       { type: "banner", kind: "green", text: "Rx Request rule satisfied — refill auto-staged", durationMs: 1000, delayMsBefore: 200 },
       {

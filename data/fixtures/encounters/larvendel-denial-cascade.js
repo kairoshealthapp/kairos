@@ -98,6 +98,9 @@ const fixture = {
       },
     ],
   },
+  // v3.0 — conditional panel declaration. Auto-inferred from
+  // actionScripts / finalSignedState; override here if needed.
+  panels: ["rnNote", "myChart"],
   initialPaneContent: {
     nurseNote: "",
     mychartMessage: "",

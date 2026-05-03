@@ -35,6 +35,12 @@ const fixture = {
     body:
       "Patient awaiting CPAP DME order placed 3/2026. Apria reports no MO HealthNet PA on file. PA path is a phone call (NOT a form), requires 3 data points: ICD-10, AHI, NPI. Approval # = patient's MO HealthNet ID.",
   },
+  // v3.0 — conditional panel declaration. Auto-inferred from
+  // actionScripts / finalSignedState; override here if needed.
+  // v3.0 Master Prompt 2 / Fix 2b — secure chat reply is the RN Note
+  // itself (drafted from the thread, posted back via Done). MyChart
+  // panel suppressed; the new tour Card 7 walks only the RN Note.
+  panels: ["rnNote"],
   initialPaneContent: {
     nurseNote: "",
     mychartMessage: "",
@@ -52,7 +58,7 @@ const fixture = {
         typingSpeedCps: 80,
         delayMsBefore: 500,
         content:
-          "DME prior auth — Apria CPAP for Howard (dual-eligible Medicare A+B + MO HealthNet). Per Apria, PA path is a phone call to MO HealthNet (NOT a form). Three data points needed: ICD-10 (G47.33 OSA), AHI (from sleep study report 1/2026: 22.4), NPI (Pendrelle 1234567890). Called MO HealthNet PA line, approval # = patient's MO HealthNet member ID. Faxed approval back to Apria for processing. Patient outreach below.\n\nPlaybook captured in Workflow Playbook Library — auto-attaches to next dual-eligible DME PA card for any nurse.",
+          "DME prior authorization completed for CPAP setup. Patient is dual-eligible (Medicare A+B + MO HealthNet). Per Apria DME, PA pathway requires verbal authorization through MO HealthNet (no form). Required documentation provided: ICD-10 G47.33 (obstructive sleep apnea), AHI 22.4 per sleep study 1/2026, provider NPI on file. Called MO HealthNet PA line, obtained approval. Approval number documented. Approval faxed to Apria for CPAP processing. Patient notified via MyChart with setup timeline and expectations.",
       },
       {
         type: "pane-update",
@@ -61,7 +67,7 @@ const fixture = {
         typingSpeedCps: 70,
         delayMsBefore: 400,
         content:
-          "Ms Howard,\n\nI wanted to update you on your CPAP machine. There was a small holdup with the second-layer authorization (MO HealthNet, in addition to Medicare). I called the authorization line for you today, gave them the details from your sleep study, and the approval has been sent over to the DME company (Apria). They should be reaching out to you in the next several days to schedule delivery.\n\nLet us know if you have not heard from them by next Wednesday.\n\nBrandon Sterne, RN BSN / Cardiology Associates",
+          "Mr. Halbrook,\n\nQuick update on your CPAP machine. There was a small holdup with the second-layer insurance approval (MO HealthNet, on top of Medicare) — they needed a few specific details from your sleep study before they'd authorize the equipment.\n\nWhat happened: I called the MO HealthNet authorization line today, gave them everything they asked for (your diagnosis code, your AHI from the sleep study, and the prescribing provider's NPI), and got the authorization approved. The approval has been sent over to Apria (the company that supplies your CPAP).\n\nWhat to do:\n- Watch for a call from Apria within the next several days to schedule delivery and a fitting\n- Continue your other medications as prescribed\n- No action needed from you unless they don't call\n\nWhat to expect: When Apria calls, they'll ask about your sleeping setup and schedule a time to deliver and fit the mask. Most people are set up within 1-2 weeks of authorization.\n\nIf you haven't heard from Apria by next Wednesday, reply to this message and we'll follow up on the order.\n\nBrandon Sterne, RN BSN / Cardiology Associates",
       },
       { type: "state-transition", target: "card", newState: "drafted", delayMsBefore: 200 },
     ],

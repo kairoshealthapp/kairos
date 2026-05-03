@@ -59,6 +59,9 @@ const fixture = {
     comment: "Already-resolved finding — RFS submitted 4/14, awaiting VA authorization. Replying to original Secure Chat thread.",
     priority: "Normal",
   },
+  // v3.0 — conditional panel declaration. Auto-inferred from
+  // actionScripts / finalSignedState; override here if needed.
+  panels: ["rnNote"],
   initialPaneContent: { nurseNote: "", mychartMessage: "", phoneScript: "", orderPad: { orders: [], hasUnansweredQuestions: false } },
   actionScripts: {},
   finalSignedState: { nurseNote: "", phoneScript: "", orders: [], dxAssociated: [] },

@@ -58,6 +58,9 @@ const fixture = {
       "Dr. H told me to be taking only the other two medications and also said I don't have to take the blood test anymore.",
   },
   contradictionHold: true,
+  // v3.0 — conditional panel declaration. Auto-inferred from
+  // actionScripts / finalSignedState; override here if needed.
+  panels: ["rnNote", "myChart"],
   initialPaneContent: {
     nurseNote: "",
     mychartMessage: "",
@@ -75,7 +78,7 @@ const fixture = {
         typingSpeedCps: 75,
         delayMsBefore: 500,
         content:
-          "Patient replied to outbound INR overdue MyChart template (sent 4/24). Patient states Dr. H (Reynolds) discontinued warfarin and INR monitoring.\n\nChart state at time of message:\n  - Med list: warfarin 6mg daily ACTIVE\n  - Last provider note: 4/21/2026 — no documentation of discontinuation\n  - Last INR: 4/19, therapeutic\n  - Coumadin Clinic still scheduled\n\nForwarded to Reynolds for verification before any patient-facing reply. No MyChart message drafted. No order changes.",
+          "Patient replied to outbound INR overdue MyChart template (sent 4/24). Patient states Dr. H (Reynolds) discontinued warfarin and INR monitoring.\n\nChart review: Last provider note (Dr. Reynolds, 4/21/2026) states \"Continue warfarin 6mg daily, therapeutic on current dose.\" No discontinuation order found. Warfarin 6mg daily remains ACTIVE on medication list.\n\nPatient statement contradicts chart. Forwarded to Dr. Reynolds for verification before any patient-facing reply. No MyChart message drafted. No order changes.",
       },
       { type: "banner", kind: "red", text: "Forwarded to Reynolds — awaiting provider confirmation", durationMs: 1200, delayMsBefore: 300 },
       { type: "state-transition", target: "card", newState: "drafted", delayMsBefore: 200 },
@@ -83,8 +86,9 @@ const fixture = {
   },
   finalSignedState: {
     nurseNote:
-      "Patient replied to outbound INR overdue MyChart template (4/24). Patient states Dr. H discontinued warfarin + INR monitoring. CHART CONTRADICTION: med list still shows active warfarin, no recent provider note documenting discontinuation. Forwarded to Reynolds for verification — NO autonomous action.",
-    mychartMessage: "[Held until provider confirms]",
+      "Patient replied to outbound INR overdue MyChart template (sent 4/24). Patient states Dr. H (Reynolds) discontinued warfarin and INR monitoring.\n\nChart review: Last provider note (Dr. Reynolds, 4/21/2026) states \"Continue warfarin 6mg daily, therapeutic on current dose.\" No discontinuation order found. Warfarin 6mg daily remains ACTIVE on medication list.\n\nPatient statement contradicts chart. AI flagged contradiction; nurse to decide whether to reply directly (chart is clear) or forward to Dr. Reynolds for verification.",
+    mychartMessage:
+      "Mr. Foster,\n\nThank you for your message. We checked your chart and your current medication list shows warfarin 6mg daily as an active prescription. Your most recent provider visit on 4/21/2026 confirmed you should continue taking warfarin as prescribed.\n\nIf Dr. Reynolds made a change to your medications that hasn't been updated in our system yet, we'll look into that and follow up with you. In the meantime, please continue taking your warfarin as directed unless you hear otherwise from us directly.\n\nIf you have any questions, reply to this message or call the clinic.\n\nBrandon Sterne, RN BSN / Lakeside Cardiology Associates",
     orders: [],
     dxAssociated: [],
   },

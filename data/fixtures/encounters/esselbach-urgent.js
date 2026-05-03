@@ -35,6 +35,9 @@ const fixture = {
     body:
       "BNP 1024 today, significantly elevated from baseline. Patient is scheduled for elective surgery 5/14. Please call patient to assess for symptoms (SOB, weight gain, edema, orthopnea), confirm current diuretic dose, and discuss whether pre-op cardiology clearance needs revisiting. MyChart status Pending — phone call only.",
   },
+  // v3.0 — conditional panel declaration. Auto-inferred from
+  // actionScripts / finalSignedState; override here if needed.
+  panels: ["rnNote", "callScript"],
   initialPaneContent: {
     nurseNote: "",
     mychartMessage: "",

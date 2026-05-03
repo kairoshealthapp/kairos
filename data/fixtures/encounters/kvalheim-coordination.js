@@ -35,6 +35,24 @@ const fixture = {
     body:
       "Two sub-tasks routed by front desk:\n1. Patient says EP referral to Williams has scheduled out to September; he is asking for an earlier alternate.\n2. Albuterol refill requested.",
   },
+  // v3.0 — conditional panel declaration. Auto-inferred from
+  // actionScripts / finalSignedState; override here if needed.
+  panels: ["rnNote", "callScript", "orderPad"],
+  panelContent: {
+    orderPad: {
+      orders: [
+        {
+          type: "Medication — refill",
+          codeVariant: "Albuterol HFA inhaler — 90-day supply",
+          reason: "Routine asthma rescue medication refill",
+          associatedDx: ["Asthma (J45.909)"],
+          priority: "Routine",
+          status: "Sent to pharmacy",
+        },
+      ],
+      hasUnansweredQuestions: false,
+    },
+  },
   initialPaneContent: {
     nurseNote: "",
     mychartMessage: "",

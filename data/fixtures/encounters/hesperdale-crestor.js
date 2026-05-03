@@ -35,6 +35,9 @@ const fixture = {
     timestamp: "2026-04-29 07:18",
     body: "Lipid panel and Chem-8 reviewed. LDL 142 (goal <100), HDL 38, TG 198, total 218. Chem-8 unremarkable. Increase Crestor (rosuvastatin) to 40 mg daily from 20 mg daily. Recheck lipid panel and hepatic function panel together in 90 days. Continue all other meds.",
   },
+  // v3.0 — conditional panel declaration. Auto-inferred from
+  // actionScripts / finalSignedState; override here if needed.
+  panels: ["rnNote", "myChart", "orderPad"],
   initialPaneContent: {
     nurseNote: "",
     mychartMessage: "",
@@ -61,7 +64,7 @@ const fixture = {
         typingSpeedCps: 70,
         delayMsBefore: 400,
         content:
-          "Ms Bennett,\n\nDr. Pendrelle has reviewed your recent labs. Your LDL (bad cholesterol) is 142, above goal for you, while your other basic labs are normal.\n\nWe are increasing your Crestor (rosuvastatin) from 20 mg to 40 mg once daily. Continue all other medications.\n\nWe will recheck your lipid panel and a hepatic (liver) function panel together in about 90 days to make sure the higher dose is working and well tolerated. The lab orders are placed for you.\n\nPlease let us know if you have new muscle aches or dark urine.\n\nBrandon Sterne, RN BSN / Cardiology Associates",
+          "Ms. Bennett,\n\nYour recent labs are in. Your LDL (the \"bad\" cholesterol) is 142 — your goal is under 100 — and your basic chemistry panel looks normal.\n\nWhat's changing: Your provider is increasing your Crestor (rosuvastatin) from 20 mg to 40 mg once daily.\n\nWhat to do:\n- Pick up the new 40 mg prescription at your pharmacy and start it as soon as you get home\n- Stop the 20 mg tablets — you can return them to the pharmacy or throw them out\n- Continue all your other medications as prescribed\n\nWhat to watch for: Statins like Crestor are usually well tolerated, but call the clinic if you notice unusual muscle aches or weakness (especially in the thighs, shoulders, or back), dark or cola-colored urine, or unusual tiredness. These are uncommon but worth knowing about.\n\nWhat's next: We've already placed the lab orders for a repeat lipid panel and a liver function panel together in about 90 days. You'll get a reminder when it's time to draw. We'll review the new labs and let you know if anything else needs to change.\n\nReply here or call the clinic with any questions.\n\nBrandon Sterne, RN BSN / Cardiology Associates",
       },
       { type: "banner", kind: "yellow", text: "Lab cluster detected: lipid + hepatic in 90 days → grouping to single date", durationMs: 1200, delayMsBefore: 200 },
       {

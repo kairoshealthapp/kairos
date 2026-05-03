@@ -21,21 +21,25 @@ function questionMatchesCondition(value, condition) {
 function YesNo({ value, onChange, disabled }) {
   return (
     <div className="flex gap-2">
-      {["Yes", "No"].map((opt) => (
-        <button
-          key={opt}
-          type="button"
-          disabled={disabled}
-          onClick={() => onChange(opt)}
-          className={`px-3 py-1 rounded-sm text-[12px] border transition-colors ${
-            value === opt
-              ? "border-amber/80 bg-amber/15 text-bone"
-              : "border-mist/60 text-bone-muted hover:border-amber/40 hover:text-bone"
-          } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
-        >
-          {opt}
-        </button>
-      ))}
+      {["Yes", "No"].map((opt) => {
+        const selected = value === opt;
+        return (
+          <button
+            key={opt}
+            type="button"
+            disabled={disabled}
+            onClick={() => onChange(opt)}
+            aria-pressed={selected}
+            className={`px-4 py-1.5 rounded-sm text-[12px] font-semibold border-2 transition-colors min-w-[64px] ${
+              selected
+                ? "bg-amber border-amber text-graphite shadow-[0_0_0_1px_rgba(245,158,11,0.4)]"
+                : "bg-transparent border-mist/60 text-bone-muted font-medium hover:border-amber/50 hover:text-bone"
+            } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+          >
+            {opt}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -215,59 +219,91 @@ export default function PatientAssessmentPanel({
         </div>
       ) : (
         <div className="flex-1 overflow-auto pr-1 space-y-4">
-          {list.map((q, idx) => {
-            const resp = r[q.id] || {};
-            const value = resp.value;
-            const followUpVisible =
-              q.followUp && questionMatchesCondition(value, q.followUp.condition);
-            return (
-              <div key={q.id} className="space-y-1.5">
-                <div className="text-[12px] text-bone">
-                  <span className="text-bone-muted mr-1">{idx + 1}.</span>
-                  {q.text}
-                </div>
-                <div>
-                  {renderInput({
-                    inputType: q.inputType,
-                    value,
-                    options: q.options,
-                    unit: q.unit,
-                    disabled: readOnly,
-                    name: q.id,
-                    onChange: (v) =>
-                      q.inputType === "number_unit"
-                        ? setQ(q.id, { value: v, unit: q.unit })
-                        : setQ(q.id, { value: v }),
-                  })}
-                </div>
-                {followUpVisible ? (
-                  <div className="ml-4 pl-3 border-l border-amber/40 space-y-1">
-                    <div className="text-[11px] text-bone-muted">{q.followUp.text}</div>
-                    {renderInput({
-                      inputType: q.followUp.inputType,
-                      value: resp.followUp,
-                      options: q.followUp.options,
-                      unit: q.followUp.unit,
-                      disabled: readOnly,
-                      name: `${q.id}-followup`,
-                      onChange: (v) => setQ(q.id, { followUp: v }),
-                    })}
-                  </div>
-                ) : null}
-              </div>
-            );
-          })}
-
-          <div className="space-y-1.5 pt-2 border-t border-mist/60">
-            <div className="text-[12px] text-bone">
-              Additional notes (anything else the patient said)
-            </div>
-            <FreeText
-              value={notes}
-              onChange={(v) => onNotesChange && onNotesChange(v)}
+          {/* v3.0 Fix 4a — primary free-text input at the top. The
+              nurse types what the patient said while on the phone;
+              structured questions below are optional. */}
+          <div className="space-y-1.5">
+            <label className="block text-[12px] text-bone">
+              Type what the patient said
+              <span className="ml-2 text-[11px] text-bone-muted/80 italic">
+                — primary input · everything below is optional
+              </span>
+            </label>
+            <textarea
+              value={notes || ""}
+              onChange={(e) => onNotesChange && onNotesChange(e.target.value)}
               disabled={readOnly}
-              multiline
+              rows={5}
+              placeholder="Type what the patient said..."
+              className="w-full bg-platinum/40 border border-mist/60 rounded-sm px-2 py-2 text-[13px] text-bone placeholder:text-bone-muted/60 placeholder:italic resize-y focus:outline-none focus:border-amber/60 disabled:opacity-50"
             />
+          </div>
+
+          {/* v3.0 Fix 4b — structured questions clearly labeled as
+              optional. Each question has a small Skip control that
+              clears any captured response. No required indicators,
+              no completion percentage. */}
+          <div className="pt-3 border-t border-mist/60">
+            <div className="text-[11px] text-bone-muted/80 italic mb-3">
+              Or use guided questions (all optional — skip any)
+            </div>
+            <div className="space-y-4">
+              {list.map((q, idx) => {
+                const resp = r[q.id] || {};
+                const value = resp.value;
+                const followUpVisible =
+                  q.followUp && questionMatchesCondition(value, q.followUp.condition);
+                const hasResponse =
+                  value !== undefined && value !== "" && !(Array.isArray(value) && value.length === 0);
+                return (
+                  <div key={q.id} className="space-y-1.5">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <div className="text-[12px] text-bone">
+                        <span className="text-bone-muted mr-1">{idx + 1}.</span>
+                        {q.text}
+                      </div>
+                      {hasResponse && !readOnly ? (
+                        <button
+                          type="button"
+                          onClick={() => onResponseChange && onResponseChange(q.id, undefined)}
+                          className="text-[11px] text-bone-muted/70 hover:text-amber transition-colors flex-shrink-0"
+                        >
+                          Skip
+                        </button>
+                      ) : null}
+                    </div>
+                    <div>
+                      {renderInput({
+                        inputType: q.inputType,
+                        value,
+                        options: q.options,
+                        unit: q.unit,
+                        disabled: readOnly,
+                        name: q.id,
+                        onChange: (v) =>
+                          q.inputType === "number_unit"
+                            ? setQ(q.id, { value: v, unit: q.unit })
+                            : setQ(q.id, { value: v }),
+                      })}
+                    </div>
+                    {followUpVisible ? (
+                      <div className="ml-4 pl-3 border-l border-amber/40 space-y-1">
+                        <div className="text-[11px] text-bone-muted">{q.followUp.text}</div>
+                        {renderInput({
+                          inputType: q.followUp.inputType,
+                          value: resp.followUp,
+                          options: q.followUp.options,
+                          unit: q.followUp.unit,
+                          disabled: readOnly,
+                          name: `${q.id}-followup`,
+                          onChange: (v) => setQ(q.id, { followUp: v }),
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}

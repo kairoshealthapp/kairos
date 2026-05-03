@@ -9,9 +9,15 @@ export default function SourcePane({ fixture }) {
   const auth = fixture.authState; // Pattern 13 carries denial-cascade chain
 
   return (
-    <section className="kairos-card p-4 h-full flex flex-col overflow-hidden">
+    <section
+      className="kairos-card p-4 flex flex-col"
+      style={{ background: "rgba(20, 24, 36, 0.55)" }}
+    >
       <header className="flex items-center justify-between mb-2">
-        <span className="kairos-kicker text-amber/80">SOURCE</span>
+        <span className="kairos-kicker text-amber/80">
+          SOURCE
+          <span className="ml-2 text-bone-muted/70 font-normal tracking-normal normal-case">· read-only</span>
+        </span>
         <span className="text-[11px] text-bone-muted">{a.timestamp || ""}</span>
       </header>
       <div className="text-[12px] text-bone-muted mb-2">
@@ -39,7 +45,7 @@ export default function SourcePane({ fixture }) {
         </div>
       ) : null}
 
-      <div className="text-[13px] text-bone leading-relaxed whitespace-pre-wrap flex-1 overflow-auto">
+      <div className="text-[13px] text-bone-muted leading-relaxed whitespace-pre-wrap">
         {a.body}
       </div>
 

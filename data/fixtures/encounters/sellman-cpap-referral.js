@@ -96,10 +96,39 @@ const fixture = {
       ],
     },
   },
+  // v3.0 — conditional panel declaration. Auto-inferred from
+  // actionScripts / finalSignedState; override here if needed.
+  panels: ["rnNote", "myChart", "orderPad"],
+  panelContent: {
+    orderPad: {
+      orders: [
+        {
+          type: "DME — Durable Medical Equipment",
+          codeVariant: "CPAP, auto-titrating, full face mask. Pressure 4-20 cmH2O.",
+          reason: "Moderate-to-severe OSA per recent sleep study (AHI 28.6)",
+          associatedDx: ["Obstructive sleep apnea (G47.33)"],
+          priority: "Routine",
+          status: "Faxed to Apria Healthcare",
+        },
+        {
+          type: "Referral",
+          codeVariant: "Sleep Medicine — outpatient consult",
+          reason: "Ongoing CPAP management and titration",
+          associatedDx: ["Obstructive sleep apnea (G47.33)"],
+          priority: "Routine",
+          status: "Pending coordinator scheduling",
+        },
+      ],
+      hasUnansweredQuestions: false,
+    },
+  },
   initialPaneContent: { nurseNote: "", mychartMessage: "", phoneScript: "", orderPad: { orders: [], hasUnansweredQuestions: false } },
   actionScripts: {},
   finalSignedState: {
-    nurseNote: "",  // computed from generatedNurseNote
+    nurseNote:
+      "Sleep study reviewed. AHI 28.6 — moderate-to-severe obstructive sleep apnea. CPAP ordered via Apria Healthcare (DME). Referral placed to Sleep Medicine for ongoing management. Referral packet auto-assembled: cover letter, sleep study report, cardiology note, face sheet, insurance cards (front/back), photo ID. Packet faxed to Apria. Patient notified via MyChart.",
+    mychartMessage:
+      "Mr. Morris,\n\nYour sleep study results are in. The study showed moderate sleep apnea, which means your breathing is being interrupted during sleep more than it should be. This can cause the tiredness and poor sleep you've been experiencing.\n\nYour provider has ordered a CPAP machine through Apria Healthcare. This is a device you'll use at night to keep your airway open while you sleep. Apria will contact you directly to schedule a fitting and get you set up — most patients hear from them within a week.\n\nWe've also referred you to a sleep medicine specialist who will work with you on an ongoing basis to make sure the CPAP is working well and adjust settings as needed.\n\nWhat to expect:\n- Apria will call you to schedule CPAP setup\n- The sleep medicine office will call to schedule your first appointment\n- If you haven't heard from either within 2 weeks, let us know\n\nThe CPAP takes some getting used to, but most patients notice a real difference in how they feel within the first few weeks. If you have any questions before your appointments, reply to this message or call the clinic.\n\nBrandon Sterne, RN BSN / Lakeside Cardiology Associates",
     phoneScript: "",
     orders: ["CPAP DME via Apria", "Referral to Sleep Medicine"],
     dxAssociated: ["Obstructive sleep apnea (G47.33)"],

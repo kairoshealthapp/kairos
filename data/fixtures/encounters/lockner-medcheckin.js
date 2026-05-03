@@ -45,6 +45,9 @@ const fixture = {
       "Patient reporting Zetia tolerance and subjective benefit. No clinical question. FYI.",
     priority: "Normal",
   },
+  // v3.0 — conditional panel declaration. Auto-inferred from
+  // actionScripts / finalSignedState; override here if needed.
+  panels: ["rnNote"],
   initialPaneContent: {
     nurseNote: "",
     mychartMessage: "",

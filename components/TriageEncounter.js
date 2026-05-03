@@ -1,107 +1,120 @@
-// Phase 3.6 — Triage Encounter (Stream 1).
-// State-machined view of the four-stage clinical reasoning workflow:
-//   Stage 1: assessment generation (empty assessment + response panels)
-//   Stage 2: response capture (structured input form / MyChart preview)
-//   Stage 3: SBAR ready (mock-prefilled responses visible)
-//   Stage 4: SBAR + routing + authorize
+// v3.0 Triage Encounter (Fix 9). Rework:
+//   - Pre-populated assessment questions (no "Generate Patient Assessment"
+//     gate; the AI has already read the chart, so the questions are
+//     visible the moment the card opens).
+//   - Phone / MyChart channel toggle at the top of the content area.
+//   - Phone mode: dual input — free text area at top, structured
+//     questions below. Every question individually skippable; no
+//     enforced completion. SBAR pane builds in real time from whatever
+//     input is captured.
+//   - MyChart mode: pre-drafted patient-facing message containing the
+//     assessment questions formatted for the patient to answer. Same
+//     Reply / Reply+CC / Forward buttons as the standard MyChart panel.
+//   - Terminal action collapses the card into the panel-completion
+//     pipeline (handled in EncounterDetail via onCardTerminate).
 //
-// Stage transitions are mock — clicking a button advances local state.
-// Auto-saves the current responses object to localStorage on change
-// (debounced 300ms) under a fixture-scoped key.
+// Tour cinematic compatibility: existing kairos-encounter:auto-action
+// listener still maps generate-inquiry / process-reply / synthesize-callback
+// to the appropriate camera moves and dispatches action-complete.
 
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import SourcePane from "./SourcePane";
-import ChartContextPanel from "./ChartContextPanel";
 import PatientAssessmentPanel from "./PatientAssessmentPanel";
-import SBARNotePanel from "./SBARNotePanel";
-import RoutingPanel from "./RoutingPanel";
+import RNNotePanel from "./panels/RNNotePanel";
+import CompletedPanel from "./panels/CompletedPanel";
+import RecipientPicker from "./panels/RecipientPicker";
 import { isCinematicMode } from "@/lib/featureFlags";
 import { cameraGoto } from "@/lib/tourCamera";
 
 const STORAGE_PREFIX = "kairos.triage.responses.v1.";
 
-function ResponseDisplay({ assessment, responses, notes }) {
-  const list = assessment || [];
-  const r = responses || {};
-  return (
-    <section className="kairos-card p-4 h-full flex flex-col overflow-hidden">
-      <header className="flex items-center justify-between mb-2">
-        <span className="kairos-kicker kairos-kicker-strong text-amber/80">
-          PATIENT RESPONSE
-        </span>
-        <span className="text-[11px] text-bone-muted">Captured</span>
-      </header>
-      {!list.length || !Object.keys(r).length ? (
-        <div className="flex-1 flex items-center justify-center text-bone-muted/60 italic text-[13px]">
-          — empty — captured after patient responds —
-        </div>
-      ) : (
-        <div className="flex-1 overflow-auto pr-1 space-y-2.5 text-[12px]">
-          {list.map((q, idx) => {
-            const resp = r[q.id];
-            if (!resp) return null;
-            const value = Array.isArray(resp.value) ? resp.value.join(", ") : resp.value;
-            const display =
-              q.inputType === "number_unit" && resp.unit
-                ? `${resp.value} ${resp.unit}`
-                : value;
-            return (
-              <div key={q.id}>
-                <div className="text-bone-muted">
-                  <span className="mr-1">{idx + 1}.</span>
-                  {q.text}
-                </div>
-                <div className="text-bone ml-4">
-                  → {display ?? <span className="italic text-bone-muted/60">no response</span>}
-                </div>
-                {resp.followUp ? (
-                  <div className="text-bone ml-4">
-                    <span className="text-bone-muted">↳ {q.followUp?.text}</span>{" "}
-                    <span>{resp.followUp}</span>
-                  </div>
-                ) : null}
-              </div>
-            );
-          })}
-          {notes ? (
-            <div className="pt-2 border-t border-mist/60">
-              <div className="text-bone-muted">Additional notes</div>
-              <div className="text-bone ml-4">{notes}</div>
-            </div>
-          ) : null}
-        </div>
-      )}
-    </section>
-  );
-}
-
-function ActionButton({ onClick, children, primary, disabled, id }) {
-  return (
+function ChannelToggle({ mode, onChange, mychartActive }) {
+  const opt = (id, label, hint) => (
     <button
-      id={id}
+      key={id}
       type="button"
-      onClick={onClick}
-      disabled={disabled}
+      onClick={() => onChange(id)}
+      disabled={id === "mychart" && !mychartActive}
+      title={id === "mychart" && !mychartActive ? "Patient does not have an active MyChart account" : ""}
       className={
-        primary
-          ? "px-4 py-2 rounded-sm text-[13px] bg-amber/90 text-platinum hover:bg-amber transition-colors disabled:opacity-50"
-          : "px-4 py-2 rounded-sm text-[13px] border border-mist/60 text-bone hover:border-amber/60 hover:text-bone transition-colors disabled:opacity-50"
+        "px-4 py-2 rounded-sm text-[12px] font-medium border-2 transition-colors text-left " +
+        (mode === id
+          ? "bg-amber border-amber text-graphite shadow-[0_0_0_1px_rgba(245,158,11,0.4)]"
+          : "bg-platinum/40 border-mist/60 text-bone-muted hover:border-amber/40 hover:text-bone disabled:opacity-40 disabled:cursor-not-allowed")
       }
     >
-      {children}
+      <span className="block">{label}</span>
+      <span className={`block text-[10px] mt-0.5 ${mode === id ? "text-graphite/80" : "text-bone-muted/80"}`}>{hint}</span>
     </button>
+  );
+  return (
+    <div className="flex items-center gap-2">
+      <span className="kairos-kicker text-bone-muted/80">CHANNEL</span>
+      {opt("phone", "Phone call", "Dual input · structured + free text")}
+      {opt("mychart", "MyChart message", "Pre-drafted patient prompt")}
+    </div>
   );
 }
 
-export default function TriageEncounter({ fixture }) {
-  const [stage, setStage] = useState(1);
-  const mychartActive =
-    (fixture.mychartStatus || "").toLowerCase() === "active";
+// Compose the SBAR as a single multi-paragraph note suitable for the
+// RN Note panel display. Called when the nurse clicks "Generate SBAR"
+// after the call ends — the AI synthesizes the four sections from the
+// captured free-text + structured responses + chart context. Baseline
+// S/B come from the fixture; A/R blend baseline with whatever the
+// nurse captured.
+function composeSbarText(fixture, responses, notes) {
+  const baseline = fixture.sbar || {};
+  const responseLines = [];
+  const list = fixture.assessment || [];
+  list.forEach((q) => {
+    const r = responses[q.id];
+    if (!r) return;
+    const value = Array.isArray(r.value) ? r.value.join(", ") : r.value;
+    if (value === undefined || value === "") return;
+    responseLines.push(`• ${q.text} → ${value}`);
+  });
+  const livePart = [
+    notes && notes.trim() ? `Free-text: ${notes.trim()}` : null,
+    responseLines.length > 0 ? `Captured:\n${responseLines.join("\n")}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+  const a = baseline.a
+    ? livePart
+      ? `${baseline.a}\n\n${livePart}`
+      : baseline.a
+    : livePart || "Pending provider review";
+  const sections = [
+    `S — Situation\n${baseline.s || "Pending provider review"}`,
+    `B — Background\n${baseline.b || "Pending provider review"}`,
+    `A — Assessment\n${a}`,
+    `R — Recommendation\n${baseline.r || "Pending provider review"}`,
+  ];
+  return sections.join("\n\n");
+}
+
+function buildMyChartDraft(fixture) {
+  const list = fixture.assessment || [];
+  const greeting = `Hi ${fixture.patient?.displayName || "there"},`;
+  const intro =
+    "Your provider asked us to check in with a few quick questions about how you're feeling. Please reply to this message with your answers — there's no wrong answer, and you can skip any question that doesn't apply.";
+  const numbered = list.map((q, i) => `${i + 1}. ${q.text}`).join("\n");
+  const closer =
+    "Once you reply, a nurse will review and follow up. If anything feels urgent — chest pain, severe shortness of breath, fainting — please call 911 or go to the nearest ER instead of waiting on this message.\n\nBrandon Sterne, RN BSN";
+  return [greeting, intro, "", numbered, "", closer].join("\n");
+}
+
+export default function TriageEncounter({ fixture, onCardTerminate }) {
+  // v3.0 — questions are pre-populated. We keep the legacy stage state
+  // for tour compatibility but the UI doesn't gate on it anymore.
+  const [stage, setStage] = useState(2);
+  const mychartActive = (fixture.mychartStatus || "").toLowerCase() === "active";
   const [mode, setMode] = useState(mychartActive ? "mychart" : "phone");
   const [responses, setResponses] = useState({});
   const [notes, setNotes] = useState("");
+  const [picker, setPicker] = useState(null); // null | "cc" | "forward" | "phoneForward"
   const saveTimerRef = useRef(null);
 
   const storageKey = useMemo(
@@ -109,7 +122,6 @@ export default function TriageEncounter({ fixture }) {
     [fixture]
   );
 
-  // Hydrate responses from localStorage on mount.
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
@@ -126,7 +138,6 @@ export default function TriageEncounter({ fixture }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey]);
 
-  // Debounced auto-save.
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -146,10 +157,17 @@ export default function TriageEncounter({ fixture }) {
   }, [responses, notes, storageKey]);
 
   const handleResponseChange = useCallback((id, value) => {
-    setResponses((prev) => ({ ...prev, [id]: value }));
+    setResponses((prev) => {
+      // v3.0 Fix 4b — Skip clears the key entirely so SBAR + display
+      // logic don't see a stale undefined entry.
+      if (value === undefined || value === null) {
+        const { [id]: _drop, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [id]: value };
+    });
   }, []);
 
-  // Move to stage 3: load mock prefilled responses from fixture.
   const captureMockResponses = useCallback(() => {
     const mock = fixture.mockResponses || {};
     const next = {};
@@ -166,20 +184,16 @@ export default function TriageEncounter({ fixture }) {
     setStage(3);
   }, [fixture]);
 
-  // Tour mode: TourMode dispatches kairos-encounter:auto-action between
-  // bubbles. Map each actionId to the matching stage transition so the
-  // four-stage UI advances in sync with narration. The manual
-  // ActionButton onClick handlers below remain wired for non-tour use.
-  //
-  // Tour timing: TourMode awaits kairos-encounter:auto-action-complete
-  // (via runAction → action-complete on standard fixtures, or this
-  // listener on triage fixtures). EncounterDetail no longer runs the
-  // action script for triage fixtures — its panes are hidden — so this
-  // listener is the only thing that closes the action loop.
-  // We dispatch action-complete immediately after the stage change
-  // commits, which keeps the tour cadence flowing into the next
-  // narration without the 15-25 second silences caused by typing into
-  // invisible panes.
+  // v3.0 Master Prompt 2 — refs for responses + notes so the tour
+  // auto-action listener (bound once) can compose the SBAR from the
+  // latest captured input rather than the stale closure.
+  const responsesRef = useRef(responses);
+  const notesRef = useRef(notes);
+  useEffect(() => { responsesRef.current = responses; }, [responses]);
+  useEffect(() => { notesRef.current = notes; }, [notes]);
+
+  // Tour event listener (preserved from prior version so tour cinematic
+  // camera + action-complete loop still fire).
   useEffect(() => {
     if (typeof window === "undefined") return;
     function onAutoAction(e) {
@@ -190,36 +204,50 @@ export default function TriageEncounter({ fixture }) {
       let cinematicFraming = "tight";
       if (actionId === "generate-inquiry") {
         setStage(2);
-        // Pass D Phase 2 / Issue 7A — camera scrolls up to the
-        // assessment pane so the freshly-generated questions land in
-        // viewport instead of below the fold next to the action bar
-        // the user just clicked.
         cinematicTarget = '[data-tour-anchor="patient-assessment"]';
       } else if (actionId === "process-reply") {
         captureMockResponses();
-        // After Send-via-MyChart fires, the responses populate. Frame
-        // the response pane TOP so Question 1 lands at the top edge of
-        // the viewport — Brandon flagged Pass D's center-framing as
-        // burying Q1 mid-page on the response reveal.
         cinematicTarget = '[data-tour-anchor="patient-response"]';
         cinematicFraming = "top";
       } else if (actionId === "synthesize-callback") {
         setStage(4);
-        // SBAR pane only renders at stage 4. Camera frames it next.
+        cinematicTarget = '[data-tour-anchor="sbar"]';
+      } else if (actionId === "triage.setPhoneMode") {
+        // v3.0 Master Prompt 2 / Fix 2c Bug 4 — Reed's fixture has
+        // mychartStatus: "Active" so the panel defaults to mychart
+        // mode. The tour walks the phone path, so the first triage
+        // beat forces the channel to phone before captureMockResponses
+        // and generateSbar fire on the (visible) phone-mode UI.
+        setMode("phone");
+        cinematicTarget = '[data-tour-anchor="patient-assessment"]';
+      } else if (actionId === "triage.captureMockResponses") {
+        // v3.0 Master Prompt 2 — pre-fill mock responses on Reed so the
+        // tour can demonstrate the SBAR build without typing. Dispatches
+        // action-complete just like the legacy stages.
+        captureMockResponses();
+        cinematicTarget = '[data-tour-anchor="patient-assessment"]';
+      } else if (actionId === "triage.generateSbar") {
+        // Click Generate SBAR — populates the RN Note panel. Composes
+        // from the latest responses + notes (via refs) so a prior
+        // captureMockResponses landed in the SBAR.
+        setSbarText(composeSbarText(fixture, responsesRef.current, notesRef.current));
+        cinematicTarget = '[data-tour-anchor="sbar"]';
+      } else if (actionId === "triage.forwardSbar") {
+        // v3.0 Master Prompt 2 / Fix 2c Bug 4 — terminal Forward in
+        // tour mode. Routed through fireTerminate so the triage
+        // onCardTerminate (which calls handleAuthorize in tour mode)
+        // fires the card fly-off. Recipient is hardcoded to Sterne
+        // MD for the tour demo.
+        setRnNoteCompleted("SBAR forwarded to Sterne MD");
+        // Brief pause so the collapse renders before fly-off; matches
+        // the 800ms in handleRnNoteTerminate.
+        setTimeout(() => fireTerminate("triage.forward", { recipient: "Sterne MD" }), 600);
         cinematicTarget = '[data-tour-anchor="sbar"]';
       } else {
         return;
       }
-      // Close the action loop on the next tick so any pending state
-      // commits flush first.
       setTimeout(() => {
         if (cinematicTarget && isCinematicMode()) {
-          // Fire-and-forget — the camera move runs alongside the
-          // action-complete dispatch so the next narration beat
-          // already has the right pane in view. Framing varies per
-          // stage: 'tight' centers the pane (Stages 1, 3); 'top' pins
-          // the pane's top edge near the viewport top so Q1 lands at
-          // the top of the screen on Stage 2 response reveal.
           cameraGoto(cinematicTarget, { framing: cinematicFraming, holdMs: 0 });
         }
         window.dispatchEvent(
@@ -234,128 +262,178 @@ export default function TriageEncounter({ fixture }) {
       window.removeEventListener("kairos-encounter:auto-action", onAutoAction);
   }, [fixture.id, captureMockResponses]);
 
-  const assessment = stage >= 2 ? fixture.assessment || [] : [];
-  const sbar = fixture.sbar || {};
+  const assessment = fixture.assessment || [];
+  const mychartDraft = useMemo(() => buildMyChartDraft(fixture), [fixture]);
+
+  // v3.0 Fix 1d — phone path no longer builds the SBAR in real time.
+  // The nurse captures responses during the call; when ready they
+  // click Generate SBAR and the synthesized SBAR populates the RN
+  // Note panel for review + Forward.
+  const [sbarText, setSbarText] = useState("");
+  const [rnNoteCompleted, setRnNoteCompleted] = useState(null);
+
+  function handleGenerateSbar() {
+    setSbarText(composeSbarText(fixture, responses, notes));
+  }
+
+  function fireTerminate(kind, extra) {
+    if (!onCardTerminate) return;
+    onCardTerminate({ kind, ...extra });
+  }
+
+  function handleRnNoteTerminate(event) {
+    const kind = event && event.kind;
+    const recipient = event && event.recipient;
+    if (kind === "rnNote.forward") {
+      const summary = recipient ? `SBAR forwarded to ${recipient}` : "SBAR forwarded";
+      setRnNoteCompleted(summary);
+      // Pause briefly so the nurse sees the collapse, then fire the
+      // card-level finish.
+      setTimeout(() => fireTerminate("triage.forward", { recipient }), 800);
+      return;
+    }
+    if (kind === "rnNote.done") {
+      setRnNoteCompleted("SBAR signed");
+      setTimeout(() => fireTerminate("triage.done"), 800);
+    }
+  }
+
+  // Bookends Pass / A1: detect tour mode so we can reserve the same
+  // 280px right gutter as EncounterDetail. Card 6 (Reed triage) renders
+  // through this component, so the HUD-overlap fix has to apply here
+  // too or RN-Note text on the right column gets clipped.
+  const triageTourMode =
+    typeof window !== "undefined" &&
+    (new URLSearchParams(window.location.search).get("tour") === "1" ||
+      sessionStorage.getItem("kairos-tour-active") === "1");
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-[480px]">
+      <ChannelToggle mode={mode} onChange={setMode} mychartActive={mychartActive} />
+
+      <div
+        className={
+          "grid grid-cols-1 lg:grid-cols-2 gap-4 items-start" +
+          (triageTourMode ? " lg:pr-[280px]" : "")
+        }
+      >
         <div data-tour-anchor="source-pane">
           <SourcePane fixture={fixture} />
         </div>
-        <div data-tour-anchor="patient-assessment">
-          <PatientAssessmentPanel
-            assessment={assessment}
-            mode={mode}
-            responses={responses}
-            onResponseChange={handleResponseChange}
-            notes={notes}
-            onNotesChange={setNotes}
-            readOnly={stage >= 3}
-          />
-        </div>
-        <div data-tour-anchor="chart-context">
-          <ChartContextPanel chartContext={fixture.chartContext} />
-        </div>
-        <div data-tour-anchor="patient-response">
-          <ResponseDisplay assessment={assessment} responses={stage >= 3 ? responses : {}} notes={stage >= 3 ? notes : ""} />
-        </div>
+        {mode === "phone" ? (
+          <>
+            <div data-tour-anchor="patient-assessment">
+              <PatientAssessmentPanel
+                assessment={assessment}
+                mode="phone"
+                responses={responses}
+                onResponseChange={handleResponseChange}
+                notes={notes}
+                onNotesChange={setNotes}
+                readOnly={false}
+              />
+              <div className="mt-3 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleGenerateSbar}
+                  data-tour-button="triage.generateSbar"
+                  className="text-[12px] font-semibold px-3 py-1.5 rounded-sm bg-amber text-graphite hover:bg-amber/90 transition-colors"
+                >
+                  Generate SBAR
+                </button>
+                <span className="text-[11px] text-bone-muted italic">
+                  {sbarText
+                    ? "SBAR drafted in the RN Note panel — review and Forward to provider."
+                    : "Click when the call ends — SBAR drafts from your captured input."}
+                </span>
+              </div>
+            </div>
+            <div data-tour-anchor="sbar">
+              {rnNoteCompleted ? (
+                <CompletedPanel label="RN Note" summary={rnNoteCompleted} />
+              ) : (
+                <RNNotePanel
+                  content={sbarText}
+                  isTyping={false}
+                  tourMode={false}
+                  onTerminate={handleRnNoteTerminate}
+                />
+              )}
+              {!sbarText && !rnNoteCompleted ? (
+                <div className="text-[11px] text-bone-muted/70 italic mt-2">
+                  SBAR will generate when you're ready — click Generate SBAR after the call.
+                </div>
+              ) : null}
+            </div>
+          </>
+        ) : (
+          <div className="lg:col-span-2" data-tour-anchor="patient-assessment">
+            <section className="kairos-card p-4 flex flex-col overflow-hidden relative">
+              <header className="flex items-center justify-between mb-2">
+                <span className="kairos-kicker kairos-kicker-strong text-amber/80">
+                  MYCHART MESSAGE
+                </span>
+                <span className="text-[11px] text-bone-muted">Pre-drafted patient prompt</span>
+              </header>
+              <dl className="text-[12px] text-bone-muted grid grid-cols-[88px_1fr] gap-x-3 gap-y-1 mb-3">
+                <dt>Recipient</dt>
+                <dd className="text-bone">{fixture.patient?.displayName || fixture.patient?.name}</dd>
+                <dt>Notify by</dt>
+                <dd className="text-bone">2 business days</dd>
+              </dl>
+              <div className="border-t border-mist/40 pt-3 flex-1 overflow-auto text-[13px] text-bone leading-relaxed whitespace-pre-wrap">
+                {mychartDraft}
+              </div>
+              <div className="mt-3 pt-3 border-t border-mist/40 flex items-center gap-2 flex-wrap relative">
+                <button
+                  type="button"
+                  onClick={() => fireTerminate("myChart.reply")}
+                  className="text-[12px] font-semibold px-3 py-1.5 rounded-sm bg-amber text-graphite hover:bg-amber/90 transition-colors"
+                >
+                  Reply
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPicker("cc")}
+                  className="text-[12px] font-medium px-3 py-1.5 rounded-sm bg-platinum/60 text-bone border border-mist/60 hover:bg-platinum hover:border-amber/60 transition-colors"
+                >
+                  Reply + CC
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPicker("forward")}
+                  className="text-[12px] font-medium px-3 py-1.5 rounded-sm bg-platinum/60 text-bone border border-mist/60 hover:bg-platinum hover:border-amber/60 transition-colors"
+                >
+                  Forward
+                </button>
+                <RecipientPicker
+                  open={picker === "cc"}
+                  multi
+                  onConfirm={(cc) => {
+                    setPicker(null);
+                    fireTerminate("myChart.replyCc", { cc });
+                  }}
+                  onCancel={() => setPicker(null)}
+                  title="CC clinicians"
+                />
+                <RecipientPicker
+                  open={picker === "forward"}
+                  onConfirm={(recipient) => {
+                    setPicker(null);
+                    fireTerminate("myChart.forward", { recipient });
+                  }}
+                  onCancel={() => setPicker(null)}
+                  title="Forward to clinician"
+                />
+              </div>
+            </section>
+          </div>
+        )}
       </div>
 
-      {stage >= 4 ? (
-        <div data-tour-anchor="sbar">
-          <SBARNotePanel sbar={sbar} />
-          <RoutingPanel routing={fixture.routing} />
-        </div>
-      ) : null}
-
-      <div className="flex flex-wrap gap-2 items-center">
-        <span className="kairos-kicker text-bone-muted/80 mr-2">
-          STAGE {stage} OF 4
-        </span>
-
-        {stage === 1 ? (
-          <>
-            <ActionButton
-              id="kairos-triage-generate-inquiry"
-              primary
-              onClick={() => setStage(2)}
-            >
-              Generate Patient Assessment
-            </ActionButton>
-            <ActionButton onClick={() => {}}>Defer</ActionButton>
-            <ActionButton onClick={() => {}}>Reject</ActionButton>
-          </>
-        ) : null}
-
-        {stage === 2 ? (
-          <>
-            {mychartActive && mode === "mychart" ? (
-              <>
-                <ActionButton
-                  id="kairos-triage-process-reply"
-                  primary
-                  onClick={captureMockResponses}
-                >
-                  Send via MyChart
-                </ActionButton>
-                <ActionButton onClick={() => setMode("phone")}>
-                  Switch to phone-call mode
-                </ActionButton>
-              </>
-            ) : (
-              <>
-                <ActionButton
-                  id="kairos-triage-process-reply"
-                  primary
-                  onClick={captureMockResponses}
-                >
-                  Phone call mode
-                </ActionButton>
-                {mychartActive ? (
-                  <ActionButton onClick={() => setMode("mychart")}>
-                    Switch to MyChart
-                  </ActionButton>
-                ) : null}
-              </>
-            )}
-            <ActionButton onClick={() => {}}>Defer</ActionButton>
-            <ActionButton onClick={() => {}}>Reject</ActionButton>
-            <ActionButton onClick={() => setStage(1)}>Edit Assessment</ActionButton>
-          </>
-        ) : null}
-
-        {stage === 3 ? (
-          <>
-            <ActionButton
-              id="kairos-triage-synthesize-callback"
-              primary
-              onClick={() => setStage(4)}
-            >
-              Synthesize SBAR
-            </ActionButton>
-            <ActionButton onClick={() => {}}>Defer</ActionButton>
-            <ActionButton onClick={() => {}}>Reject</ActionButton>
-            <ActionButton onClick={() => setStage(2)}>Edit Responses</ActionButton>
-            <ActionButton onClick={() => setStage(2)}>Re-inquire</ActionButton>
-          </>
-        ) : null}
-
-        {stage === 4 ? (
-          <>
-            <ActionButton
-              id="kairos-triage-authorize"
-              primary
-              onClick={() => {}}
-            >
-              Authorize → forward to provider
-            </ActionButton>
-            <ActionButton onClick={() => setStage(3)}>Edit</ActionButton>
-            <ActionButton onClick={() => {}}>Defer</ActionButton>
-            <ActionButton onClick={() => {}}>Reject</ActionButton>
-          </>
-        ) : null}
-      </div>
+      {/* v3.0 Fix 1d — phone-mode terminal action moved into the RN
+          Note panel itself (Forward button on the populated SBAR).
+          The bottom "Forward SBAR" bar is no longer needed. */}
     </div>
   );
 }

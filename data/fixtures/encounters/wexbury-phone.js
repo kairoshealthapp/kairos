@@ -36,6 +36,9 @@ const fixture = {
     body:
       "TTE Complete read by David Curtis MD on 4/29:\n  1. Echocardiogram\n  2. Ejection fraction normal at 55-60%\n  3. Normal right ventricular size and function\n  4. Normal left and right atrial size\n  5. Trivial aortic insufficiency\n  6. Mild mitral insufficiency\n  7. No change in treatment based on echocardiogram\n\nMyChart Pending — phone-only contact.",
   },
+  // v3.0 — conditional panel declaration. Auto-inferred from
+  // actionScripts / finalSignedState; override here if needed.
+  panels: ["rnNote", "callScript"],
   initialPaneContent: {
     nurseNote: "",
     mychartMessage: "",

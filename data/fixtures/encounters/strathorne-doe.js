@@ -36,6 +36,9 @@ const fixture = {
     body:
       "Patient called stating he had 4 stents placed in 2025 but is still experiencing DOE walking across the room. Reports lightheadedness intermittently. Requests nurse callback.",
   },
+  // v3.0 — conditional panel declaration. Auto-inferred from
+  // actionScripts / finalSignedState; override here if needed.
+  panels: ["rnNote", "callScript"],
   initialPaneContent: {
     nurseNote: "",
     mychartMessage: "",

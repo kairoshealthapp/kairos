@@ -35,6 +35,9 @@ const fixture = {
     body:
       "CTA abdomen reviewed. Cardiac findings unremarkable. Incidental 1.4 cm simple-appearing pancreatic cyst noted; below standard threshold for cardiology workup. Please forward results to her PCP (Fenella Olson MD) for further follow-up.",
   },
+  // v3.0 — conditional panel declaration. Auto-inferred from
+  // actionScripts / finalSignedState; override here if needed.
+  panels: ["rnNote", "myChart"],
   initialPaneContent: {
     nurseNote: "",
     mychartMessage: "",
@@ -46,7 +49,7 @@ const fixture = {
     nurseNote:
       "Dr. Pendrelle reviewed CTA abdomen. Cardiac findings unremarkable. Incidental 1.4 cm pancreatic cyst — forwarded to PCP (Fenella Olson MD). Patient notified via MyChart.",
     mychartMessage:
-      "Dr. Pendrelle reviewed your scan — heart side unremarkable. Incidental small pancreatic cyst forwarded to your PCP (Dr. Olson).",
+      "Hi,\n\nYour CTA abdomen results are in. Two things to share:\n\n1. Heart and major blood vessels: unremarkable. The cardiology question that prompted this scan has a clean answer — nothing concerning on the heart side.\n\n2. Incidental finding: The radiologist noted a small (1.4 cm) simple-appearing cyst on the pancreas. This is below the size threshold where cardiology would do anything about it, but it's worth having your primary-care provider track it. Cysts of this size are very common and usually nothing to worry about, but the right team to follow it is your PCP, Dr. Fenella Olson.\n\nWhat to do:\n- No changes to your medications\n- We've forwarded the imaging report to Dr. Olson's office so she has it on file\n- At your next visit with Dr. Olson, ask her how she'd like to handle follow-up on the cyst — most providers either repeat the scan in 12 months or recommend no further action depending on your overall health picture\n\nWhat to watch for: Persistent or new abdominal pain, jaundice (yellowing of skin or eyes), unintentional weight loss, or new digestive issues. If any of those come up, contact Dr. Olson.\n\nIf you have questions about the cardiology side, reply here. For questions about the pancreatic finding or follow-up plan, please reach out to Dr. Olson's office.\n\nBrandon Sterne, RN BSN / Cardiology Associates",
     orders: ["Route imaging study to PCP — Fenella Olson MD"],
     dxAssociated: ["Other specified disorders of pancreas"],
   },

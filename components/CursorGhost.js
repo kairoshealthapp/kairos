@@ -208,7 +208,12 @@ export default function CursorGhost() {
         // target's NEW viewport position, not its pre-scroll position.
         if (isTourActive()) {
           try {
-            el.scrollIntoView({ behavior: "smooth", block: "center" });
+            // v3.0 Master Prompt 2 / Fix 2c Bug 1 — "nearest" scrolls
+            // only just enough to make the target visible at the
+            // closest edge of the viewport. "center" used to push panel
+            // content off the top whenever the cursor target was a
+            // button at the bottom of an already-visible panel.
+            el.scrollIntoView({ behavior: "smooth", block: "nearest" });
           } catch (e) {
             // Older browsers without smooth-scroll support fall through.
           }

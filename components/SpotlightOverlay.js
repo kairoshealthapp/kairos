@@ -147,28 +147,47 @@ function pickCinematicPlacement(rectWithPadding, vw, vh, w, h, activeAnchorName)
         paneFraction += overlap / pane.area;
       }
     }
+    // v3.0 Master Prompt 2 / Fix 2d Bug 4 — when a candidate is
+    // significantly clipped, the clamp pushes the bubble far from the
+    // target it's meant to describe (Card 4 RN Note: "top" has 0
+    // pane-overlap so it won the paneFraction sort, but clipping
+    // landed the bubble at viewport y=16, near the patient header,
+    // not adjacent to the panel header at y=80+). Treat large clip
+    // area as effective pane-overlap so the picker prefers an
+    // in-viewport candidate that's actually next to the target.
+    const clipPenalty = clipArea > 5000 ? 1.0 : 0;
     return {
       name: c.name,
       rect: r,
       targetOverlap,
       targetInvalid,
-      paneFraction,
+      paneFraction: paneFraction + clipPenalty,
       clipArea,
       bias: POSITION_BIAS[c.name] ?? 99,
     };
   });
 
+  // v3.0 Master Prompt 2 / Bug 3 — pane-fraction now wins over the
+  // in-viewport/clipped split. Previously a "right" candidate that
+  // covered 70% of the next panel still beat a "bottom" candidate that
+  // was 100px clipped — because in-viewport sorted first. The new
+  // tour anchors source-pane on the left with panels right of it, so
+  // "right" ALWAYS overlaps the panel being narrated next. Sorting
+  // pane-fraction first promotes the clean "bottom" candidate even if
+  // it requires a tiny clamp.
   const valid = scored.filter((c) => !c.targetInvalid);
   if (valid.length > 0) {
     valid.sort((a, b) => {
-      // 1. In-viewport candidates beat clipping candidates.
-      const aClip = a.clipArea > 0;
-      const bClip = b.clipArea > 0;
-      if (aClip !== bClip) return aClip ? 1 : -1;
-      // 2. Smaller pane fraction wins (with epsilon to avoid jitter).
+      // 1. Smaller pane fraction wins (with epsilon to avoid jitter) —
+      //    promoted from rule 2 in Pass G v3 because covering an
+      //    upcoming pane is worse than a small viewport clip.
       if (Math.abs(a.paneFraction - b.paneFraction) > PANE_FRACTION_TIE_EPSILON) {
         return a.paneFraction - b.paneFraction;
       }
+      // 2. In-viewport candidates beat clipping candidates.
+      const aClip = a.clipArea > 0;
+      const bClip = b.clipArea > 0;
+      if (aClip !== bClip) return aClip ? 1 : -1;
       // 3. Smaller clip area wins.
       if (a.clipArea !== b.clipArea) return a.clipArea - b.clipArea;
       // 4. Position bias: top > right > left > bottom.

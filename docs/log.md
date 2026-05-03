@@ -6951,3 +6951,249 @@ Footer cleanup: dropped the SlicerDicer note-volume line and the "production pla
 - Static-content edit — Chrome computer-use not required per CLAUDE.md localhost handoff protocol. Brandon's review is the verification.
 
 ### No git push.
+
+---
+
+## 2026-05-03 16:45 — Tour Fix Prompt 2a (4 bugs from Card 1 smoke test)
+
+### Bug 1 (BLOCKER): Tour stalled after panel terminal action
+
+**Root cause:** Race in event dispatch. EncounterDetail's `panel:<kind>` auto-action handler called `handlePanelTerminate` then immediately dispatched `kairos-encounter:action-complete` — synchronously, inside the same `dispatchEvent` call as the inbound auto-action. TourMode.runAction was at:
+
+```
+window.dispatchEvent(new CustomEvent("kairos-encounter:auto-action", ...));
+await waitForEvent("kairos-encounter:action-complete", ...);
+```
+
+By the time `dispatchEvent` returned and `waitForEvent` registered its listener, action-complete had already fired and was missed. Tour engine waited forever.
+
+**Fix:** EncounterDetail wraps the action-complete dispatch in `setTimeout(..., 0)` so it lands on the next macrotask, AFTER TourMode's listener registration. Same pattern TriageEncounter already uses for its legacy stage transitions. ([components/EncounterDetail.js:407-417](components/EncounterDetail.js:407))
+
+### Bug 2: Camera scrolled past unnarrated content
+
+**Cause:** `preframeForAnnotation` defaulted to `framing: "wide"`, which CENTERS the target — for an RN Note panel that's already visible above the fold, "wide" still scrolls the page so the panel sits center-vertical, pushing the source pane off-screen above and squeezing MyChart partially below.
+
+**Fix:** Default framing changed from `"wide"` to `"top"` ([components/TourMode.js:303](components/TourMode.js:303)). The "top" framing pins the target near the top of the viewport with 80px breathing room, leaving subsequent panels visible below. Combined with the existing `skipIfVisible: true` (visibilityFraction 0.9 for "top"), already-visible panels get no scroll at all. Cards can still opt back into wide/tight via explicit `cinematicFraming`.
+
+### Bug 3: Spotlight callout covered the panel it described
+
+**Cause:** Cinematic placement scoring sorted in-viewport candidates BEFORE pane-fraction overlap. Source pane "right" callout candidate was in-viewport but covered ~70% of the RN Note panel. Bottom candidate was 100px clipped but had 0% pane overlap. Old sort put right first because in-viewport beat clipped.
+
+**Fix:** Swapped sort priority in `pickCinematicPlacement` — pane-fraction now wins first ([components/SpotlightOverlay.js:147-154](components/SpotlightOverlay.js:147)). Covering an unnarrated pane is worse than a small viewport clamp. Also belt-and-suspenders: source-pane spotlights in tourScript switched from `position: "right"` to `position: "bottom"` + explicit `cinematicFraming: "top"`.
+
+### Bug 4: TTS mispronounced "Coumadin"
+
+**Fix:** Two narration lines in Card 1 (Whitfield) updated:
+- `"Margaret Whitfield, seventy-four, Coumadin clinic..."` → `"...warfarin clinic..."`
+- `"applied the Phelps Coumadin policy..."` → `"...Phelps warfarin policy..."`
+
+Display-only text fields (`displayText`, `body`) untouched per spec — visual text can still say "Coumadin clinic" since it's not pronounced. 2 MP3s regenerated: `mp2-whitfield-pre.mp3`, `mp2-whitfield-rnnote.mp3`. Cost: $0.007.
+
+### Verification
+
+Build passes clean. Dev server restart + Chrome computer-use handoff issued. No git push.
+
+---
+
+## 2026-05-03 17:00 — Tour Fix Prompt 2b (5 bugs from Card 1+4 smoke test)
+
+### Bug 1 (BLOCKER root): Panels stretched to fill column space
+
+**Cause:** Panel sections used `h-full flex flex-col overflow-hidden` and content divs used `flex-1 overflow-auto`. Combined with the outer EncounterDetail grid's default `align-items: stretch`, the source pane and the panel column matched each other's height — so a 2-line RN Note rendered as a 600px-tall mostly-empty box (matching the source pane's natural height), and the camera "anchored on the panel" was actually centering on empty space.
+
+**Fix:**
+- All six panel components stripped of `h-full`, `overflow-hidden`, and `flex-1 overflow-auto`. Sections now `kairos-card p-4 flex flex-col`; content divs no longer fight the parent for height. Panels size to their content with header+padding floor (~80px).
+- EncounterDetail outer grid gained `items-start` so source pane and PanelGrid no longer mutually stretch.
+- TriageEncounter inner grid lost `min-h-[480px]` (replaced with `items-start`).
+
+Files: [components/panels/RNNotePanel.js](components/panels/RNNotePanel.js), [components/panels/MyChartMessagePanel.js](components/panels/MyChartMessagePanel.js), [components/panels/OrderPadPanel.js](components/panels/OrderPadPanel.js), [components/panels/CallScriptPanel.js](components/panels/CallScriptPanel.js), [components/SourcePane.js](components/SourcePane.js), [components/ReferralPacketPanel.js](components/ReferralPacketPanel.js), [components/EncounterDetail.js:819](components/EncounterDetail.js:819), [components/TriageEncounter.js:286](components/TriageEncounter.js:286).
+
+### Bug 2: Camera anchors at top with 80px offset
+
+Already addressed in Fix 2a (default framing changed from "wide" to "top" with 80px breathing room via `applyTopFraming`). With Bug 1 fixed, panels are correctly-sized so "top" framing puts the actual content at the viewport top instead of centering on empty box space.
+
+### Bug 3: Tour stall after panel terminal click
+
+**Diagnosis:** Card 4 (Norreys) was the smoking gun. Fixture declared `panels: ["rnNote", "myChart", "orderPad"]` but the tour script only walks `panel:rnNote.done`. After RN Note collapsed, completedCount=1 vs totalActionPanels=3 → card-completion effect never fired `handleAuthorize` → no `flown-off` event → TourMode `await waitForEvent("flown-off")` hung indefinitely.
+
+**Fix:** Reduce fixture panel lists to match the new tour's intent. Norreys → `["rnNote"]`. Halbrook DME → `["rnNote"]` (Card 7 also walks just RN Note; secure chat reply IS the note posted back). Both fixtures got matching `panelContent` overrides where the actionScripts didn't already populate the panel via `derivePanelContent`.
+
+Files: [data/fixtures/encounters/norreys-transactional.js](data/fixtures/encounters/norreys-transactional.js), [data/fixtures/encounters/halbrook-dme-pa.js](data/fixtures/encounters/halbrook-dme-pa.js).
+
+### Bug 4: RN Note empty on Card 4
+
+Same fixture, same fix. Norreys now ships `panelContent.rnNote` with refill-workflow text per the spec ("Refill request received via Surescripts. Patient seen 4/21/2026... Approved warfarin 6mg daily, 90-day supply, 3 refills.").
+
+### Bug 5: Approve & Send Packet button not highlighted on Card 3
+
+**Cause:** Likely a downstream effect of Bug 1 — the inflated panel column on Card 3 pushed the Referral Packet section far below the fold; the cursor's `scrollIntoView` couldn't keep up with the spotlight's panel anchor and landed off-screen. With Bug 1 fixed, the panels collapse to their natural sizes (RN Note, MyChart, Order Pad each ~120-180px instead of stretched to column height), and the Approve button sits comfortably in the post-collapse viewport.
+
+The button already carries `data-tour-button="referralPacket.approve"` and the tour script's cursor target points at it. No script changes needed beyond the panel-sizing fix.
+
+### Verification
+
+`next build` clean. Dev server restart + Chrome handoff issued. No git push.
+
+---
+
+## 2026-05-03 17:15 — Tour Fix Prompt 2c (5 polish-layer bugs)
+
+### Bug 1 (BLOCKER): Camera scrolled to action button before user could read content
+
+**Cause:** Two collaborating mechanisms moved the camera onto the button at the bottom of the panel:
+- `scheduleCursorPreScroll` fired ~300ms before cursor `startTime` and called `cameraGoto(cursorTarget, framing: "wide")` — yanking the page to center the button.
+- `CursorGhost`'s own `scrollIntoView({ block: "center" })` then re-centered when the cursor began moving.
+
+Combined with cursor startTime ~1000ms, the camera moved off panel content within the first second of every narration beat. The user heard "the note is already written..." but had already lost the panel from view.
+
+**Fix:**
+- `showSpotlight` no longer calls `scheduleCursorPreScroll`. The camera anchors at panel top via `preframeForAnnotation` and STAYS there for the duration of the narration. ([components/TourMode.js:402-410](components/TourMode.js:402))
+- `CursorGhost.scrollIntoView` switched from `block: "center"` to `block: "nearest"` ([components/CursorGhost.js:211](components/CursorGhost.js:211)). When the cursor target is already on screen (the common case after Bug 1 of Fix 2b shrunk the panels), no scroll fires. When the button is genuinely below the fold, "nearest" scrolls just enough to bring it to the bottom edge — never centers it.
+
+`scheduleCursorPreScroll` is preserved for `showNarrator` (corner narration on /rn) where the cursor target is the dashboard card and pre-scroll is still useful.
+
+### Bug 2: Approve & Send Packet button styled inconsistently
+
+**Cause:** ReferralPacketPanel had `disabled={!!tourMode}` on the button plus a tour-mode-specific `bg-amber/30 text-graphite/60 cursor-not-allowed` style — washed out compared to the bright amber Done/Reply/Approve buttons on every other card.
+
+**Fix:** Removed the tour-mode disabled state and the conditional class. Button now uses the same `bg-amber text-graphite hover:bg-amber/90` treatment as the other primary action buttons in every state. ([components/ReferralPacketPanel.js](components/ReferralPacketPanel.js)). Tour cursor click is purely visual; the actual termination still routes through the auto-action handler so the disabled state was never functionally needed.
+
+### Bug 3: Card 5 narration — wrong reasoning for phone vs MyChart
+
+**Cause:** Pre-arrival narrator said "Provider wants the patient called instead of messaged" — clinically wrong. The channel is determined by patient enrollment, not provider preference.
+
+**Fix:** Replaced with "Eleanor Greene, seventy-one. BP log review, at goal, no changes needed. She's not on MyChart, so this one needs a phone call." ([lib/tourScript.js](lib/tourScript.js) Card 5 preArrivalNarrator). MP3 regenerated (`mp2-greene-pre.mp3`).
+
+### Bug 4: Card 6 triage — narration played but UI didn't progress
+
+**Diagnosis:** Two compounding issues:
+1. Reed's fixture (`underwell-full-lifecycle`) declares `mychartStatus: "Active"`, so `TriageEncounter` defaults to MyChart mode. The phone-mode UI (assessment + Generate SBAR + RN Note panel) wasn't mounted. `triage.captureMockResponses` and `triage.generateSbar` had no UI to act on.
+2. The terminal Forward beat used `actionId: "panel:rnNote.forward"`. For triage cards, the standard panel-completion path doesn't fly the card off — the card-completion effect waits for all declared panels in `fixture.panels` (`[rnNote, orderPad, callScript]`), which never collapse because the triage UI doesn't render PanelGrid.
+
+**Fix:**
+- New `triage.setPhoneMode` auto-action in `TriageEncounter` that calls `setMode("phone")` ([components/TriageEncounter.js](components/TriageEncounter.js)). Card 6 now opens with a Beat 0 that fires this before any other beat.
+- New `triage.forwardSbar` auto-action in `TriageEncounter` that calls `fireTerminate("triage.forward", {recipient: "Sterne MD"})`. Routes through `onCardTerminate` which calls `handleAuthorize` in tour mode → flown-off → tour advances. Card 6 Beat 4 swapped from `panel:rnNote.forward` to `triage.forwardSbar`.
+
+### Bug 5: Spotlight callout covered Card 6 triage questions
+
+**Cause:** Card 6 spotlights used `position: "left"` for the assessment-questions panel. Reed's UI puts the source pane on the left; in narrow viewports the cinematic placement clamped the bubble onto the questions panel itself.
+
+**Fix:** Card 6 Beats 1+2 spotlights switched to `position: "bottom"`. Combined with the Fix 2a pane-fraction sort priority (overlap penalty wins over in-viewport), the callout reliably lands BELOW the questions panel rather than on top of them.
+
+### Verification
+
+`next build` clean. 1 MP3 regenerated ($0.001). Dev server restart + Chrome handoff issued. No git push.
+
+---
+
+## 2026-05-03 17:35 — Tour Fix Prompt 2d (final polish for Tuesday pitch)
+
+### Bug 1: Tour HUD covered panel content
+Repositioned `NarratorCorner` from `right-4 bottom-4` to `right-4 top-4`. Top-right of viewport sits above the patient header, in dead space — never competes with the action button row of any panel, never covers the bottom of long panels (Card 5 Call Script). Same 340px width retained. ([components/NarratorCorner.js:66](components/NarratorCorner.js:66))
+
+### Bug 2: MyChart camera scrolled to button before user finished reading
+
+**Cause:** Even with Fix 2c's `scheduleCursorPreScroll` disabled and `CursorGhost` using `block: "nearest"`, CursorGhost still moved the cursor at `startTime ~= 1000ms`. For a tall panel (MyChart message ~25 lines), the button at the bottom triggered a "nearest" scroll that pushed the panel header off-screen.
+
+**Fix:** Reordered `showSpotlight` so audio starts FIRST via `beginBubble`, then beat-start dispatches with cursor timings auto-shifted to the last few seconds. For any spotlight whose cursor target is `[data-tour-button=...]`, TourMode computes:
+- `startTime = audioMs - 3500`
+- `arriveTime = audioMs - 2000`
+- `clickTime = audioMs - 700`
+
+The cursor stays parked off-screen until ~3.5 seconds before audio ends, then sweeps in. The user reads the panel content for the bulk of narration, the camera holds at panel top, and only at the end does the cursor (and any "nearest" scroll it triggers) become a factor. ([components/TourMode.js:438-460](components/TourMode.js:438))
+
+### Bug 3: TTS pronounced past-tense "read" as "reed"
+Two narration lines updated:
+- Card 1 RN Note: `"KAIROS read the chart..."` → `"KAIROS reviewed the chart..."` Also collapsed `"the nurse reviews and approves"` → `"the nurse approves"` to avoid double "review" awkwardness with the swap. ([lib/tourScript.js:96](lib/tourScript.js:96))
+- Card 6 triage intro: `"KAIROS read her full chart..."` → `"KAIROS reviewed her full chart..."` ([lib/tourScript.js:625](lib/tourScript.js:625))
+
+Card 7 line `"KAIROS reads the thread..."` left as-is (present tense, TTS pronounces correctly). The noun phrase `"the read works today, the write needs approval"` also left — "reed" vs "red" both work in that API context.
+
+2 MP3s regenerated: `mp2-whitfield-rnnote.mp3`, `mp2-reed-intro.mp3`.
+
+### Bug 4: Card 4 callout floated near patient header instead of next to RN Note
+
+**Cause:** The cinematic placement scoring picked "top" for the spotlight bubble. With the camera anchored at panel top + 80px offset, the "top" candidate's un-clamped position sat ABOVE the viewport. Clamping pushed the bubble down to viewport y=16 — visually adjacent to the patient header, not the panel.
+
+The Fix 2a sort order put pane-fraction first; "top" had 0 pane-overlap so it won, even though the resulting clamp was nowhere near the panel.
+
+**Fix:** Treat large `clipArea` (>5000 px²) as effective pane-overlap by adding a +1.0 penalty to the candidate's `paneFraction`. A clipped candidate now competes with covered candidates instead of always winning, so the picker prefers an in-viewport position even when it has minor pane overlap. ([components/SpotlightOverlay.js:153-161](components/SpotlightOverlay.js:153))
+
+### Bug 5: Card 7 "the reply" stutter
+Regenerated `mp2-halbrook-rnnote.mp3`. Same source text — TTS-1 occasionally stutters on idiosyncratic phrasing; a clean regeneration usually resolves it. Cost: $0.003.
+
+### Verification
+
+`next build` clean. 3 MP3s regenerated total ($0.011). Dev server restart + Chrome handoff issued. No git push.
+
+---
+
+## 2026-05-03 17:55 — Tour bookends + final polish (Pre-pitch Pass)
+
+### A1: Card 5 HUD overlap
+
+Shrunk `NarratorCorner` HUD by ~30%: `w-[340px]` → `w-[260px]`, `p-4` → `p-3`, title 16px → 14px, body 13px → 12px, button min-heights 32 → 26, pill heights 22 → 20. Positioning unchanged (top-right) but the smaller footprint clears the long RN-Note + Call-Script stack on Card 5 (Greene). Set-and-forget across all cards. ([components/NarratorCorner.js:66](components/NarratorCorner.js:66))
+
+### A2: Card 7 RN Note clinical text
+
+Replaced the Card 7 (Halbrook DME) RN Note content. Removed the line `"Playbook captured in Workflow Playbook Library — auto-attaches to next dual-eligible DME PA card for any nurse."` — that's Kairos system reasoning that should never appear in a clinical note headed for Epic. New text reads as standard nursing documentation: ICD-10, AHI, NPI, MO HealthNet PA call, approval routed to Apria, patient notified via MyChart. No Kairos internals, no playbook references. ([data/fixtures/encounters/halbrook-dme-pa.js:61](data/fixtures/encounters/halbrook-dme-pa.js:61))
+
+### Part B: Opening bookend (~20s)
+
+New `lib/tourBookends.js` declares `TOUR_OPENER` with three frames:
+1. KAIROS wordmark, center, large Fraunces serif (5s)
+2. "Seven encounters. One morning. One nurse." (7s)
+3. Long-form context line + corner wordmark (8s)
+
+One narration track (`opener-v1.mp3`) plays across all three frames. Audio starts at frame 0, frames 1+2 advance on `holdMs` timers tuned to the narration cadence.
+
+### Part C: Closing bookend (~90s)
+
+`TOUR_CLOSER` declares four frames, each with its own MP3 so any one can be re-recorded without regenerating the rest:
+- Frame 1: "Seven encounters. Three to four minutes." (22s)
+- Frame 2: "Every output written from the full chart." (25s)
+- Frame 3: "More signal in. Better care out." (25s)
+- Frame 4: "What's missing is the institutional decision to start." + corner wordmark (18s)
+
+### TourBookend component
+
+New `components/TourBookend.js`. Full-screen black overlay (z-80) with cross-fade between frames. Headline uses Fraunces serif, scaled via `clamp()` for responsiveness. Optional subline below. Per-frame audio plays at frame-start; Skip ▸ button (opener) advances into Card 1, ✕ button (closer) calls `skipTour` to exit entirely.
+
+### TourMode integration
+
+- Imports `TOUR_OPENER`, `TOUR_CLOSER`, `TourBookend`. New `bookend` state (null | "opener" | "closer") and `bookendResolveRef` for promise-based sequencing.
+- New `runBookend(kind)` callback returns a promise that resolves on complete/skip.
+- Opener runs in `runTour()` between the audio preload and the card while-loop, gated on `startStep === 0` so card-pill jumps skip the opener.
+- Closer runs in the success path after the last card, before showing `TourEndModal`.
+- Persistent HUD render is now gated on `!bookend` so the chrome doesn't bleed into the cinematic.
+- `skipTour` and `freeExplore` clear bookend state and resolve any pending bookend promise so unmounts unwind cleanly.
+
+### Audio generation
+
+`scripts/generate-bookend-audio.js` parses `BOOKEND_VOICE_TEXT` from `lib/tourBookends.js` and calls OpenAI TTS (onyx voice, tts-1) for each track. Skips already-existing files. Generated all 5 MP3s in one run: 1,536 chars billed, $0.023 (well under the $0.30 budget).
+
+### Verification
+
+`next build` clean. Dev server restart on port 3009. No git push.
+
+
+---
+
+## 2026-05-03 18:10 — Card 5 HUD overlap follow-up (Approach #2: reserve right gutter)
+
+### Problem
+Even after shrinking the HUD to 260px wide, top-right placement still clipped the right edge of the RN Note panel on Card 5 (Wexbury phone). Note text "Normal RV size and function. Normal aortic insufficiency..." was being chopped because the panel's right edge slid under the fixed-position HUD.
+
+### Decision: option 2 — reserve a 280px right gutter when tour active
+Approach 1 (move HUD to top/bottom-center) puts it in the patient header / action button row. Approach 3 (auto-shift per card) feels jittery. Approach 2 is deterministic, consistent across every card, and only costs ~280px of horizontal real estate during tour playback.
+
+### Implementation
+- `components/EncounterDetail.js` — outer source-pane + panel-grid container at line 819 takes a conditional `lg:pr-[280px]` when `tourMode` is true. Both columns shrink proportionally; ratio between source pane and panel grid is preserved. Free-explore mode is unaffected. ([components/EncounterDetail.js:819](components/EncounterDetail.js:819))
+- `components/TriageEncounter.js` — added the same `triageTourMode` detection (URL `tour=1` OR sessionStorage `kairos-tour-active`) and applied `lg:pr-[280px]` to its `lg:grid-cols-2` container. Card 6 (Reed) renders through this component, so without the gutter the RN-Note column would still clip. ([components/TriageEncounter.js:300](components/TriageEncounter.js:300))
+
+### Sizing math
+HUD: `right-4` (16px from edge) + `w-[260px]` = 276px from viewport right edge. 280px gutter reserves a 4px buffer so panel content cannot extend under the HUD on any breakpoint where the `lg:` rule applies. Below `lg:`, the layout stacks single-column and the HUD overlay is acceptable (mobile / narrow-viewport behavior unchanged from prior).
+
+### Verification
+`next build` clean. Dev server restarted on port 3010. Awaiting Chrome handoff for Card 1-7 walkthrough. No git push.
+

@@ -33,6 +33,10 @@ import pelcVaRfs from "./pelc-va-rfs";
 // Pass E §2 / §3 — new tour Cards 9 + 10.
 import whitfieldInr from "./whitfield-inr";
 import beasleyEpReferral from "./beasley-ep-referral";
+// v3.0 Fix 1d — child card spawned when Reed replies to her MyChart
+// triage assessment. Standard card pattern (RN Note + MyChart) since
+// the AI has already synthesized the SBAR from her responses.
+import reedMyChartFollowup from "./reed-mychart-followup";
 
 const FIXTURES = [
   aldingtonTte,
@@ -65,6 +69,7 @@ const FIXTURES = [
   pelcVaRfs,
   whitfieldInr,
   beasleyEpReferral,
+  reedMyChartFollowup,
 ];
 
 const BY_ID = {};

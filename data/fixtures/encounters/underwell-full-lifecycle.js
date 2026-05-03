@@ -39,6 +39,9 @@ const fixture = {
     body:
       "Patient called clinic stating BP \"still high\" despite recent amlodipine dose reduction. Reports fuzzy thinking and feet swelling. Requests nurse callback. PMH: HTN, AFib, CAD, MR, CKD, peripheral edema. Last visit 3/2026 with amlodipine reduced from 10mg to 5mg due to peripheral edema.",
   },
+  // v3.0 — conditional panel declaration. Auto-inferred from
+  // actionScripts / finalSignedState; override here if needed.
+  panels: ["rnNote", "orderPad", "callScript"],
   initialPaneContent: {
     nurseNote: "",
     mychartMessage: "",

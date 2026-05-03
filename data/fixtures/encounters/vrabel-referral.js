@@ -35,6 +35,9 @@ const fixture = {
     body:
       "Patient: hadn't heard from Wash U about HCM scheduling with Dr. Williams.\nPendrelle reply: confirmed 4/18 telephone encounter, no appointment date, asked nurse to call Wash U.\nNurse called Wash U: \"Milly will call patient in ~2 weeks.\" Messaged patient back; patient replied \"Thanks Brandon!\"",
   },
+  // v3.0 — conditional panel declaration. Auto-inferred from
+  // actionScripts / finalSignedState; override here if needed.
+  panels: ["rnNote", "myChart"],
   initialPaneContent: {
     nurseNote: "",
     mychartMessage: "",
@@ -46,7 +49,7 @@ const fixture = {
     nurseNote:
       "Patient checking Wash U HCM scheduling status. Confirmed with Wash U scheduling — patient will be contacted in ~2 weeks. Patient updated. Thread closed by patient.",
     mychartMessage:
-      "Hi Ms Sullivan — I called Wash U scheduling. Their team (Milly) will reach out to you in about 2 weeks. Let us know if you have not heard from them by then.",
+      "Hi Ms. Sullivan,\n\nI heard you back about your Wash U HCM appointment — thanks for letting me know it hadn't been scheduled yet. I called their scheduling team this morning to track it down.\n\nWhat I learned: Their scheduler (Milly) confirmed they have your referral and your records. She told me she'll reach out to you directly to schedule, and to expect her call within about 2 weeks.\n\nWhat to do:\n- No action needed right now — just watch for a call from Wash U scheduling\n- Continue all your current medications as prescribed\n- Bring up any new symptoms with your primary care provider in the meantime if anything comes up\n\nWhat to watch for: New chest pain, fainting or near-fainting, severe shortness of breath, or palpitations that won't settle. If any of those happen, don't wait for the Wash U appointment — call our clinic the same day, or 911 for severe symptoms.\n\nIf you haven't heard from Wash U in 2 weeks, reply to this message and we'll follow up again.\n\nBrandon Sterne, RN BSN / Cardiology Associates",
     orders: [],
     dxAssociated: ["Hypertrophic cardiomyopathy"],
   },

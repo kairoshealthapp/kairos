@@ -47,6 +47,9 @@ const fixture = {
     timestamp: "2026-05-03 07:55",
     body: "HOLTER MONITOR — 48-hour ambulatory rhythm study\nKey finding: Multiple sustained VT episodes; longest run 12 seconds.\nEF 35% on most recent echo (2026-03-15).\n\nPendrelle NP review note:\nMultiple sustained VT runs, longest 12s. Given EF 35% and CAD history with prior stents, refer to electrophysiology at Riverside Medical Center for ICD candidacy evaluation. Communicate to patient.",
   },
+  // v3.0 — conditional panel declaration. Auto-inferred from
+  // actionScripts / finalSignedState; override here if needed.
+  panels: ["rnNote", "myChart", "orderPad"],
   initialPaneContent: {
     nurseNote: "",
     mychartMessage: "",
@@ -166,7 +169,7 @@ const fixture = {
         typingSpeedCps: 70,
         delayMsBefore: 400,
         content:
-          "Mr Beasley,\n\nYour recent Holter monitor showed some irregular heart rhythms that Pendrelle NP would like a specialist to evaluate further.\n\nWe're referring you to the electrophysiology team at Riverside Medical Center. Their office will contact you to schedule an appointment. This is a consultation to determine if a heart device would be beneficial for you.\n\nWe've sent your records to their office so they'll have everything they need. If you don't hear from them within 2 weeks, please let us know.\n\nIf you experience dizziness, fainting, or prolonged palpitations before your appointment, go to your nearest emergency room.\n\nBrandon Sterne, RN BSN / Lakeside Cardiology Associates",
+          "Mr. Beasley,\n\nYour 48-hour Holter monitor results are in. The recording showed several short runs of an irregular fast rhythm coming from the lower chambers of your heart. The longest run lasted about 12 seconds. Combined with your weakened heart muscle (your most recent echo showed an ejection fraction of 35%) and your history of coronary artery disease with stents, your provider wants a heart-rhythm specialist (electrophysiologist, or \"EP\") to evaluate you.\n\nWhat's happening: We've referred you to the EP team at Riverside Medical Center. They'll review your records and discuss whether a small implantable device — like an ICD (implantable cardioverter-defibrillator) — would lower your risk and add an extra layer of safety. This is a conversation, not a commitment to anything.\n\nWhat to do:\n- Continue all your current medications as prescribed\n- Watch for the EP office to call you to schedule — usually within 1-2 weeks\n- We've already sent your full chart, your Holter results, and your most recent echo to their office, so you don't need to bring records\n\nWhat to watch for between now and the appointment: Fainting or near-fainting, sudden severe dizziness, prolonged palpitations (heart racing for more than a few minutes), chest pain, or shortness of breath that's worse than usual. If any of those happen, call 911 or go to the nearest ER — don't wait for the EP appointment.\n\nIf you don't hear from the EP office within 2 weeks, reply to this message and we'll follow up.\n\nBrandon Sterne, RN BSN / Lakeside Cardiology Associates",
       },
       {
         type: "pane-update",
