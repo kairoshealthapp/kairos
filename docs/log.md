@@ -6435,3 +6435,519 @@ Static content change to long-scroll editorial page; no interactive UI to exerci
 
 ### No git push
 Local commit/push deferred per spec.
+
+## 2026-05-03 — Epic FHIR sandbox: scope-grant re-run after portal update
+
+Epic portal scopes lifted from 27 → 38. Waited 5 min for cache propagation, then re-ran `node sandbox/fhir-capability-test.js`. Sandbox base URL, JWKS, harness, and private key all unchanged from the previous run — this isolates the diff to scope grants alone.
+
+### New token scope (14 active read/write scopes vs. 9 previously)
+
+```
+system/AllergyIntolerance.read
+system/CarePlan.read                  ← NEW
+system/Condition.read
+system/Coverage.read                  ← NEW
+system/DiagnosticReport.read
+system/DocumentReference.read
+system/DocumentReference.write        ← NEW (first WRITE scope)
+system/Encounter.read
+system/Immunization.read              ← NEW
+system/MedicationRequest.read
+system/Observation.read
+system/Patient.read
+system/Procedure.read                 ← NEW
+system/ServiceRequest.read
+```
+
+If the portal shows 38, the missing 24 are likely Patient-context / OpenID / SMART-launch scopes that don't apply to this backend-services client-credentials flow. Worth a sanity check — but everything we asked for in the writable workflows category (Communication.write, ServiceRequest.write) is still NOT in the granted set.
+
+### Per-resource flips (vs. previous run)
+
+| Resource / Op | Previous | Now | Verdict |
+|---|---|---|---|
+| Procedure search | 403 | **200** (5 entries) | ✅ scope flip — clean pass |
+| Coverage search | 403 | **200** (0 entries — Camila has no coverage) | ✅ scope flip — endpoint reachable |
+| CarePlan search | 403 | 400 | ⚠️ scope flip; needs `category` param (`38717003` longitudinal, `734163000` encounter, `736271009` other per Epic's error message) |
+| **DocumentReference WRITE** (POST clinical note) | 403 | **400 "Valid encounter required"** | ✅ **WRITE scope authorized** — request was rejected on payload validation, not auth. Add `context.encounter` reference and this should be 201. |
+| Immunization | not probed | scope granted | will exercise after harness update |
+| Communication search | 403 | 403 | unchanged — still no scope |
+| CareTeam search | 403 | 403 | unchanged |
+| Practitioner / PractitionerRole / Organization / Location / Binary | 403 | 403 | unchanged |
+| Communication WRITE | 403 | 403 | unchanged — no `Communication.write` granted |
+| ServiceRequest WRITE | 403 | 403 | unchanged — no `ServiceRequest.write` granted |
+| MedicationRequest WRITE | 405 | 405 | unchanged — FHIR refuses POST regardless of scope |
+| Encounter WRITE | 405 | 405 | unchanged — FHIR refuses POST regardless of scope |
+
+### Headline: first authorized FHIR write
+
+`POST DocumentReference` is now scope-authorized. The only thing standing between us and a successfully-attached clinical note is a payload tweak — Epic requires `context.encounter` to point at a valid encounter for the patient. The harness payload omitted it. Next iteration: pick one of Camila's existing encounters (the `Encounter?patient=…` search returned 5 of them), reference it, retry.
+
+### What's still gated (and how to unblock)
+
+| Still blocked | Why | Unblock path |
+|---|---|---|
+| Communication search/write (MyChart messages) | scope | request `system/Communication.read` + `.write` from Epic portal |
+| ServiceRequest write (referrals) | scope | request `system/ServiceRequest.write` |
+| CareTeam, Practitioner, PractitionerRole, Organization, Location | scope | request the corresponding `.read` scopes |
+| Binary (raw doc bytes) | scope | request `system/Binary.read` |
+| MedicationRequest create (Coumadin orders) | structural — Epic's FHIR endpoint declares only `read, search-type` | not solvable via FHIR; needs Epic order-entry web service |
+| Encounter create (Anticoag-Warfarin Visit 1001) | structural — same | not solvable via FHIR; needs Epic Patient Update Web Service or proprietary scheduling API |
+
+### Non-changes worth recording (so we don't re-test next run)
+
+- CapabilityStatement is identical (Epic Feb 2026 / FHIR 4.0.1 / 59 resources).
+- Test patient set unchanged (Camila Lopez, Derrick Lin, Desiree Lambridge still 200; the `Tbt3KuCY...` ID still 404).
+- Patient search by `family=Lopez` still returns 0 entries — this isn't a permissions thing, it's that Epic's Patient search needs different params (probably `identifier` or `birthdate`+`family`). Per-id read works fine.
+- Observation search still returns 400 — needs `code` or `category`.
+
+### Artifacts
+
+- [sandbox/capability-report.md](../sandbox/capability-report.md) — overwritten with this run's results.
+- [sandbox/fhir-capability-test.js](../sandbox/fhir-capability-test.js) — unchanged this iteration.
+
+### Suggested next harness pass (not done this turn — waiting for direction)
+
+1. Add `context.encounter` to the DocumentReference write payload (pull a real encounter id from Camila's Encounter bundle) → expect 201, confirms full end-to-end write capability.
+2. Add `Immunization?patient=…` probe so the new `Immunization.read` scope shows up as a confirmed capability.
+3. Add `&category=laboratory` to the Observation probe and `&category=38717003` to CarePlan — these are search-param fixes, not capability changes, but they'd clean the report's NOT AVAILABLE bucket.
+
+### No git push
+
+Local files only.
+
+## 2026-05-03 — KAIROS v3.0 Master Prompt 1: Card UI + Conditional Panels
+
+### Goal
+
+Rebuild the EncounterDetail view into a four-panel card layout with conditional panel rendering per fixture. The nurse sees only the panels relevant to the encounter at hand. Panels are self-contained (each carries its own terminal action buttons) so the workflow no longer depends on a single global Authorize button at the bottom.
+
+### Architecture landed
+
+**New components (`components/panels/`)**
+
+- `ChatBar.js` — non-functional input shell at the top of the detail view ("Ask Kairos about this patient...").
+- `RNNotePanel.js` — AI-drafted nurse note. Buttons: **Done**, **Forward** (recipient picker), **Edit** (toggle textarea).
+- `MyChartMessagePanel.js` — AI-drafted patient message. Buttons: **Reply**, **Reply + CC** (multi-select picker), **Forward** (clinician-only picker), **Edit**.
+- `OrderPadPanel.js` — AI-pre-staged orders, 13-field card layout (preserved from legacy `OrderPadPane`). Buttons: **Approve**, **Edit**.
+- `CallScriptPanel.js` — read-only phone script with "Reference — not charted" sub-label and muted background tint.
+- `RecipientPicker.js` — shared dropdown stub for Forward / Reply+CC. Six placeholder names.
+- `PanelGrid.js` — renders the conditional grid based on the fixture's `panels` array. 1 panel → single-col, 2 → stacked, 3-4 → 2-col on xl breakpoint.
+
+**Helper (`lib/derivePanelContent.js`)**
+
+`derivePanelContent(fixture)` walks the fixture's existing `actionScripts` for the final `pane-update` content per target, then falls back to `finalSignedState` fields for skeleton fixtures with empty actionScripts. `inferPanels(fixture)` returns the panel ID list from the derived content. `deriveSourceContent(fixture)` returns the verbatim Epic inbox body.
+
+This avoids duplicating clinical content into a new `panelContent` field on each fixture. The 16 skeleton fixtures (besemer-bnp, crider-inr, czeschin-bp, wendelfaer-pcp, esselbach-urgent, frazier-handoff, halbrook-lab-review, lockner-medcheckin, kvalheim-coordination, pelc-va-rfs, strathorne-doe, reiner-multilab, sellman-cpap-referral, quelthorne-async, heldenmark-securechat, vrabel-referral) which previously animated nothing now surface their `finalSignedState` content statically through the new panels.
+
+**EncounterDetail.js**
+
+The standard non-triage / non-pelc render path now lays out as:
+
+```
+Patient header
+ChatBar
+Source pane (left ~38%)  |  Panel grid (right ~62%)
+Referral packet (if any)
+Add-context row
+Routing panel (if any)
+ActionBar (preserved for tour compat)
+```
+
+Triage fixtures (Strathorne, Underwell), the Pelc already-resolved layout, and the contradiction-hold inline alert are unchanged. The ContradictionAlert now sits above the panel grid in the right column.
+
+**Terminal action handler (`handlePanelTerminate`)**
+
+Branches on tour state:
+- **Tour live** — defers to existing `handleAuthorize` (fly-off + sessionStorage persist + back to dashboard). Tour cursor + auto-authorize event paths untouched.
+- **Demo (non-tour)** — surfaces a transient toast at bottom-center ("Note signed.", "Reply sent to patient.", "Forwarded to Dr. Skarsdale.", "Orders placed.") and leaves the card in place for further exploration.
+
+### Fixture changes
+
+All 30 encounter fixtures updated with an explicit `panels: [...]` array, inserted just before `initialPaneContent`. Panel sets were inferred programmatically from each fixture's existing pane-update targets and finalSignedState fields:
+
+- 6 fixtures: `[rnNote, myChart, orderPad]` (full SYNTHESIS-with-orders)
+- 1 fixture: `[rnNote, orderPad, callScript]` (Underwell full lifecycle)
+- 17 fixtures: `[rnNote, myChart]` (synthesis or notification)
+- 4 fixtures: `[rnNote, callScript]` (phone-channel)
+- 2 fixtures: `[rnNote]` (single-panel — Crider, Lockner, Sellman, Pelc skeletons)
+
+No clinical content was modified — only the panel declaration was added.
+
+### Tour compatibility
+
+- `data-tour-anchor` attributes preserved (`source-pane`, `nurse-note`, `output-pane`, `phone-script`, `order-pad`, `patient-header`, `action-bar`, `referral-packet`).
+- `ActionBar` remains rendered with all original action buttons + Authorize/Edit/Defer/Reject + auto-authorize event listener + button-pulse choreography.
+- Existing typing-stream pipeline (dataSource.runAction → pane-update events → paneState) untouched. Panels read from `paneState` first (live streaming during tour) and fall back to derived static content when paneState is empty (non-tour viewing).
+- Cursor positions are stale in the new layout — Brandon's Master Prompt 2 will re-anchor them.
+
+### Verification
+
+- `npx next build` clean. All 30 `/encounter/[slug]` routes generated successfully (52/52 static pages).
+- Dev server up at http://localhost:3000 (Next 15, ready in 3.3s, no errors).
+- Manual interactive verification deferred to Brandon per Localhost Handoff Protocol — see test prompt below.
+
+### Files added (8)
+
+- `lib/derivePanelContent.js`
+- `components/panels/ChatBar.js`
+- `components/panels/RNNotePanel.js`
+- `components/panels/MyChartMessagePanel.js`
+- `components/panels/OrderPadPanel.js`
+- `components/panels/CallScriptPanel.js`
+- `components/panels/RecipientPicker.js`
+- `components/panels/PanelGrid.js`
+
+### Files modified (31)
+
+- `components/EncounterDetail.js` (imports, terminal handler, layout swap, panel toast)
+- 30 fixtures in `data/fixtures/encounters/` — `panels: [...]` declaration only.
+
+### Off-limits constraints honored
+
+- CursorGhost.js, TourMode.js, tourCamera.js, SpotlightOverlay.js — untouched.
+- Tour scripts, narration, audio, MP3s — untouched.
+- ActionBar.js tour behavior — preserved verbatim.
+- Dashboard, nav, routing, MP3 generation — untouched.
+- ChatBar wired to no AI API.
+- All existing fixture clinical content preserved exactly.
+
+### Helper scripts
+
+`scripts/_infer-panels.mjs` and `scripts/_inject-panels.mjs` — one-shot Node ESM scripts used to compute and inject the `panels` declarations across all 30 fixtures. Kept in-repo for reproducibility / re-runs.
+
+### No git push.
+
+## 2026-05-03 — KAIROS v3.0 Fix Prompt 1a: Smoke Test Fixes
+
+Five fixes applied to the v3.0 panel UI based on Brandon's localhost smoke test:
+
+### 1. In-place edit (no textarea reshape)
+
+`RNNotePanel`, `MyChartMessagePanel`, and `OrderPadPanel` now use `contentEditable` on the existing display surface. The panel keeps its full size and layout in edit mode; only a subtle amber dashed outline + caret indicates editability. New `kairos-editable` CSS class (`app/globals.css`) provides the visual treatment. "Done editing" captures the live `innerText` and locks the panel back to read-only display.
+
+### 2. Epic-style recipient search (no real Phelps names)
+
+`RecipientPicker` rewritten. The static dropdown is replaced with:
+- Search input ("Search by name...") with autocomplete from a fictional 9-entry roster.
+- Multi-select (Reply + CC) shows selected names as removable chips above the input.
+- Single-select (Forward) fills the input and confirms one name.
+- ESC + click-outside dismiss; auto-focus on open.
+
+Fictional roster: Dr. Sarah Chen MD (Cardiology), Dr. Michael Torres MD (Internal Medicine), Dr. Priya Patel MD (Cardiology), James Holvenmark NP (Cardiology), Rachel Kim RN (Support Staff Pool), Lisa Park RN (Cardiology), Front Desk Pool, Cardiology Support Staff Pool, Device Nurse Pool. No Phelps Health identifiers anywhere.
+
+### 3. Terminal actions remove the card
+
+`handlePanelTerminate` in EncounterDetail now: shows the toast, then `router.push('/rn')` after 1.5s. Tour-mode branch unchanged (defers to existing `handleAuthorize` fly-off). The card feels processed and gone from the inbox.
+
+### 4. ActionBar removed
+
+`ActionBar`, `AddContextRow`, and the legacy pane imports (`NurseNotePane`, `OutputPane`, `OrderPadPane`) all removed from `EncounterDetail.js`. The dead `editable` / `setEditable` state and `handleEdit` callback are also gone. `runAction` is preserved (the tour still dispatches `kairos-encounter:auto-action` events that drive the typing pipeline into `paneState`, which the new panels read live).
+
+Tour mode is now broken — expected and accepted per Master Prompt 1a. Master Prompt 2 will re-wire the tour to drive panel buttons.
+
+### 5. ChatBar polish
+
+ChatBar now has a leading `✦` glyph in muted bone, italic placeholder text in slightly elevated `bone-muted/80`, and a de-emphasized Send button (small, low-contrast text-only, disabled when input is empty). Reads as a passive prompt surface, not a primary action.
+
+### Build + dev server
+
+- `npx next build` clean (52/52 static pages, no errors/warnings).
+- Dev server restarted, ready in 2.1s on http://localhost:3000.
+- `/encounter/[id]` bundle dropped from 19.2 kB → 18.5 kB after ActionBar removal.
+
+### Files modified (6)
+
+- `components/EncounterDetail.js` — terminal nav timing, ActionBar removal, dead state cleanup
+- `components/panels/RNNotePanel.js` — contentEditable inline edit
+- `components/panels/MyChartMessagePanel.js` — contentEditable inline edit
+- `components/panels/OrderPadPanel.js` — contentEditable inline edit
+- `components/panels/RecipientPicker.js` — full rewrite (search + autocomplete + chips)
+- `components/panels/ChatBar.js` — placeholder + de-emphasized Send
+- `app/globals.css` — `.kairos-editable` focus indicator
+
+### Off-limits
+
+- CursorGhost.js, tour scripts/narration/audio, MP3s, dashboard, nav, routing, fixture clinical content — untouched.
+
+### No git push.
+
+## 2026-05-03 — KAIROS v3.0 Fix Prompt 1a (11 items) + Fix 1b (per-panel completion)
+
+Eleven smoke-test fixes applied to the v3.0 panel UI, plus Fix 1b (per-panel completion model) dropped mid-pass.
+
+### Fix 1 — Inline contentEditable (already shipped prior pass)
+
+RNNotePanel + MyChartMessagePanel + OrderPadPanel use contentEditable on the existing display surface — panels keep full size in edit mode. Subtle amber dashed outline + caret via .kairos-editable in app/globals.css.
+
+### Fix 2 — Epic-style search, no real names
+
+RecipientPicker roster expanded from 9 to 12 fictional clinicians/pools per spec. Zero Phelps Health identifiers anywhere.
+
+### Fix 3 — Persist completion + redirect on direct URL + remove auto-clear
+
+handlePanelTerminate and onCardTerminate now write fixture.id into kairos.authorizedCards.v1 sessionStorage on every completion (no longer tour-only). EncounterDetail mounts a direct-URL guard that router.replace to /rn for completed fixtures outside the tour. app/rn/page.js no longer auto-clears on mount; completed cards persist for the session until manual Reset.
+
+### Fix 4 — ActionBar removed entirely (already shipped prior pass)
+
+ActionBar / AddContextRow / NurseNotePane / OutputPane / OrderPadPane imports + render references all removed from EncounterDetail.js. Dead editable / setEditable state and handleEdit callback removed.
+
+### Fix 5 — Chat bar polish (already shipped prior pass)
+
+Leading sparkle glyph, italic placeholder, low-contrast Send button disabled until input is non-empty.
+
+### Fix 6 — Foster contradiction
+
+maundrell-contradiction.js: RN Note rewritten to quote the actual provider note ("Continue warfarin 6mg daily, therapeutic on current dose.") instead of just noting an absence. MyChart message updated to held-pending-provider-confirmation copy. Both actionScripts content and finalSignedState updated.
+
+### Fix 7 — Order Pad coverage audit
+
+Five fixtures gained an orderPad panel + structured panelContent.orderPad orders: halbrook-lab-review (Toprol-XL bump + BP log), reiner-multilab (Hematology referral + Mg supplement + repeat labs), sellman-cpap-referral (CPAP DME + Sleep Med referral), frazier-handoff (BNP draw + Heart Logic device-nurse follow-up), kvalheim-coordination (Albuterol HFA refill).
+
+Confirmed no orders needed for: czeschin-bp, esselbach-urgent, halbrook-dme-pa, vrabel-referral, wendelfaer-pcp, quelthorne-async, heldenmark-securechat, lockner-medcheckin.
+
+### Fix 8 — Patient-education MyChart messages (16 rewrites)
+
+Every MyChart panel now follows the 5-part template: what changed/why, what to do, what to watch for, what's next, how to reach the clinic. Tone is direct, plain language, not chart documentation.
+
+Rewritten across animated fixtures (actionScripts pane-update content) and skeleton fixtures (finalSignedState.mychartMessage):
+
+whitfield-inr, aldington-tte, beasley-ep-referral, brexley-statin, hesperdale-crestor, norreys-transactional, quennell-scope, ravensdale-cpap, halbrook-dme-pa, besemer-bnp, czeschin-bp, wendelfaer-pcp, frazier-handoff, quelthorne-async, vrabel-referral, heldenmark-securechat.
+
+Already met the bar (no change): wood-lipid, larvendel-denial-cascade. Updated as part of Fix 6/7/10: maundrell-contradiction, halbrook-lab-review, reiner-multilab, sellman-cpap-referral.
+
+### Fix 9 — Triage rework
+
+TriageEncounter rewritten:
+
+- Questions pre-populated on card open (no Generate gate). Initial stage defaults to 2.
+- New ChannelToggle at top: Phone call vs MyChart message. MyChart auto-disables when fixture.mychartStatus is not active.
+- Phone mode: dual input (free-text notes + per-question structured controls), all skippable. SBAR pane renders alongside via new buildLiveSbar helper that appends free-text + captured responses to the baseline fixture.sbar in real time. Terminal: "Forward SBAR to provider".
+- MyChart mode: pre-drafted patient prompt built by buildMyChartDraft (greeting + explainer + numbered questions + safety closer with 911 disclaimer + nurse signature). Same Reply / Reply+CC / Forward buttons as the standard MyChart panel.
+- New onCardTerminate prop wired from EncounterDetail. Tour mode defers to handleAuthorize; outside tour shows toast, persists fixture ID, navigates to /rn after 1.5s.
+- Tour cinematic auto-action listener preserved verbatim.
+
+### Fix 10 — Morris content + add myChart panel
+
+sellman-cpap-referral.js: panels expanded to ["rnNote", "myChart", "orderPad"]. finalSignedState.nurseNote and .mychartMessage populated with the spec content. panelContent.orderPad added with structured CPAP DME + Sleep Medicine referral orders.
+
+### Fix 11 — Referral packet Approve & Send
+
+ReferralPacketPanel accepts completed, completedSummary, tourMode, onTerminate props. New "Approve and Send Packet" button at the bottom calls onTerminate with kind=referralPacket.approve. When completed, the panel collapses to the same one-line strip as the action panels. Wired through EncounterDetail so referral-packet completion counts toward card-level auto-clear.
+
+### Fix 1b — Per-panel completion
+
+Replaced the "any terminal action collapses the whole card" model:
+
+- New components/panels/CompletedPanel.js — single-line collapsed strip with sage check, panel label, summary text. Muted background, no buttons.
+- EncounterDetail.completedPanels state map tracks which action panels have terminated. PanelGrid renders CompletedPanel in place of any panel whose ID is in the map.
+- ReferralPacketPanel participates via its own collapsed strip.
+- Card-level auto-clear effect: when every action panel (excluding read-only callScript) plus referralPacket-if-present is completed, 1s "read the last collapse" beat fires "Encounter complete." toast, persists to sessionStorage, then 1.5s navigation to /rn.
+- Tour mode bypasses entire flow and falls back to handleAuthorize.
+
+### Helper extension
+
+lib/derivePanelContent.js extended: reads explicit panelContent override (rnNote / myChart / callScript / orderPad) from fixture, after walking actionScripts and falling back to finalSignedState. Skeleton fixtures use this to publish structured order content into the panel.
+
+### Build + dev server
+
+npx next build clean (52/52 static pages). Dev server restarted on http://localhost:3000 (Next 15, Ready in 1.9s). Manual interactive verification deferred per Localhost Handoff Protocol.
+
+### Files added
+
+components/panels/CompletedPanel.js
+
+### Files modified (components)
+
+components/EncounterDetail.js, components/TriageEncounter.js, components/ReferralPacketPanel.js, components/panels/RecipientPicker.js, components/panels/PanelGrid.js, app/rn/page.js, lib/derivePanelContent.js
+
+### Files modified (fixtures, 16)
+
+maundrell-contradiction, sellman-cpap-referral, halbrook-lab-review, reiner-multilab, frazier-handoff, kvalheim-coordination, whitfield-inr, aldington-tte, beasley-ep-referral, brexley-statin, hesperdale-crestor, norreys-transactional, quennell-scope, ravensdale-cpap, halbrook-dme-pa, besemer-bnp, czeschin-bp, wendelfaer-pcp, quelthorne-async, vrabel-referral, heldenmark-securechat.
+
+### Off-limits
+
+CursorGhost.js, tour scripts, narration, audio, MP3s, dashboard structure, nav, routing, fixture clinical content beyond the explicit Fix 6/7/8/10 rewrites — untouched.
+
+### No git push.
+
+## 2026-05-03 — KAIROS v3.0 Fix Prompt 1c: Final Smoke Test Fixes
+
+Four issues remaining from the v3.0 smoke test, all addressed.
+
+### Fix 1 — Routing collapses with referral packet
+
+The ROUTING section (Recipient · Pool · Comment · Priority) was rendering below the referral packet even after the packet was approved. EncounterDetail now hides the routing block when the fixture has both a referralPacket and that packet is in completedPanels — they are one conceptual unit (the packet + where it goes are both "sent" when approved).
+
+For non-referral fixtures (Lockner, Kvalheim, Strathorne, etc.), the routing section continues to render normally — those routings are independent surfaces, not tied to a referral approval.
+
+### Fix 2 — Foster contradiction MyChart now shows draft + warning banner
+
+maundrell-contradiction fixture: finalSignedState.mychartMessage replaced from the held placeholder to a real, ready-to-send patient message that quotes the chart ("your current medication list shows warfarin 6mg daily as an active prescription. Your most recent provider visit on 4/21/2026 confirmed you should continue taking warfarin as prescribed."). RN Note text loosened to acknowledge the AI flags and the nurse decides.
+
+MyChartMessagePanel updated: when fixture.contradictionHold is true, renders an amber warning banner above the drafted message — "Contradiction detected — patient statement conflicts with chart. Verify before sending." — but keeps Reply / Reply+CC / Forward / Edit buttons fully active. The AI flags; the nurse chooses to send to the patient directly, forward to the provider for verification, or edit.
+
+The redundant outer ContradictionAlert wrapper was removed from EncounterDetail since the warning now lives inside the panel that needs it.
+
+### Fix 3 — Triage: removed Chart Context pane + Routing section
+
+TriageEncounter.js: removed ChartContextPanel (raw problem list + meds + allergies clutter — the AI already used this to generate the questions) and RoutingPanel (forwarding now happens via the SBAR Forward button with the Epic-style search picker). The only panes in the triage view now are SourcePane (verbatim Epic message), the patient assessment block, and the live SBAR.
+
+### Fix 4 — Triage phone-call view: prominent free-text + Skip affordance + SBAR fallback
+
+PatientAssessmentPanel phone-mode rewrite:
+
+- **4a Free-text area at the top**: Large 5-row textarea with placeholder "Type what the patient said..." appears immediately after the channel toggle. Labeled "Type what the patient said — primary input · everything below is optional". This is the first thing the nurse sees and the primary input mode for one-handed phone-call typing.
+- **4b Structured questions are visually optional**: Below the free-text area, a thin separator + label "Or use guided questions (all optional — skip any)". Each question that has a captured response shows a small "Skip" link on the right; clicking Skip clears the response (TriageEncounter.handleResponseChange now deletes the key entirely on undefined/null). No required indicators, no completion percentage, no red borders.
+- **4c SBAR fallback**: SBARNotePanel placeholder changed from "— not provided —" to "Pending provider review" so empty A/R sections read as a living document instead of a half-filled form.
+
+### Build + dev server
+
+npx next build clean. Dev server restarted on http://localhost:3000 (Ready in 1.6s).
+
+### Files modified
+
+- components/EncounterDetail.js — referralPacket-completed gate on routing render, ContradictionAlert wrapper removal
+- components/panels/MyChartMessagePanel.js — contradictionHold warning banner; removed legacy noOutbound branch
+- components/TriageEncounter.js — removed ChartContextPanel + RoutingPanel imports/renders; handleResponseChange clears keys on Skip
+- components/PatientAssessmentPanel.js — phone-mode rewrite: prominent free-text textarea at top, "Or use guided questions" label, per-question Skip control
+- components/SBARNotePanel.js — empty-section placeholder changed to "Pending provider review"
+- data/fixtures/encounters/maundrell-contradiction.js — drafted MyChart message replaces held placeholder; RN Note language updated
+
+### Off-limits
+
+CursorGhost.js, tour scripts, narration, audio, MP3s — untouched.
+
+### No git push.
+
+## 2026-05-03 — KAIROS v3.0 Fix 1d: Triage SBAR Generation Logic (split by channel)
+
+Replaced the always-on real-time SBAR pane with two distinct triage paths.
+
+### Phone path — Generate SBAR button
+
+TriageEncounter no longer derives the SBAR live during the call. The right column now renders the standard `RNNotePanel` with empty content; below the assessment workspace there is a "Generate SBAR" button. After the call ends, the nurse clicks Generate SBAR and the AI synthesizes the four sections into the RN Note panel for review.
+
+- New `composeSbarText(fixture, responses, notes)` returns a single multi-paragraph SBAR (S/B/A/R sections) suitable for the RN Note panel content. Baseline S/B come from `fixture.sbar`; A/R blend baseline with whatever the nurse captured. Empty sections render as "Pending provider review".
+- New `sbarText` state populates the `RNNotePanel` after Generate SBAR.
+- Forward (and Done) on the populated RN Note collapse the panel to a `CompletedPanel` strip ("SBAR forwarded to [name]"), pause briefly, then call `fireTerminate("triage.forward")` → `onCardTerminate` → toast → `/rn`.
+- The legacy bottom "Forward SBAR to provider" bar is gone — the terminal action is now where the drafted SBAR lives.
+
+### MyChart path — child card with auto-generated SBAR
+
+When the nurse sends the assessment via MyChart on the parent card (Reed / underwell-full-lifecycle), the parent card auto-clears as before. A new fixture represents what lands in the inbox when the patient replies:
+
+`reed-mychart-followup` — same patient, same `tab: "patientcall"` basket as the parent. Standard 2-panel layout (RN Note + MyChart, no triage chrome):
+
+- **Source pane**: "MyChart Reply" with the patient's six numbered responses to the assessment questions, plus a parent-card breadcrumb at the top ("Follow-up from triage assessment sent 5/3 at 09:14").
+- **RN Note panel**: pre-populated with a fully synthesized SBAR built from the patient's replies + chart context (BP 158/92, persistent edema, two missed carvedilol doses, afternoon fuzzy thinking, near-fall Wednesday). Forward terminates the card.
+- **MyChart panel**: pre-drafted follow-up message that summarizes what stood out, what to do, and what's next — same 5-part patient-education template as the rest of v3.0.
+
+The parent-child relationship is captured in the new `parentCardRef` field on the child fixture (fixtureId + sentAt + summary). Narration linking the two cards lands in Master Prompt 2.
+
+### Files changed
+
+- `components/TriageEncounter.js` — `composeSbarText` replaces `buildLiveSbar`; phone-mode renders RNNotePanel + Generate SBAR button + bottom bar removed; new `sbarText` and `rnNoteCompleted` state.
+- `components/SBARNotePanel.js` — no longer used by triage; placeholder still reads "Pending provider review" if reused elsewhere later.
+- `data/fixtures/encounters/reed-mychart-followup.js` — new fixture (child card).
+- `data/fixtures/encounters/index.js` — registry import + array entry for the child fixture.
+
+### Build + dev server
+
+`npx next build` clean. Dev server restarted on http://localhost:3000 (Ready in 1.6s). 31 encounter routes generated (was 30).
+
+### Off-limits
+
+CursorGhost.js, tour scripts, narration, audio, MP3s — untouched.
+
+### No git push.
+
+---
+
+## 2026-05-03 16:10 — KAIROS v3.0 Master Prompt 2: Tour rebuild + UI polish
+
+### Part A — UI polish
+
+**A1: Yes/No buttons — visible selected state.**
+`PatientAssessmentPanel.YesNo` now renders selected state with a filled amber background, dark graphite text, and a thicker (`border-2`) bright border. `aria-pressed` set for screen readers. The `ChannelToggle` in `TriageEncounter` got the same treatment so Phone vs MyChart selection is unmissable when a nurse has the phone on her shoulder and one thumb to tap.
+
+**A2: Routing section removed from referral cards.**
+`EncounterDetail.js` — the Routing condition flipped from "show until packet completes" to "never show when fixture has a referralPacket". Packets carry their destination + fax method baked into the packet header, and the Approve & Send Packet button is the only control needed.
+
+**A3: Left-border accent stripes replaced with bg tint + header treatment.**
+Removed the unused `kairos-panel kairos-panel--{type}` CSS hooks from RNNotePanel, MyChartMessagePanel, OrderPadPanel, CallScriptPanel, and the inline TriageEncounter MyChart panel.
+- Read-only panels (CallScriptPanel, SourcePane) — darker `rgba(20,24,36,0.55)` background; header label gets a `· read-only` suffix in muted lowercase; body text muted.
+- Actionable panels (RN Note, MyChart, Order Pad) — standard `kairos-card` background; header is just the panel name. Right-side "Clinical register" / "Written register" labels removed when not editing.
+- Completed panels (CompletedPanel, ReferralPacketPanel.completed branch) — faint sage-tinted background `rgba(110,153,124,0.10)` with sage-tinted border. Checkmark is bolder; summary text is full-bone weight rather than italicized.
+
+### Part B — Tour rebuild for the four-panel UI
+
+The legacy tour walked the old ActionBar (Generate → typing animations → Authorize). The new tour walks a card with all panels pre-filled, narrates what AI did + why it helps + what Epic integration approval is needed, and clicks each panel's terminal button in sequence.
+
+**Wiring changes:**
+
+- **EncounterDetail.js** — Tour-mode short-circuit in `handlePanelTerminate` removed. Panels now collapse individually in tour mode the same way they do in free play; when all action panels are completed, the card-completion effect calls `handleAuthorizeRef.current()` which dispatches `kairos-encounter:flown-off` so the tour engine advances. New `panel:<kind>` actionId handler routes `kairos-encounter:auto-action` directly into `handlePanelTerminate({kind, recipient})` and dispatches `action-complete` immediately. Routed BEFORE the triage short-circuit so Reed (triage) can also forward via `panel:rnNote.forward`. Triage `triage.*` kinds fall through to `handleAuthorize()` since they have no per-panel collapse.
+
+- **TriageEncounter.js** — Two new auto-action handlers: `triage.captureMockResponses` pre-fills the demo answers (mirrors the legacy `process-reply` action), `triage.generateSbar` clicks Generate SBAR using fresh refs over `responses`/`notes` so a prior captureMockResponses lands in the SBAR. `data-tour-button="triage.generateSbar"` on the button.
+
+- **TourMode.js** — `runAction` extended with a `spotlight` field that fires audio + cursor BEFORE the auto-action dispatch (the new tour explains each panel before clicking its button). New `fx.skipAutoAuthorize` flag bypasses the legacy `kairos-encounter:auto-authorize` dispatch — the card already self-finishes via panel termination, so the engine just awaits `flown-off`. `recipient` field on action piped into the auto-action detail so forward toasts carry it.
+
+- **Panel components** — `data-tour-button` attributes added on every terminal button (`rnNote.done`, `rnNote.forward`, `myChart.reply`, `myChart.replyCc`, `myChart.forward`, `orderPad.approve`, `referralPacket.approve`, `triage.generateSbar`). Cursor selectors in tourScript.js target these directly.
+
+**lib/tourScript.js — full rewrite (1849 → 562 lines).**
+
+7 cards, one per dashboard inbox category:
+1. Whitfield (RESULTS · Coumadin) — RN Note + MyChart
+2. Kevin Halbrook (RESULTS F/U · med change + orders) — fixture `halbrook-lab-review` — RN Note + MyChart + Order Pad
+3. Kevin Morris (RESULTS F/U · referral packet) — fixture `sellman-cpap-referral` — RN Note + MyChart + Order Pad + Referral Packet
+4. Daniel Stewart (RX REQUEST · refill) — fixture `norreys-transactional` — RN Note
+5. Eleanor Greene (PATIENT CALL · phone) — fixture `wexbury-phone` — Call Script + RN Note
+6. Barbara Reed (PATIENT ADVICE REQUEST · triage) — fixture `underwell-full-lifecycle` — assessment + Generate SBAR + Forward
+7. Halbrook DME (SECURE CHAT) — fixture `halbrook-dme-pa` — RN Note
+
+Single tier — Quick/Deep buttons collapsed to one **Take the tour** button (per spec: "Drop the Quick/Deep distinction — one focused tour at the natural pace"). Each bubble carries only `quickVoiceText`; `estimateTourMinutes` walks `walkBubbles` which now also yields the new pre-action `spotlight` field. Old script archived at `lib/tourScript.preMP2-backup.js`.
+
+**Narration tone — executive track.** Every actionable-panel beat is triple-duty: (a) what AI did, (b) value to nurse or patient, (c) Epic integration approval needed where applicable. No "FHIR scope" / "App Orchard" / "DocumentReference" jargon — it's "Epic integration approval through Phelps", "the read works today, the write needs approval", "this needs institutional sign-off".
+
+**Audio.** 37 new MP3s generated via `scripts/generate-tour-audio.js` (OpenAI TTS-1, onyx voice). 5,021 chars billed. Total cost: $0.075. All files live in `public/tour-audio/` with the `mp2-` prefix so they're easy to identify/regenerate without disturbing the legacy corpus. Pronunciation guidance baked into the narration text (e.g. "I-N-R", "B-P", "C-P-A-P", "BNP" written as "B-N-P" only when initialism is helpful).
+
+### Verification
+
+- `npx next build` clean — 31 encounter routes generated, no warnings on the new code.
+- Dev server restart + Chrome computer-use test prompt issued separately per `CLAUDE.md` localhost handoff protocol. Brandon drives the actual interactive verification.
+
+### No git push.
+
+---
+
+## 2026-05-03 · Executive page revision pass (10/10 polish)
+
+External-review revisions to `app/executive/page.js`. Wholesale rewrite to the new 8-section structure, prototype-accurate language, and tighter language throughout. Kairos is now consistently presented as a working prototype validated against synthetic test cases in Epic's sandbox — no claims of production use or real-patient deployment.
+
+### Section restructure (final order)
+
+01. **The Problem** — added thesis sentence at top; added capacity-projection paragraph framed as projection, not validated outcome.
+02. **The Clinical Thesis** — added "What this looks like for one encounter" before/after scenario (INR workflow, no invented time numbers); replaced triage paragraph with patient-specific-questions framing while keeping Harvard/BIDMC/Stanford April 2026 *Science* citation.
+03. **The Architecture** — kept bidirectional FHIR thesis, six baskets, atomic commit; added "Phased by risk, not by feature" with timeline estimates (Phase 1: 2–4 wks; Phase 2: 4–8 wks; Phase 3: 8–16 wks) framed as estimates dependent on institutional review pace; dropped speculative "four roles, one platform".
+04. **Risk and Governance** (NEW — replaces "How This Generalizes") — liability paragraph (Kairos is decision support; final responsibility with the licensed clinician; no autonomous outbound action); audit trail; auth/identity; PHI handling; LLM provider pathway (model-agnostic, BAA-compatible); IT lift; vendor durability subsection (prototype today; portable architecture; not dependent on a single individual).
+05. **The Pilot Proposal** (NEW) — three threshold criteria (clinical agreement, time per encounter, safety) framed as criteria FOR the pilot, not achieved metrics; "What we need from Phelps" with three institutional functions (Nursing leadership, IT, Compliance); 1–2 hrs/day staff time for 2–3 weeks of parallel-workflow validation; defined decision authority.
+06. **The Field, Right Now (May 2026)** (was 05) — release-cadence subhead cut; remaining four subheads tightened to <60 words each.
+07. **The Window** (was 08) — rewritten to three subheads: Strategic positioning · Risk of delay · What happens next. Less inspiration, more risk-clarity.
+08. **Author Context** (NEW, replaces and re-positions the old "Where We Are — and What We Need") — biographical/credentialing context at the END as context, not at the front as sales argument. Twenty-six years nursing, eleven years VA/Navy outpatient, Director of Process Improvement w/ Lean Six Sigma. Explicit transferability statement.
+
+### Prohibited-phrase scan (post-rewrite)
+
+`grep -nE` for the full forbidden list returned ZERO matches across `app/executive/page.js`:
+AI coworker · Nurse as QA · App Orchard · FHIR scope · Communication API · MedicationRequest · We have a plan · This is not a portfolio piece · Move fast · Disrupt · 10x · HVC · ClinAI · production use · production-grade · battle-tested · encounters processed · patients served · real patient · live clinical · in production · real-world deployment · in clinical use · proven in practice · proven across hundreds · SlicerDicer.
+
+Footer cleanup: dropped the SlicerDicer note-volume line and the "production platform" architect line. Footer is now author name + clinic only.
+
+### CSS
+
+`app/globals.css` — added `.ke-prose ul`, `.ke-prose li` (em-dash bullet, gold-tinted, 22px indent), `.ke-prose strong` (slightly heavier weight, ke-ink color), and a mobile rule for `.ke-prose li` font sizing. Reuses existing tokens (`--ke-ink`, `--ke-gold-hi`).
+
+### Verification
+
+- `npm run build` clean — 53/53 static pages generated, `/executive` route at 142 B / 87.5 kB First Load JS.
+- Static-content edit — Chrome computer-use not required per CLAUDE.md localhost handoff protocol. Brandon's review is the verification.
+
+### No git push.

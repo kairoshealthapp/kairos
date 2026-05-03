@@ -244,6 +244,19 @@ details[open] > summary .drawer-chev { transform: rotate(90deg); }
   margin-left: 1px;
 }
 
+/* v3.0 contentEditable focus indicator. Subtle amber dashed outline +
+   caret color so the user can see where they're typing without the
+   layout reshaping into a textarea. */
+.kairos-editable {
+  caret-color: var(--color-amber);
+  outline: 1px dashed rgba(245, 158, 11, 0.35);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+.kairos-editable:focus {
+  outline: 1px dashed rgba(245, 158, 11, 0.65);
+}
+
 /* Tour-targeted action button — amber border + glow that pulses while the
    beat narrating that button is on screen. Toggled by ActionBar in
    response to kairos-tour:beat-start / kairos-tour:beat-end events. */
@@ -937,6 +950,30 @@ details[open] > summary .drawer-chev { transform: rotate(90deg); }
   margin: 0 0 22px;
 }
 
+.ke-prose ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 22px;
+}
+.ke-prose li {
+  font-size: 16px;
+  line-height: 1.75;
+  color: var(--ke-ink);
+  padding-left: 22px;
+  position: relative;
+  margin-bottom: 8px;
+}
+.ke-prose li::before {
+  content: "—";
+  position: absolute;
+  left: 0;
+  color: var(--ke-gold-hi);
+}
+.ke-prose strong {
+  color: var(--ke-ink);
+  font-weight: 600;
+}
+
 .ke-subhead {
   font-family: var(--font-fraunces), Georgia, serif;
   font-weight: 500;
@@ -1042,6 +1079,7 @@ details[open] > summary .drawer-chev { transform: rotate(90deg); }
   .ke-section-title { font-size: 22px; }
 
   .ke-prose p { font-size: 15.5px; line-height: 1.7; }
+  .ke-prose li { font-size: 15.5px; line-height: 1.7; }
   .ke-subhead { font-size: 17.5px; }
   .ke-emphasis { font-size: 17.5px !important; }
   .ke-quote { padding-left: 20px; margin: 26px 0; }
