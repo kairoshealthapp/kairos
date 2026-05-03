@@ -5839,3 +5839,84 @@ Pass B (cursor-leads-camera-trails 200ms lag) still queued for Brandon-driven ve
 ### No git push performed
 
 All Pass E commits stay local. Brandon handles the push manually after smoke-testing.
+
+## 2026-05-02 — Pass F: universal card choreography across all 9 cards
+
+Brandon's master task: every card must follow the universal 4-step choreography (SOURCE → GENERATE → REVIEW OUTPUTS → DISPOSITION), with Card 7 doing the multi-stage variant (Step 5). Audit of the existing tour script surfaced gaps on 7 of the 9 cards. Pass F closes them. Per master-task constraint, all commits stay local; no `git push`.
+
+### Commits (chronological, all local)
+
+| Hash | Title |
+| --- | --- |
+| `b383d65` | feat: typing speed 10× → 25× |
+| `71861d8` | feat: universal card choreography (Pass F #2-9) |
+| _(audio)_ | feat: Pass F MP3 regen — 18 new beats across 5 cards |
+| _(this)_ | docs: Pass F summary |
+
+### Per-card resolution
+
+| Card | Existing state | Pass F edits |
+| --- | --- | --- |
+| 1 Anderson | Already universal | No edits |
+| 2 Henderson | Missing Nurse Note review beat | + `henderson-lipid-pa-note` |
+| 3 Bennett | Missing Nurse Note + MyChart review + disposition | + `bennett-crestor-pa-note`, `bennett-crestor-pa-mychart`, `bennett-crestor-disposition` |
+| 4 Stewart | Missing disposition | + `stewart-transactional-disposition` |
+| 5 Nguyen | Missing disposition | + `nguyen-scope-disposition` |
+| 6 Foster | Source covered but red contradiction-alert banner not spotlighted; missing disposition | + `foster-contradiction-alert`, `foster-contradiction-disposition` |
+| 7 Reed | onArrival anchored `action-bar` (skipped Step 1 SOURCE) | onArrival anchor → `source-pane`; cursor still moves to Stage 1 Generate at end |
+| 8 Greene | onArrival anchored `patient-header` (highlighted MyChart-Pending chip instead of source) | onArrival anchor → `source-pane`; narration retained |
+| 9 Jackson | Missing disposition | + `jackson-denial-cascade-disposition` (names both A peer-to-peer / B forward-to-provider paths) |
+
+### Card 6 special case
+
+Master task: Step 1 must highlight BOTH source AND the red CONTRADICTION HOLD banner. The source is covered by the existing onArrival (anchor `source-pane`). The contradiction-alert banner renders from fixture mount (`fixture.contradictionHold === true`), so it has been visible since the encounter loaded — the new `foster-contradiction-alert` annotation gold-boxes it as the first after-action beat, calling it out explicitly.
+
+### Card 9 dual paths
+
+Master task: Card 9 has two disposition paths (A and B). The action bar exposes both buttons (`schedule-peer-to-peer`, `forward-to-provider`) plus Authorize. The new `jackson-denial-cascade-disposition` annotation outlines the action-bar and names both paths in narration:
+
+- **Path A** — schedule the peer-to-peer today (deadline-bound; only window to overturn the denial without resubmitting).
+- **Path B** — forward to the provider for the next-step decision (escalate to heart cath given the symptoms, or resubmit with new documentation).
+
+### TTS regen log
+
+| audioKey family | Files | Reason |
+| --- | --- | --- |
+| `henderson-lipid-pa-note{,-deep}` | 2 | Card 2 Step 3 Nurse Note review |
+| `bennett-crestor-pa-note{,-deep}` | 2 | Card 3 Step 3 Nurse Note review |
+| `bennett-crestor-pa-mychart{,-deep}` | 2 | Card 3 Step 3 MyChart review |
+| `bennett-crestor-disposition{,-deep}` | 2 | Card 3 Step 4 disposition |
+| `stewart-transactional-disposition{,-deep}` | 2 | Card 4 Step 4 disposition |
+| `nguyen-scope-disposition{,-deep}` | 2 | Card 5 Step 4 disposition |
+| `foster-contradiction-alert{,-deep}` | 2 | Card 6 contradiction-alert spotlight |
+| `foster-contradiction-disposition{,-deep}` | 2 | Card 6 Step 4 disposition |
+| `jackson-denial-cascade-disposition{,-deep}` | 2 | Card 9 Step 4 dual-path disposition |
+
+18 new files. **Cost: $0.0424** (2,825 new chars billed at $15/1M). Voice = onyx, consistent with prior generations.
+
+### Typing speed
+
+Pass E's 10× was bumped to 25× per master task ("divide current ms/char by 2.5"). At `typingSpeedCps=80` the tour @1× is now ~1333 cps and tour @2× is ~2666 cps — effectively instant. The 1.5× legacy readability baseline still applies before the 25× kicks in.
+
+### What to smoke-test
+
+Each card should now follow the same shape:
+
+1. `npm run dev` → `http://localhost:3001/rn` (or whatever port Next.js picks).
+2. Use the card-navigation pills (1-9 in HUD bottom-right) to jump to each card.
+3. Verify per card:
+   - **Step 1 (SOURCE)**: gold box on the source pane, narration explains the inbound (lab, message, call, secure chat, contradiction).
+   - **Step 2 (GENERATE)**: cursor travels to the Generate button, click visible.
+   - **Step 3 (REVIEW)**: gold box walks each generated artifact (Nurse Note → MyChart → Order Pad / Phone Script / SBAR as applicable). Card 6 also gold-boxes the red contradiction-alert.
+   - **Step 4 (DISPOSITION)**: gold box on the action bar, brief 'Send/Sign/Done' or 'Forward to provider' narration. Card 9 names both A and B paths.
+4. Card 7 multi-stage: SOURCE → Stage 1 (Generate Patient Assessment) → Stage 2 (responses captured, Q1 at top of viewport) → Stage 3 (SBAR) → Stage 4 disposition (forward to provider).
+5. Typing animation should be effectively instant at 2× speed.
+6. If clean: `git push origin main`.
+
+### CursorGhost.js untouched
+
+Pass B (cursor-leads-camera-trails 200ms lag + tooltip fixes) still queued for separate work. No edits to `components/CursorGhost.js` in Pass F.
+
+### No git push performed
+
+All Pass F commits stay local. Brandon handles the push manually after smoke-testing.
