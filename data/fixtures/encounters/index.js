@@ -30,6 +30,9 @@ import locknerMedcheckin from "./lockner-medcheckin";
 import criderInr from "./crider-inr";
 import sellmanCpapReferral from "./sellman-cpap-referral";
 import pelcVaRfs from "./pelc-va-rfs";
+// Pass E §2 / §3 — new tour Cards 9 + 10.
+import whitfieldInr from "./whitfield-inr";
+import beasleyEpReferral from "./beasley-ep-referral";
 
 const FIXTURES = [
   aldingtonTte,
@@ -60,6 +63,8 @@ const FIXTURES = [
   criderInr,
   sellmanCpapReferral,
   pelcVaRfs,
+  whitfieldInr,
+  beasleyEpReferral,
 ];
 
 const BY_ID = {};

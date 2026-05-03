@@ -663,10 +663,13 @@ export default function EncounterDetail({ fixture, fromTab }) {
         </div>
       </div>
 
-      {/* Phase-3.6 — Sellman moat: append the auto-assembled referral
-          packet preview below the four-pane grid. */}
-      {isSellman && fixture.referralPacket ? (
-        <div className="mt-4">
+      {/* Phase-3.6 / Pass E §3 — auto-assembled referral packet preview
+          below the four-pane grid. Originally Sellman-only; now any
+          fixture that declares a `referralPacket` renders it (Card 10
+          beasley-ep-referral uses this too). data-tour-anchor lets the
+          tour spotlight gold-box the panel. */}
+      {fixture.referralPacket ? (
+        <div className="mt-4" data-tour-anchor="referral-packet">
           <ReferralPacketPanel packet={fixture.referralPacket} />
         </div>
       ) : null}
