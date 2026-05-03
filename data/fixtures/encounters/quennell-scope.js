@@ -13,6 +13,7 @@ const fixture = {
   // asking about H+H and low blood pressure — a patient-advice query,
   // not a result followup.
   tab: "patientadvice",
+  authorizeActions: ["Send MyChart Reply", "Done"],
   urgency: "calm",
   sourceChannel: "mychart",
   sourceBox: "pt-advice",

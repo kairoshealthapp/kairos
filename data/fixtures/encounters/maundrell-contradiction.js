@@ -12,6 +12,7 @@ const fixture = {
   // the INR-overdue template; the inbound is a patient-advice query
   // (with contradiction), not a fresh result.
   tab: "patientadvice",
+  authorizeActions: ["Send MyChart Reply", "Done"],
   urgency: "calm",
   sourceChannel: "mychart",
   sourceBox: "pt-advice",

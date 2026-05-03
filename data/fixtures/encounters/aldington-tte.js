@@ -7,6 +7,7 @@ const fixture = {
   patternId: 2,
   patternName: "SYNTHESIS + NEW ORDER",
   tab: "resultsfu",
+  authorizeActions: ["Send MyChart", "Sign Nurse Note", "Done"],
   urgency: "calm",
   sourceChannel: "epic-result",
   sourceBox: "results-followup",

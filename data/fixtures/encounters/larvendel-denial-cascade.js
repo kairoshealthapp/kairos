@@ -10,6 +10,11 @@ const fixture = {
   patternId: 13,
   patternName: "INSURANCE DENIAL CASCADE",
   tab: "securechat",
+  // Card 8 has two disposition paths — render two Authorize buttons.
+  authorizeActions: [
+    ["Send Secure Chat Reply", "Done"],
+    ["Create Telephone Encounter", "Sign Note", "Forward to Provider", "Done"],
+  ],
   urgency: "calm",
   sourceChannel: "secure-chat",
   sourceBox: "secure-chat",
@@ -110,7 +115,7 @@ const fixture = {
         typingSpeedCps: 80,
         delayMsBefore: 500,
         content:
-          "Second denial in 8-day workup. Dr. Pendrelle looped into Secure Chat for peer-to-peer decision (deadline today only) vs. resubmission vs. moving directly to heart cath given patient's CAD with prior stent and ongoing symptoms.\n\nPatient outreach drafted in denial-acknowledgment frame rather than routine imaging-review frame.",
+          "Second denial in 8-day workup. Dr. Pendrelle looped into Secure Chat for peer-to-peer decision (deadline today only) vs. resubmission vs. moving directly to heart cath given patient's CAD with prior stent and ongoing symptoms.",
       },
       {
         type: "pane-update",

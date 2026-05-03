@@ -30,6 +30,22 @@ function tourActive() {
   }
 }
 
+// Pass E §4 — normalize the fixture's authorizeActions field. Two
+// supported shapes:
+//   ["A", "B"]              → single Authorize button labeled "A · B"
+//   [["A","B"], ["C","D"]]  → two Authorize buttons; rendered side by
+//                             side. Used by Card 8 (Jackson) which has
+//                             two disposition paths.
+// Default fallback when a fixture hasn't defined authorizeActions yet:
+// a single button reading "Authorize" so the UI never crashes.
+function normalizeAuthorizeActions(actions) {
+  if (!Array.isArray(actions) || actions.length === 0) {
+    return [["Authorize"]];
+  }
+  if (Array.isArray(actions[0])) return actions;
+  return [actions];
+}
+
 export default function ActionBar({
   cardId,
   pattern,
@@ -39,6 +55,7 @@ export default function ActionBar({
   onAuthorize,
   onEdit,
   fromTab,
+  authorizeActions,
 }) {
   const router = useRouter();
   const buttons = (pattern && pattern.actionButtons) || [];
@@ -167,24 +184,38 @@ export default function ActionBar({
         )}
 
         {/* Verb bar */}
-        <div className="flex items-center gap-2">
-          <button
-            id="kairos-action-authorize"
-            type="button"
-            onClick={handleAuthorize}
-            disabled={isPlaying || blockAuthorize}
-            title={blockAuthorize ? "Order requires verification before Authorize" : ""}
-            className={
-              "text-[13px] font-semibold px-4 py-2 rounded-sm transition-colors " +
-              (isPlaying || blockAuthorize
-                ? "bg-amber/30 text-graphite/60 cursor-not-allowed"
-                : "bg-amber text-graphite hover:bg-amber/90") +
-              (pulseTarget === "authorize" ? " kairos-action-pulse" : "") +
-              (clickedTarget === "authorize" ? " kairos-action-click" : "")
-            }
-          >
-            Authorize
-          </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Pass E §4 — Authorize button label(s) from fixture's
+              authorizeActions array, joined with " · ". Fixtures with
+              two disposition paths (Card 8 Jackson) render two buttons;
+              everything else renders one. The first button keeps the
+              canonical id `kairos-action-authorize` so the tour cursor
+              + auto-authorize event paths don't change. Subsequent
+              buttons get suffixed ids for future per-path targeting. */}
+          {normalizeAuthorizeActions(authorizeActions).map((labelArr, idx) => {
+            const label = labelArr.join(" · ");
+            const id = idx === 0 ? "kairos-action-authorize" : `kairos-action-authorize-${idx}`;
+            return (
+              <button
+                key={id}
+                id={id}
+                type="button"
+                onClick={handleAuthorize}
+                disabled={isPlaying || blockAuthorize}
+                title={blockAuthorize ? "Order requires verification before Authorize" : ""}
+                className={
+                  "text-[13px] font-semibold px-4 py-2 rounded-sm transition-colors " +
+                  (isPlaying || blockAuthorize
+                    ? "bg-amber/30 text-graphite/60 cursor-not-allowed"
+                    : "bg-amber text-graphite hover:bg-amber/90") +
+                  (pulseTarget === "authorize" && idx === 0 ? " kairos-action-pulse" : "") +
+                  (clickedTarget === "authorize" && idx === 0 ? " kairos-action-click" : "")
+                }
+              >
+                {label}
+              </button>
+            );
+          })}
           <button
             type="button"
             onClick={handleEdit}

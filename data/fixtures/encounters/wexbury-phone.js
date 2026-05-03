@@ -7,6 +7,7 @@ const fixture = {
   patternId: 14,
   patternName: "PHONE-CHANNEL SYNTHESIS",
   tab: "resultsfu",
+  authorizeActions: ["Sign Nurse Note", "Done"],
   urgency: "calm",
   sourceChannel: "epic-result",
   sourceBox: "results-followup",

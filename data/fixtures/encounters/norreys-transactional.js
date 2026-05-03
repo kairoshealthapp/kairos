@@ -9,6 +9,7 @@ const fixture = {
   patternId: 9,
   patternName: "TRANSACTIONAL REPLY",
   tab: "rxrequest",
+  authorizeActions: ["Sign Note", "Sign Refill"],
   urgency: "calm",
   sourceChannel: "mychart",
   sourceBox: "pt-advice",

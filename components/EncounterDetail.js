@@ -211,17 +211,22 @@ export default function EncounterDetail({ fixture, fromTab }) {
             return;
           }
           // Animated typing: stream characters into pane state.
-          // Pass F — Brandon asked to divide current ms/char by 2.5
-          // again on top of Pass E's 10× bump, so divisor now goes from
-          // (speedMul × 10) → (speedMul × 25). At typingSpeedCps=80 the
-          // tour @1× effective rate is ~1333 cps and tour @2× is
-          // ~2666 cps — effectively instant. The 1.5× legacy slowdown
-          // baseline still applies before the 25× kicks in.
+          // Pass G-fix3 #2 — typing is a cosmetic flash, not text to
+          // read. Bumping the per-char divisor any further hits the
+          // browser's setTimeout floor (~4ms even when asked for 1ms),
+          // so a long pane content can still take 500-1000ms to appear.
+          // Switched to chunked streaming: per tick we write ~80
+          // characters at the 1ms floor, so a 500-char artifact lands
+          // in ~6 ticks ≈ 25-30ms — visually a single flash with the
+          // typing pipeline still doing its thing (skip / cancel /
+          // append modes all still work).
           let intervalMs = Math.max(8, 1000 / typingSpeedCps);
+          let charsPerTick = 1;
           if (typeof window !== "undefined" && sessionStorage.getItem("kairos-tour-active") === "1") {
             const ts = sessionStorage.getItem("kairos-tour-speed");
             const speedMul = ts === "2" ? 2 : 1;
-            intervalMs = Math.max(1, (intervalMs * 1.5) / (speedMul * 25));
+            intervalMs = 1; // floor — browser setTimeout clamps anyway
+            charsPerTick = 80 * speedMul;
           }
           const chars = String(content);
           let acc = mode === "append" ? null : "";
@@ -242,7 +247,8 @@ export default function EncounterDetail({ fixture, fromTab }) {
             });
             await sleep(0);
           }
-          for (let i = 0; i <= chars.length; i++) {
+          let i = 0;
+          while (i <= chars.length) {
             if (cancelRef.current) return;
             // Fast-forward path — Skip pressed while we were typing. Jump
             // straight to the final string and resolve so action-complete
@@ -256,6 +262,8 @@ export default function EncounterDetail({ fixture, fromTab }) {
             const partial = chars.slice(0, i);
             const next = mode === "append" ? (acc || "") + partial : partial;
             applyPaneContent(target, next, "replace");
+            if (i === chars.length) break;
+            i = Math.min(chars.length, i + charsPerTick);
             await sleep(intervalMs);
           }
           dispatchArtifactComplete();
@@ -685,6 +693,7 @@ export default function EncounterDetail({ fixture, fromTab }) {
           onAuthorize={handleAuthorize}
           onEdit={handleEdit}
           fromTab={fromTab}
+          authorizeActions={fixture.authorizeActions}
         />
       </div>
     </div>

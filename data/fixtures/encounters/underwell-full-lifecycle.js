@@ -10,6 +10,7 @@ const fixture = {
   patternId: "7b",
   patternName: "ASYNC PRE-CALL STRUCTURED INQUIRY",
   tab: "patientcall",
+  authorizeActions: ["Sign SBAR", "Forward to Provider", "Done"],
   urgency: "calm",
   sourceChannel: "phone",
   sourceBox: "patient-call",
