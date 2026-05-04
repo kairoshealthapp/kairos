@@ -1,4 +1,5 @@
 // /executive — strategic readout for hospital informatics leadership.
+import Link from "next/link";
 // Long-scroll editorial page. Bypasses AppChrome (see components/AppChrome.js)
 // so neither the demonstration banner nor tour chrome render here. Server
 // component, no JS interactivity beyond native scroll.
@@ -9,13 +10,20 @@ export const metadata = {
     "Clinical infrastructure for outpatient cardiology — a working prototype and a pilot proposal for Phelps Health's clinical informatics program.",
 };
 
-const TOUR_URL = "https://kairos-tour.firekraker.net/rn";
+const TOUR_URL = "/rn";
 
 export default function ExecutivePage() {
   return (
     <div className="kairos-executive">
       <header className="ke-topbar">
-        <div className="ke-mark" />
+        <Link
+          href="/"
+          aria-label="Kairos — home"
+          className="kairos-nav-wordmark"
+          style={{ fontSize: "15px" }}
+        >
+          KAIROS
+        </Link>
         <div>kairoshealth.app</div>
       </header>
 
@@ -37,7 +45,7 @@ export default function ExecutivePage() {
           <span className="ke-cta-arrow" aria-hidden="true">&rarr;</span>
         </a>
         <div className="ke-cta-host" aria-hidden="true">
-          kairos-tour.firekraker.net/rn
+          kairoshealth.app/rn
         </div>
       </section>
 
@@ -251,7 +259,7 @@ export default function ExecutivePage() {
             <span className="ke-cta-arrow" aria-hidden="true">&rarr;</span>
           </a>
           <div className="ke-cta-host" aria-hidden="true">
-            kairos-tour.firekraker.net/rn
+            kairoshealth.app/rn
           </div>
         </section>
 
@@ -495,7 +503,7 @@ export default function ExecutivePage() {
             <span className="ke-cta-arrow" aria-hidden="true">&rarr;</span>
           </a>
           <div className="ke-cta-host" aria-hidden="true">
-            kairos-tour.firekraker.net/rn
+            kairoshealth.app/rn
           </div>
         </section>
 

@@ -7197,3 +7197,85 @@ HUD: `right-4` (16px from edge) + `w-[260px]` = 276px from viewport right edge. 
 ### Verification
 `next build` clean. Dev server restarted on port 3010. Awaiting Chrome handoff for Card 1-7 walkthrough. No git push.
 
+## 2026-05-04 18:15 CDT — Pre-pitch hygiene: firekraker.net sweep + HomeNav
+
+Two surgical edits before tomorrow's pitch.
+
+### Fix 1 — strip firekraker.net from /executive
+
+`app/executive/page.js` was the only page advertising the legacy `kairos-tour.firekraker.net` host. The pitch URL is now `kairoshealth.app`, so any visible firekraker reference would read as a stale demo.
+
+- `TOUR_URL` constant: `https://kairos-tour.firekraker.net/rn` → relative `/rn`. The "Live prototype" CTA and the two mid-page CTAs now route in-app instead of leaving the executive deck.
+- All three displayed CTA host captions (lines ~40, ~254, ~498): `kairos-tour.firekraker.net/rn` → `kairoshealth.app/rn`.
+
+Verified `grep firekraker app/executive/page.js` → 0 matches. `curl /executive | grep firekraker` → 0 matches. Other pages that still mention firekraker (docs/, sandbox/, app/api/hvc/chat/route.js, app/globals.css comment, etc.) were left untouched per the surgical-edit instruction.
+
+### Fix 2 — HomeNav wordmark on /rn and /executive
+
+Added a fixed top-left KAIROS wordmark linking to `/` (the role-picker landing) so a visitor can always get back to the front door from the dashboard or the executive deck.
+
+- New `components/HomeNav.js` — `Link href="/"`, reuses the existing `.kairos-nav-wordmark` class (gold-gradient Fraunces, 22px, 0.08em letter-spacing — same treatment as the in-flow nav wordmark on /rn and the hero wordmark on /executive).
+- Inline-styled position: `fixed; top: 14px; left: 22px; z-index: 50`. Top-left placement keeps it clear of the Tour HUD on /rn (top-right, 260px wide) and clear of every panel on /executive.
+- Mounted as a sibling element only — no changes to `CursorGhost.js`, `EncounterDetail` handlers, demo persistence, `clearDemoState`, or any tour state.
+- `app/executive/page.js`: import added, `<HomeNav />` placed inside `.kairos-executive` above the existing `.ke-topbar`.
+- `app/rn/page.js`: import added, `<HomeNav />` placed inside the top-level fragment above the existing `<header>`. The existing in-flow wordmark (links to `/rn`) is left in place; the fixed HomeNav sits on top of it visually and wins the click target, sending the user to `/`.
+
+### Verification
+
+- `next build` clean.
+- Dev server on `http://localhost:3010`.
+- `curl /executive` → 200, `grep firekraker` → 0 matches, captions render `kairoshealth.app/rn`, `href="/"` HomeNav present.
+- `curl /rn` → 200, KAIROS wordmark present in HTML.
+
+No Chrome computer-use; static-content sweep + 200 checks per the user's instruction. Brandon will eyeball wordmark placement on mobile.
+
+## 2026-05-04 18:30 CDT — HomeNav rollback: wrap existing wordmarks instead
+
+The previous entry's `HomeNav.js` approach added a *second* fixed-position KAIROS wordmark on top of the existing in-flow gold wordmark on /rn. Two stacked wordmarks. Wrong. Brandon's intent was to make the existing wordmark click through to `/`, not add a new one.
+
+### What changed
+
+- `components/HomeNav.js` deleted.
+- `app/rn/page.js`: removed `HomeNav` import + render. Existing in-flow wordmark `<Link href="/rn" className="kairos-nav-wordmark shrink-0" aria-label="Kairos — dashboard home">KAIROS</Link>` had its `href` flipped from `/rn` to `/` and its aria-label from "Kairos — dashboard home" to "Kairos — home". No other styling changed; same gold-gradient Fraunces 22px treatment, same position in the dashboard top header.
+- `app/executive/page.js`: removed `HomeNav` import + render. Imported `Link from "next/link"`. Wrapped the hero `<h1 className="ke-wordmark">KAIROS</h1>` in `<Link href="/" aria-label="Kairos — home" style={{ textDecoration: "none" }}>` so the existing centered hero wordmark is itself the home link. No styling changes — `style={{ textDecoration: "none" }}` only suppresses the default anchor underline that wrapping introduces.
+
+### Constraints honored
+
+- No changes to `CursorGhost.js`, `EncounterDetail` handlers, demo persistence, `clearDemoState`, or any tour state.
+- No styling, position, font, color, or size changes on the existing wordmarks. Wrap-only on /executive; href-flip-only on /rn (Link wrapper already existed).
+
+### Verification
+
+- `next build` clean.
+- Dev server on `http://localhost:3010`.
+- `curl /rn` → 200; rendered HTML shows `<a class="kairos-nav-wordmark shrink-0" ... href="/">KAIROS</a>` (single wordmark, links to `/`).
+- `curl /executive` → 200; rendered HTML shows `<a aria-label="Kairos — home" ... href="/"><h1 class="ke-wordmark">KAIROS</h1></a>`.
+
+Brandon will eyeball.
+
+## 2026-05-04 18:45 CDT — /executive top-left wordmark (separate from hero)
+
+Brandon eyeballed and noted that wrapping the giant hero KAIROS as the home link was wrong — the hero is editorial, not nav. The /executive top-left was actually empty (only the tiny `ke-mark` dot lived there); the visible band was just `kairoshealth.app` on the right. He wants a small clickable KAIROS wordmark in the top-left of the band, weight comparable to the right-side caption.
+
+### What changed
+
+- `app/executive/page.js`: unwrapped the hero — the `<h1 className="ke-wordmark">KAIROS</h1>` is back to a plain h1 with no Link.
+- `app/executive/page.js`: replaced the decorative `<div className="ke-mark" />` in `.ke-topbar` with `<Link href="/" aria-label="Kairos — home" className="kairos-nav-wordmark" style={{ fontSize: "15px" }}>KAIROS</Link>`. Reuses the existing `.kairos-nav-wordmark` gold-gradient Fraunces treatment so it matches the brand wordmark on `/rn`; inline `font-size: 15px` overrides the class's 22px default to keep it visually balanced against the 11px uppercase `kairoshealth.app` caption on the right of the same flex space-between band. The `.ke-topbar` flex layout is unchanged — left-aligned wordmark, right-aligned host caption.
+- `/rn` not touched (already correct: in-flow nav wordmark links to `/`).
+
+### Constraints honored
+
+- No changes to `CursorGhost.js`, `EncounterDetail` handlers, demo persistence, `clearDemoState`, or any tour state.
+- The giant hero KAIROS untouched (just unwrapped from the previous mistaken Link).
+- /executive only.
+
+### Verification
+
+- `next build` clean.
+- Dev server on `http://localhost:3010` (clean restart, ready in 2.2s).
+- `curl /executive` → 200; rendered HTML confirms `<header class="ke-topbar"><a aria-label="Kairos — home" class="kairos-nav-wordmark" style="font-size:15px" href="/">KAIROS</a><div>kairoshealth.app</div></header>`.
+
+Brandon will eyeball.
+
+
+

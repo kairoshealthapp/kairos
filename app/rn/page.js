@@ -217,9 +217,9 @@ export default function DashboardPage() {
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6">
           <div className="h-14 flex items-center gap-3 sm:gap-8 justify-between sm:justify-start">
             <Link
-              href="/rn"
+              href="/"
               className="kairos-nav-wordmark shrink-0"
-              aria-label="Kairos — dashboard home"
+              aria-label="Kairos — home"
             >
               KAIROS
             </Link>
