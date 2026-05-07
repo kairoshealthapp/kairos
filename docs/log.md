@@ -8249,3 +8249,19 @@ Why scrollTop = 0 is correct: the chat input is the first scrollable element in 
 - Dev server fresh on `http://localhost:3010`, `/provider` → 200.
 - Repro: tour → [3] → Skip through 12 → expected: drawer visibly scrolls up so chat input is at the top of the visible area BEFORE the cursor enters; cursor lands on the visible input; typing + loading + answer all play in the visible viewport; closing narration plays after the answer holds.
 
+
+---
+
+## Session 18 — Landing page Provider card flipped to LIVE TOUR
+**2026-05-07**
+
+### Change
+`app/page.js` line 32: Provider card status updated from `"Coming soon", live: false` to `"Live tour", live: true` — pixel-for-pixel match with the Nurse card (gold dot, gold uppercase "LIVE TOUR" text). Provider tour at `/provider` is deployed and functional from commit 5ec6de5; landing page now reflects that.
+
+### Untouched
+Scribe, Front Desk, Executive cards remain unchanged. `href: "/provider"` was already correct.
+
+### Verification
+- `next build` clean.
+- Dev server up on `http://localhost:3000`.
+- Awaiting Brandon's Chrome computer-use visual confirmation before push.

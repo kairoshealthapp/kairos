@@ -29,7 +29,7 @@ export const metadata = {
 
 const TILES = [
   { label: "Nurse",      href: "/rn",        status: "Live tour",   live: true  },
-  { label: "Provider",   href: "/provider",  status: "Coming soon", live: false },
+  { label: "Provider",   href: "/provider",  status: "Live tour",   live: true  },
   { label: "Scribe",     href: "/scribe",    status: "Coming soon", live: false },
   { label: "Front Desk", href: "/frontdesk", status: "Coming soon", live: false },
   { label: "Executive",  href: "/executive", status: "Live",        live: true  },
