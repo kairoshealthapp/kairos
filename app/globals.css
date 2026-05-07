@@ -283,6 +283,24 @@ details[open] > summary .drawer-chev { transform: rotate(90deg); }
   animation: kairos-action-click 600ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* /provider tour — soft amber section highlight. Toggled by ProviderTour
+   on a per-beat basis so the briefing section being narrated is visually
+   anchored even when the cursor ghost is mid-flight. Mirrors the /rn tour
+   pulse pattern but lighter — these are content sections, not action
+   buttons, so the glow is decorative rather than imperative. */
+/* Active section outline — matches /rn SpotlightOverlay.js line 354-366
+   exactly. Static 2px amber border at 85% opacity with a 12px blurred
+   amber glow. NO fill, NO background, NO pulse. The first box-shadow
+   layer (`0 0 0 2px ...`) is the equivalent of /rn's stroke="2"; the
+   second (`0 0 12px ...`) is the equivalent of its drop-shadow filter.
+   `rx="6"` on /rn's SVG rect → `border-radius: 6px` here. */
+.provider-tour-section-active {
+  border-radius: 6px;
+  box-shadow:
+    0 0 0 2px rgba(245, 158, 11, 0.85),
+    0 0 12px 0 rgba(245, 158, 11, 0.45);
+}
+
 /* Phase-3.7 landing page — five-tile orbit pulse. Each tile runs the same
    3s scale + opacity cycle; staggered by 2.4s in clockwise order
    (Provider → Front Desk → Executive → Nurse → Scribe), so at any moment

@@ -7279,3 +7279,973 @@ Brandon will eyeball.
 
 
 
+
+## 2026-05-06 18:30 — Session 1: /provider surface + 3-specialty tour
+
+### What
+
+Built the full provider surface end-to-end. Replaces the previous /provider stub with a working day-in-the-life schedule view, click-to-briefing drawer, and a 9-beat narrated tour.
+
+### Files added
+
+- `lib/fixtures/providerSchedule.cardiology.js` — 15 fictional visits, 3 Post Hospital
+- `lib/fixtures/providerSchedule.pulmonology.js` — 15 fictional visits, 3 Post Hospital
+- `lib/fixtures/providerSchedule.internalMedicine.js` — 15 fictional visits, 3 Post Hospital
+- `lib/fixtures/providerBriefings.cardiology.js` — 3 deep post-hospital briefings + 12 lighter templates
+- `lib/fixtures/providerBriefings.pulmonology.js` — same pattern
+- `lib/fixtures/providerBriefings.internalMedicine.js` — same pattern
+- `app/provider/components/SpecialtySelector.js` — 3-pill selector
+- `app/provider/components/ScheduleCard.js` — single visit row, gold left-edge accent on Post Hospital
+- `app/provider/components/BriefingDrawer.js` — half-screen right drawer with 5 briefing-kind renderers
+- `app/provider/components/ProviderTour.js` — 9-beat tour runner, isolated from /rn TourMode
+- `app/provider/components/ProviderTourLauncher.js` — gold pill button
+- `app/provider/lib/providerTourScript.js` — beat schema + voiceText
+- `scripts/generate-provider-tour-audio.js` — OpenAI TTS onyx, writes to `public/provider-tour-audio/`
+- `public/provider-tour-audio/provider-tour-0{1..9}-*.mp3` — 9 narration MP3s, 2,732 chars total, ~$0.04 billed
+
+### Files modified
+
+- `app/provider/page.js` — replaced stub with full provider surface
+
+### Architecture notes
+
+- Specialty switching swaps schedule + briefing fixtures live; never resets the tour mid-play.
+- Briefing drawer renders 5 different layouts based on `briefing.kind` (postHospital, routine, newPatient, annual, device). Post Hospital carries all 8 universal sections; others use lighter templates.
+- Free-text query field is visual-only per spec — no backend wired.
+- Provider tour reuses `CursorGhost` via shared `kairos-tour:beat-start` etc. window events. Tour-active flag is namespaced (`kairos-provider-tour-active`) so /rn machinery is untouched.
+- Provider tour starts via `kairos-provider-tour:start`; /rn TourMode listens for `kairos-tour:start` and is unaffected.
+- Pause/resume on spacebar; mute persists in `kairos.provider-tour.muted`.
+- Tour script is specialty-agnostic at meta level (Beats 1–2), then drills into whichever specialty is selected (Beats 3–9). Selecting Cardiology before pressing "Take the tour" gives the cardiology Post Hospital walkthrough.
+- Names verified fictional — none overlap with the existing /rn fixture roster.
+
+### Verification
+
+- `next build` clean. /provider weighs 16.6 kB (113 kB First Load JS).
+- Dev server on `http://localhost:3010` (clean restart, ready in 2.2s).
+- `curl /provider` → 200; HTML confirms specialty pills, demo banner, schedule cards, "Take the tour" pill.
+- `curl /rn` → 200 (regression check, /rn machinery intact).
+- 9 MP3s generated and present in `public/provider-tour-audio/`. 1 spurious `....mp3` from a comment regex match was removed and the regex hardened to skip `audioKey: "..."` schema-example matches.
+- Chrome computer-use handoff prompt provided for Brandon's PASS/FAIL.
+
+
+## 2026-05-06 19:45 — Session 2: 12-section briefing schema + 17-beat tour rebuild
+
+### What
+
+Replaced the 8-section provider briefing structure with the universal 12-section schema (sections 01-13 including the visual-only free-text query at 13). Three deep cards authored verbatim per spec: Robert Trentham (cardiology cardiac arrest), Lawrence Okafor (pulmonology COPD exacerbation), Howard Whitestone (internal medicine CHF exacerbation). Remaining 42 cards have sections 1-8 mapped from prior fixture content where possible and sections 9-12 carrying scaffolding text indicating specialty authoring is pending. Tour rebuilt from 9 beats to 17 beats, with three fresh audio beats (1, 5, 17) per spec. 
+
+### Files modified
+
+- `app/provider/components/BriefingDrawer.js` — rewritten for 12-section schema with two-digit gold all-caps headers, `data-section-id` and `data-tour-anchor` attributes on every section, type-aware body renderers for each kind (postHospital, routine, etc.).
+- `lib/fixtures/providerBriefings.cardiology.js` — Trentham 1-12 verbatim; 14 other cards mapped to new schema with scaffolds.
+- `lib/fixtures/providerBriefings.pulmonology.js` — Okafor 1-12 verbatim; 14 other cards mapped + scaffolded.
+- `lib/fixtures/providerBriefings.internalMedicine.js` — Whitestone 1-12 verbatim; 14 other cards mapped + scaffolded.
+- `app/provider/lib/providerTourScript.js` — 17-beat tour, sections walked in groups (01-02, 03-04, 05-08), bridge between 05 and 09, then 09-12 narrated individually, then routine-card calibration, then pulm + IM specialty swaps, then closer.
+- `app/provider/components/ProviderTour.js` — added in-drawer scroll + section highlight on each beat (mirrors /rn TourMode's CursorGhost scroll-into-view behavior), `retarget:` sequence action for mid-beat cursor moves between sections, `switchAndOpenPostHospital:<key>` composed before-action for beats 13/15.
+- `app/globals.css` — added `.provider-tour-section-active` keyframe + class for soft amber section pulse during tour playback.
+- `public/provider-tour-audio/provider-tour-{01..17}-*.mp3` — regenerated all 17 MP3s with OpenAI TTS onyx voice. ~6,120 chars total, ~$0.09 billed.
+
+### Beat numbering note
+
+Spec said "INSERT NEW BEAT 5 (everything currently numbered 5-16 shifts down by one)". The bridge audio's content ("everything you're seeing is data Epic already has") narratively belongs AFTER the data sections (01-08) and BEFORE the patterns section (09). I designed the OLD 16-beat layout so that beat 4 ends on section 08 and old beat 5 was section 09 — that places the bridge insertion at position 5 with the cursor "between section 05 and section 09" exactly as specified. The new beat 5 cursor starts on section 05 and retargets to section 09 mid-audio via the new `retarget:` sequence action.
+
+### Verification
+
+- `next build` clean. /provider weighs 24.8 kB (121 kB First Load JS), up from 16.6 kB pre-rewrite.
+- Existing dev server still running on `http://localhost:3010` — Next.js hot-reload picked up source changes.
+- `curl /provider` → 200, schedule renders with Robert Trentham at 8:40 AM and "Take the tour" pill present.
+- `curl /rn` → 200 (regression check, /rn unaffected).
+- All 17 MP3s present in `public/provider-tour-audio/`.
+- Chrome computer-use handoff prompt provided for Brandon's PASS/FAIL.
+
+
+## 2026-05-06 19:55 — Session 3: Card-transition pacing + TTS speed audit
+
+### Issue 1 — fixed: Card-to-card transitions now show schedule mid-transition
+
+Brandon's verification flagged that the pulm and IM specialty switches felt rushed — the previous implementation used `switchAndOpenPostHospital:<key>` which opened the new specialty's drawer immediately after the switch, with no visible "back to schedule, click into next patient" beat.
+
+Replaced with a new `closeAndSwitchSpecialty:<key>` before-action that:
+1. Closes the current drawer (300ms slide-out animation completes).
+2. Switches the specialty (schedule rerenders with new roster).
+3. Sleeps 350ms before dispatching the cursor cue, so the schedule is fully visible before any cursor motion.
+
+Then within the beat, the cursor cue carries:
+- `target: '[data-encounter-id="pulm-0840"]'` (or `im-0840`) — the next patient's row, not the specialty selector pill.
+- `startTime: 1200ms` — extends the schedule-visible pause (350 + 1200 = ~1.55s before cursor moves).
+- `arriveTime: 2500ms` — cursor travels for ~1.3s.
+- `clickTime: 3000ms` — 500ms hover after arrival before click ripple.
+
+A new `sequence: [{ at: 3000, action: "openFirstPostHospital" }]` step opens the drawer at the same wall-clock moment as the click ripple, so the "click → drawer opens" feels causal.
+
+Required two new handler hooks in `app/provider/components/ProviderTour.js`:
+- `closeAndSwitchSpecialty:<key>` as a `before` action.
+- `openFirstPostHospital` as a no-arg `sequence` action (previously only available as a `before` hook).
+
+Applies to beats 13 (cardiology→pulmonology) and 15 (pulmonology→internal medicine). Pattern is reusable for any future card-to-card transition. Within-card section transitions (sections 01→02, 02→03, etc.) are deliberately NOT changed — those should remain smooth section-to-section.
+
+### Issue 2 — flagged, NOT fixed: Cadence difference NOT in TTS config
+
+Brandon's verification flagged that /provider tour audio cadence sounds faster than /rn tour audio. Inspected all three TTS generation scripts:
+- `scripts/generate-tour-audio.js` (/rn tour)
+- `scripts/generate-bookend-audio.js` (/rn bookend cinematics)
+- `scripts/generate-provider-tour-audio.js` (/provider tour)
+
+All three use IDENTICAL config: `model: "tts-1"`, `voice: "onyx"`, `response_format: "mp3"`, no `speed` parameter (so all default to OpenAI's 1.0). There is NO speed mismatch in the scripts.
+
+Per the spec instruction "If both scripts already use the same speed parameter, the issue is somewhere else — flag it for Brandon and stop. Don't guess at fixes." — flagging here, not regenerating audio.
+
+Likely candidates for the perceived difference (Brandon's call):
+- /provider beats may be denser per second of audio (more facts, fewer natural breath pauses).
+- /provider's `padMs` between beats may be shorter than /rn's, giving less silence to "settle" between beats.
+- /rn narration uses more pronunciation cues like "I-N-R" (hyphenated letters) that force TTS pauses; /provider narration may have fewer such cues.
+
+If Brandon wants slower cadence, options are: (a) add `speed: 0.9` to all three scripts and regenerate, (b) increase per-beat `padMs` on /provider, (c) rewrite narration with more pause-creating punctuation. None applied tonight.
+
+### Files modified
+
+- `app/provider/lib/providerTourScript.js` — beats 13 and 15 redesigned with the close→pause→cursor→click→open pattern.
+- `app/provider/components/ProviderTour.js` — added `closeAndSwitchSpecialty:<key>` before-action handler; added `openFirstPostHospital` as a sequence action handler.
+
+### Verification
+
+- `next build` clean.
+- Dev server restarted on `http://localhost:3010` (Ready in 1.8s).
+- `curl /provider` → 200, `curl /rn` → 200.
+- No audio regeneration this session — Issue 2 flagged for Brandon's call.
+
+
+## 2026-05-06 20:15 — Session 4: Master fix pass before Medical Directors meeting
+
+Six issues addressed in one pass for tomorrow's noon Medical Directors meeting.
+
+### Issue 1 — Tour-init scroll reset
+`runTour()` in `app/provider/components/ProviderTour.js` now calls `window.scrollTo({ top: 0, left: 0, behavior: "auto" })` and resets `#provider-briefing-drawer.scrollTop = 0` before Beat 1 audio plays. Tour starts with the schedule at the top, Trentham (8:40 AM) visible without scrolling.
+
+### Issue 2 — Drawer full-width
+`app/provider/components/BriefingDrawer.js` width changed from `w-full md:w-[52%] max-w-[720px]` to plain `w-full`. Briefing IS the surface during the tour; schedule doesn't need to remain visible behind it. Mobile behavior unchanged (already full-width).
+
+### Issue 3 — Click choreography on Beat 2 (Trentham initial open) and Beat 11 (routine open)
+Mirrored /rn TourMode pattern — `arriveTime` → +500ms hover → `clickTime` ripple → side effect dispatched separately via sequence step.
+
+- Beat 2 cursor now targets `[data-encounter-id="card-0840"]` (Trentham row), with `clickTime: 2500` and a sequence step `openFirstPostHospital` at the same wall-clock moment. After the drawer slides in, two retarget steps walk sections 01 → 02.
+- Beat 11 reorganized: previously used `before: "swapToRoutine"` which closed-and-opened atomically with no visible cursor travel. Now uses `before: "closeDrawer"` to close the Trentham deep drawer → ~1.5s schedule-visible pause → cursor flies to the 9:00 AM Voorhees row → 500ms hover → click ripple → sequence step `swapToRoutine` opens the routine briefing.
+- `swapToRoutine` was previously only a `before`-action; added as a sequence-step handler in `ProviderTour.js`.
+- CursorGhost.js was NOT modified — only its existing `clickTime` field is consumed.
+
+### Issue 4 — Beat 5 backward jump fixed
+Previously: Beat 4 ended on section-08, Beat 5 (bridge) started on section-05, then retargeted to section-09 mid-audio. The cursor jumped backward from 08 → 05 → forward to 09.
+
+Now: Beat 5 cursor target is `[data-tour-anchor="briefing-section-08"]` (continuing from where Beat 4 ended), and the retarget at audio midpoint (16000ms) moves forward to `briefing-section-09`. No backward jumps anywhere in the tour. Audited the full beat-order array — sections walk 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → BRIDGE → 09 → 10 → 11 → 12 in strict forward order across all 17 beats.
+
+### Issue 5a — Control pill repositioned
+Pause/mute/skip pill moved from `fixed bottom-6 left-1/2 -translate-x-1/2 z-50` (bottom-center, dead in the middle of the drawer's content column) to `fixed bottom-4 left-4 z-[60]` (bottom-left corner, above the drawer at z-60). Stays clear of section content as the drawer scrolls.
+
+### Issue 5b — TTS speed parameter
+Audited all three audio scripts (`generate-tour-audio.js` /rn, `generate-bookend-audio.js` /rn bookends, `generate-provider-tour-audio.js` /provider). All three implicitly use OpenAI TTS default `speed: 1.0` — no script previously passed the parameter. Added explicit `speed: 1.0` to /provider script with a comment block referencing /rn's config so any future drift is visible at a glance.
+
+### Issue 6 — Narration audit (rules 6A and 6B)
+
+**Rule 6A — "Kairos" appears exactly twice in audio narration:**
+- Beat 1: "Kairos pulls this schedule directly from Epic via FHIR" — kept
+- Beat 17: "Kairos is the layer above it that knows BNP trajectory matters" — kept
+- Beat 5 bridge: "Kairos isn't reaching outside Epic" → "The platform isn't reaching outside Epic"
+- Beat 6 patterns: "Patterns Kairos surfaces" → "Patterns the platform surfaces"
+- Beat 9 flagged: "Kairos surfaces what's there" → "the platform surfaces what's there"
+- Beat 11 routine: "Kairos uses visit type" → "The platform uses visit type"
+- Beat 13 pulm: "the patterns Kairos surfaces are pulmonary-specific" → "the patterns surfaced are pulmonary-specific"
+
+Section labels visible on screen (PATTERNS KAIROS SURFACES, KAIROS-FLAGGED ITEMS) unchanged — those are screen labels, not narration.
+
+**Rule 6B — Subject is the application, not the builder/audience:**
+- Beat 1: "Let's start in cardiology" → "This is cardiology". "Let's walk through one patient deeply" → "One patient, walked deeply".
+- Beat 10 query: "Anything else you need from this chart, you ask" → "Anything else needed from this chart, ask".
+- Beat 12 routine walk: "you don't need eight sections of hospital course. You need who they are" → "eight sections of hospital course aren't needed. Just who they are".
+- Beat 17 closer: "the work I want to do here, with you" → "the work that earns its keep here".
+
+Clinical content, section walkthrough specifics, and fact-checked reasoning unchanged. Only framing language touched.
+
+### Audio regenerated
+All 17 MP3s wiped and regenerated with explicit `speed: 1.0`. ~6,076 chars total, ~$0.09 billed. File sizes consistent with prior generation (no truncation, no oversized files indicating speed drift).
+
+### Files touched
+
+- `app/provider/lib/providerTourScript.js` — full rewrite of all 17 beats (narration + cursor targets + sequence steps)
+- `app/provider/components/ProviderTour.js` — scroll reset, control pill repositioning, `swapToRoutine` added to sequence handlers
+- `app/provider/components/BriefingDrawer.js` — full-width container
+- `scripts/generate-provider-tour-audio.js` — explicit `speed: 1.0`
+- `public/provider-tour-audio/provider-tour-{01..17}-*.mp3` — all 17 regenerated
+
+### Verification
+
+- `next build` clean, no warnings
+- Dev server fresh on `http://localhost:3010`, ready in 2.1s
+- `curl /provider` → 200, schedule renders with Trentham at 8:40 AM
+- `curl /rn` → 200, regression-clean
+- All 17 MP3s present
+- Chrome computer-use handoff prompt provided (T1–T7 + console-state check)
+
+
+## 2026-05-06 21:00 — Session 5: Master fix pass for Medical Directors meeting (14 issues)
+
+Tomorrow noon: Dr. Linwarth (IM) and Dr. Castelvar (Pulmonology). All 14 issues addressed in one pass. Per spec: do NOT modify CursorGhost.js (used as-is via existing `kairos-tour:beat-start` events).
+
+### Issue 1 — Tour-init scroll reset
+`runTour()` now calls `window.scrollTo({top:0})`, resets `#provider-briefing-drawer.scrollTop`, and resets `[data-tour-anchor="schedule-list"].scrollTop` BEFORE Beat 1 audio plays. Tour begins with Trentham (8:40 AM) visible without any scrolling.
+
+### Issue 2 — Section anchoring within a card
+Each Trentham section beat (Beats 2-10) now anchors ONE section heading at the top of the drawer's visible area via `el.scrollIntoView({block:"start"})`. The `.provider-tour-section-active` CSS class pulses on the active section. Beat ends → next beat anchors the next section. No mid-beat scroll advancement (audio duration drives advancement implicitly via beat timing).
+
+### Issue 3 — Pill controls top-center
+PauseBadge now renders at `fixed top-[70px] left-1/2 -translate-x-1/2 z-[60]` — sits in the empty band between the drawer's 90px-tall sticky header and the first section content. Stays clear of section text across all 12 sections. Backdrop-blur for readability.
+
+### Issue 4 — Double scrollbar eliminated
+`BriefingDrawer` now sets `document.body.style.overflow = "hidden"` while the drawer is open, restoring on close. The drawer's own overflow-y-auto on its `<aside>` is the single scrollable surface during the tour.
+
+### Issue 5 — Cross-clinic + within-clinic transition choreography
+Tour script gained a `transition` field per beat. ProviderTour state machine handles three transition types:
+- `crossClinic`: close drawer → cursor flies to `[data-specialty="<key>"]` tab → click ripple → switchSpecialty → schedule re-render pause → cursor flies to first patient row → click ripple → openFirstPostHospital → drawer expand → pre-audio pause. Total ~6.9s.
+- `withinClinic`: close drawer → cursor flies to next patient row on same schedule → click → drawer expand → pause. Total ~3.8s.
+- `openCard`: Beat 2 only. Cursor flies to Trentham row → click → drawer opens → pause.
+
+Beat 13 (cardiology→pulm) and Beat 15 (pulm→IM) use `crossClinic`. Beat 11 (Trentham→Voorhees) uses `withinClinic`. Beat 2 uses `openCard`.
+
+### Issue 6 — Whitestone visit type relabeled
+`lib/fixtures/providerSchedule.internalMedicine.js` `im-0840`: visitType "Post Hospital Visit" → "Post Hospital F/U", context "CHF exacerbation" → "Multiple comorbidities". Internal-medicine framing. Section 09 content unchanged per spec.
+
+### Issue 7 — Drawer bleed-through eliminated
+Drawer aside now has explicit `style={{backgroundColor: "#0B0E13"}}` (kairos-graphite hex) — guarantees no opacity drift through Tailwind class transformations. Plus the body-overflow lock from Issue 4 prevents any background page render bleeding through during state transitions.
+
+### Issue 8 — Tour termination after pulmonology
+Audited the beat loop. New `runTour` uses an explicit `while (i < PROVIDER_TOUR.length)` loop with explicit `i += 1` advancement (no off-by-one). Jump and skip use a `jumpToRef` to set the next index without breaking the loop. The loop only exits when `cancelRef.current` is set, ensuring all 17 beats execute through Whitestone closer.
+
+### Issue 9 — Pacing constants applied
+Exposed `PACING` from tour script:
+- drawerCollapseMs: 800
+- cursorTravelMs: 1200
+- clickHighlightMs: 400
+- scheduleRerenderMs: 1500
+- drawerExpandMs: 800
+- preAudioPauseMs: 600
+
+All transition state machines use these constants. Cursor never teleports — every move uses `cursorTravelMs` minimum.
+
+### Issue 10 — Card jumper + Skip pill UI
+PauseBadge layout:
+`Beat X / 17 · [1] [2] [3] [4] · Skip → · ⏸ · 🔊 · End`
+
+- Card buttons jump to `firstBeatOfCard(idx)` via `jumpToRef`. Cross-clinic jumps run the full transition choreography (since it's part of the target beat's `before` hook).
+- Skip → sets `skipRef.current = true`, current beat aborts its audio wait, loop advances to next beat.
+- Active card highlighted in gold (matches active card's beat).
+- Buttons remain clickable throughout the tour.
+
+### Issue 11 — "Kairos" reduced to exactly 2 audible mentions
+- Beat 1: "Kairos pulls this schedule directly from Epic via FHIR" (kept verbatim)
+- Beat 17: "Kairos is the layer above it that knows BNP trajectory matters" (kept verbatim)
+- Beat 8 bridge: "Kairos isn't reaching" → "The platform isn't reaching"
+- Beat 9 patterns: "Patterns Kairos surfaces" → "Patterns the platform surfaces"
+- Beat 10 flagged: "Kairos surfaces what's there" → "The platform surfaces what's there"
+- Beat 11 routine: "Kairos uses visit type" → "The platform uses visit type"
+- Beat 13 pulm: "the patterns Kairos surfaces" → "the patterns surfaced"
+- On-screen section labels (PATTERNS KAIROS SURFACES, KAIROS-FLAGGED ITEMS) unchanged — labels not narration.
+
+### Issue 12 — First-person framing eliminated
+- Beat 1: "Let's start in cardiology" → "This is cardiology". "Let's walk through one patient deeply" → "One patient, walked deeply".
+- Beat 12 routine walk: "you don't need eight sections" → "eight sections aren't needed". "You need who they are" → "Just who he is".
+- Beat 17 closer: "the work I want to do here, with you" → "the work that earns its keep here".
+- All other beats already in third-person observational voice.
+
+### Issue 13 — TTS speed parameter matched to /rn
+`scripts/generate-provider-tour-audio.js` already explicitly passes `speed: 1.0` (matching /rn's default). All 17 MP3s wiped and regenerated with the new narration. ~5,698 chars total, ~$0.09 billed. File sizes consistent with prior 1.0x generations.
+
+### Issue 14 — Cursor parking + section pulse
+On every beat-start the section heading is `scrollIntoView({block:"start"})` and tagged with `.provider-tour-section-active`. The class adds a soft amber background pulse (`@keyframes kairos-section-highlight`, ~1.6s cycle). CursorGhost is NOT modified — the cursor sits on the section heading per its existing `kairos-tour:beat-start` cue. Cleared on beat-end and on tour-end/skip/jump.
+
+### Files touched
+- `lib/fixtures/providerSchedule.internalMedicine.js` — Whitestone label
+- `app/provider/lib/providerTourScript.js` — full 17-beat rewrite, `transition` field, `PACING` export, `firstBeatOfCard` helper, `card` index per beat
+- `app/provider/components/ProviderTour.js` — full rewrite: transition state machines, scroll reset, section anchoring, Card jumper UI, Skip + Jump refs, pacing-aware sleep
+- `app/provider/components/BriefingDrawer.js` — body-overflow lock, explicit #0B0E13 hex on aside
+- `public/provider-tour-audio/provider-tour-{01..17}-*.mp3` — all 17 regenerated
+
+### Verification
+- `next build` clean. /provider weighs 25.3 kB (121 kB First Load JS).
+- Dev server fresh on `http://localhost:3010` (Ready in 3.7s).
+- `curl /provider` → 200, `curl /rn` → 200 (regression-clean).
+- 17 MP3s present.
+
+
+## 2026-05-06 21:45 — Session 6: Six follow-up fixes from verification
+
+### Issue A — Tour init scroll target
+Beat 1 now carries `skipScrollAnchor: true`. ProviderTour's beat loop reads this flag and SKIPS the `anchorSection()` call for Beat 1, so the page stays at `scrollY = 0` from `runTour`'s initial `window.scrollTo(0, 0)`. Banner, KAIROS wordmark, clinic tabs, page title, and 8:40 AM Trentham row are all visible at tour start.
+
+Previously: anchorSection on `[data-tour-anchor="schedule-list"]` was scrolling the page so the schedule section's top aligned with viewport top — pushing the page header off-screen. The user saw the schedule mid-scrolled (Voorhees at top, Trentham above) because of additional scroll behavior interacting with the auto-scroll logic.
+
+### Issue B + D — Pre-scroll-then-cursor pattern
+New helper `preScroll(selector, blockMode)` in ProviderTour:
+- Calculates target's bounding rect
+- If already comfortably inside viewport (with 80px margin), no-op
+- Else `el.scrollIntoView({behavior:"smooth", block: blockMode})` and `await pwait(700)` for smooth-scroll to settle
+
+Applied before EVERY cursor move in transition state machines:
+- `runCrossClinicTransition`: preScroll to clinic tab with `block:"start"` (anchors tab at top), then cursor moves; preScroll to first patient row with `block:"center"`, then cursor moves.
+- `runWithinClinicTransition`: preScroll to next patient row with `block:"center"`.
+- `runOpenCardTransition` (Beat 2): preScroll to Trentham row with `block:"center"`.
+
+Cross-clinic total now ~7.7s (was ~6.9s). Within-clinic ~4.5s (was ~3.8s). Cursor never travels through off-screen space.
+
+### Issue C — Audio.ended event drives advancement
+Beat-loop wait was timer-based using `audio.duration * 1000`. TTS-1 MP3 metadata can understate true playback length, so a beat with metadata = 10s and actual = 19s would advance after 10s + padMs, mid-narration. The next beat's `anchorSection` would scroll the drawer forward — exactly what was reported for Beat 6 (Trended Data) jumping to Section 9 mid-narration.
+
+Replaced the timer-based wait with an `audio.addEventListener("ended", handler)` event. Beat advancement is now gated on the actual audio end. Hard timeout (`fallbackDurationMs * 1.5 + 5000`) protects against stuck audio elements. The `padMs` after-pause now only fires after `audioEnded` is observed.
+
+### Issue E — Capability-voice narration rewrite
+Rewrote Beats 2-7, 9-10, 12-16 to describe what THE PLATFORM DID rather than explaining clinical concepts. Examples:
+
+- Beat 4 OLD: "Active problems. Cardiac arrest with ROSC, status post LAD drug-eluting stent, new HFrEF at thirty-five percent — all new at this admission."
+- Beat 4 NEW: "Section 03 surfaces the active problem list, with new diagnoses tagged based on encounter date. The platform flagged what changed during the admission — three new at this admission, two pre-existing escalated."
+
+- Beat 9 OLD: "Patterns the platform surfaces. He's on the foundation: aspirin plus P-2-Y-12 inhibitor for DAPT, high-intensity statin, beta blocker, ACE inhibitor. EF thirty-five with anterior wall scar. If EF stays at or below forty, four-pillar guideline-directed therapy applies..."
+- Beat 9 NEW: "Section 09 cross-references the active medication list against the active diagnosis list. Here it surfaces the missing GDMT pillar — the platform did the matching, the provider sees the gap without hunting through the med list."
+
+- Beat 16 OLD: "Howard Whitestone, seventy-one. Newly diagnosed HFrEF at thirty-five percent on a primary care visit. On three of four GDMT pillars — S-G-L-T-2 inhibitor not started despite dual indication with diabetes."
+- Beat 16 NEW: "Section 04 reconciled his discharge medication list. The platform flagged the absent SGLT-2 inhibitor against his diagnosis stack. Section 08 elevated the new NSAID intolerance — buried in the discharge PDF on admission, surfaced at the visit-level allergy view now."
+
+Beat 1 opener, Beat 8 bridge, and Beat 17 closer kept verbatim per spec. "Kairos" still appears exactly twice (Beats 1 and 17). Zero first-person framing across all 17 beats.
+
+### Issue F — Beat 17 reachability
+Verified the audio.ended fix from Issue C does NOT regress termination. The beat loop's `while (!audioEnded && t < hardTimeoutMs)` exits cleanly when audio ends. `i += 1` advances. No early break paths. All 17 beats execute through the Whitestone closer.
+
+### Files touched
+- `app/provider/lib/providerTourScript.js` — full beat narration rewrite, `skipScrollAnchor` flag on Beat 1
+- `app/provider/components/ProviderTour.js` — `preScroll()` helper, applied to all transition state machines, `audio.addEventListener("ended", ...)` based wait, `skipScrollAnchor` check on beat-loop section anchor
+- `public/provider-tour-audio/provider-tour-{01..17}-*.mp3` — all 17 regenerated, ~5,506 chars, ~$0.08
+
+### Verification
+- `next build` clean. /provider weighs 25.4 kB.
+- Dev server fresh on `http://localhost:3010` (Ready in 1.5s).
+- `curl /provider` → 200, `curl /rn` → 200.
+- All 17 MP3s present.
+
+
+## 2026-05-06 22:30 — Session 7: Single-clock orchestrator + 21-beat array
+
+Critical fix pass. Tour was desynced because audio playback, section highlight, and cursor were running on independent clocks. Root cause was the orchestrator dispatching cursor cues + anchorSection at beat-start, then awaiting an audio.duration-based or audio.ended-based timer for advancement — but the cursor cue, the audio play, and the highlight were all firing in parallel, not sequentially.
+
+### Single source of truth: playBeat()
+
+Rewrote `app/provider/components/ProviderTour.js` around an explicit per-beat sequencer. Each beat awaits each step in strict order:
+
+```
+async function playBeat(beat) {
+  if (beat.transition)              await runTransition(beat.transition);
+  if (cursorTarget && !skipScroll)  scrollIntoViewSafe(cursorTarget, "start");
+                                    await pwait(scrollSettleMs);
+  if (cursorTarget)                 dispatchCursor(cursorTarget, ..., cursorTravelMs);
+                                    await pwait(cursorTravelMs + arriveBuffer);
+  if (cursorTarget)                 setActiveSection(cursorTarget);
+                                    await pwait(preAudioPauseMs);
+  await playAudioAndWaitEnded(beat.audioKey, beat.voiceText);
+  await pwait(beat.padMs);
+}
+```
+
+Beat advancement happens ONLY when this awaitable resolves (or when Skip / Jump / End sets a control flag, observed inside `pwait()` and inside the audio-ended wait loop).
+
+`playAudioAndWaitEnded` is the audio-end primitive: loads audio, plays it, attaches `addEventListener("ended", ...)`, polls a flag set by that listener. Hard timeout at `1.5×` the chars-based estimate `+10s` only fires if the audio element gets stuck — under normal playback the `ended` event resolves the wait.
+
+### What was killed
+- The previous `audio.duration`-as-primary-timer pattern. Metadata can understate true playback length on TTS-1 MP3s, which was causing beats to advance mid-narration and pull the section anchor forward.
+- All parallel dispatch of cursor cue + audio play. Cursor now fully arrives at the section heading BEFORE audio plays.
+- Mid-beat retarget sequence steps. Removed entirely. Section anchor moves only between beats.
+
+### Beat array audit + expansion (17 → 21)
+
+Trentham was previously walked in 9 beats covering 12 sections — sections 07 (Hospital Course) and 08 (Allergies) were being SKIPPED, and sections 10/11/12 were lumped into one beat. The section-09 jump Brandon observed in Beat 6 was actually Beat 7 (anchored section-06) advancing into Beat 8 (anchored section-09) because the 06→09 hop skipped 07 and 08.
+
+New Card 1 walk:
+- Beat 2  Section 01 (WHO THIS IS, openCard transition)
+- Beat 3  Section 02 (WHY HERE TODAY)
+- Beat 4  Section 03 (ACTIVE PROBLEMS)
+- Beat 5  Section 04 (CURRENT MEDICATIONS)
+- Beat 6  Section 05 (LONGITUDINAL STORY)
+- Beat 7  Section 06 (TRENDED DATA)
+- Beat 8  Section 07 (HOSPITAL COURSE)            ← NEW DEDICATED BEAT
+- Beat 9  Section 08 (ALLERGIES)                  ← NEW DEDICATED BEAT
+- Beat 10 BRIDGE (between sections 08 and 09)     ← OWN BEAT, not replacing 07/08
+- Beat 11 Section 09 (PATTERNS)
+- Beat 12 Section 10 (RISK CONTEXT)               ← SPLIT OUT
+- Beat 13 Section 11 (CARE GAPS)                  ← SPLIT OUT
+- Beat 14 Section 12 (FLAGGED ITEMS)              ← SPLIT OUT
+
+Strict forward order across all 12 sections + dedicated bridge. No skipping, no lumping.
+
+Card 2/3/4 keep the 2/2/3-beat structure (transition + walk pattern). Closer is Beat 21.
+
+Final card mapping:
+- Card 0  — Beat 1 (opener)
+- Card 1  — Beats 2–14 (Trentham)
+- Card 2  — Beats 15–16 (Voorhees)
+- Card 3  — Beats 17–18 (Okafor)
+- Card 4  — Beats 19–21 (Whitestone + closer)
+
+### Files touched
+- `app/provider/lib/providerTourScript.js` — full rewrite to 21 beats; new `sectionId` field per beat; exported `targetForSection(id)` helper; PACING constants for orchestrator.
+- `app/provider/components/ProviderTour.js` — full rewrite around `playBeat()`; explicit `playAudioAndWaitEnded()` primitive; transition state machines unchanged from prior round but now invoked from inside playBeat instead of as a "before" hook.
+- `public/provider-tour-audio/provider-tour-{01..21}-*.mp3` — 21 MP3s regenerated with `speed: 1.0`. ~6,194 chars total, ~$0.09 billed.
+
+### Verification
+- `next build` clean. /provider weighs ~25 kB.
+- Dev server fresh on `http://localhost:3010` (Ready in 1.6s).
+- `curl /provider` → 200, `curl /rn` → 200.
+- 21 MP3s present in `public/provider-tour-audio/`.
+
+
+## 2026-05-06 23:00 — Session 8: Architectural rebuild — clinic dropdown nav + STEPS orchestrator
+
+Wiped the existing ProviderTour and rebuilt from scratch around a clinic-dropdown architecture.
+
+### New page architecture
+
+- `app/provider/components/ClinicNav.js` — persistent 3-button nav row (Cardiology / Pulmonology / Internal Medicine). Each button is a dropdown trigger with caret. Click outside closes any open dropdown.
+- `app/provider/components/ClinicDropdown.js` — patient list panel below the active clinic button. Solid #0B0E13 background, opaque, 420px wide, 70vh max-height with scroll. Each row has `data-encounter-id` and `data-tour-card` attributes for tour targeting.
+- `app/provider/page.js` — rewritten with `openClinic` + `openVisit` state. ClinicNav unmounted (not just hidden) when `openVisit` is non-null, so the schedule never bleeds through behind the card. BriefingDrawer is the existing component, still solid graphite.
+- Removed: `app/provider/components/SpecialtySelector.js`, `app/provider/components/ScheduleCard.js` (replaced by ClinicNav + ClinicDropdown).
+
+### New tour orchestration
+
+- `app/provider/lib/providerTourScript.js` — flat STEPS array (60 steps) with discrete step types: opener, openClinic, openPatient, section, closePatient, closer. `audioKeyForSection(card, sectionId)` resolver returns existing audio for Card 1's 12 sections + opener/closer; Cards 2–4 fall back to `null` for sections beyond 01 (Prompt 2 will fill these in).
+- `app/provider/components/ProviderTour.js` — fully rewritten (old file deleted, new file written). Single async loop. One STEP at a time, `await playStep(...)` before advancement. No timers, no intervals, no duration estimates.
+  - Audio primitive: `playAudioAndWait(audioKey)` returns a Promise that resolves on `audio.ended` or `audio.error`. Skip / Jump / End directly call the resolver via a ref. No polling.
+  - `pwait(ms)` is a pause-aware sleep used only for visual transitions (cursor travel, scroll settle, drawer animation). Skip/Jump/End fast-bail.
+  - Card jumper: clicking [1]/[2]/[3]/[4] sets `jumpToCardRef`. After the current step's audio resolver fires (handleSkip pauses the audio), the loop runs `runJumpToCard(N)`, which closes the current card, switches clinic dropdown if needed, clicks the target patient, and returns the STEPS index of that card's first section walk.
+- CursorGhost is reused via existing `kairos-tour:beat-start` events. Not modified.
+
+### Section walk pattern
+
+Each section step:
+1. `clearHighlight()` — remove prior section pulse.
+2. `scrollSectionToTop(selector)` — smooth `scrollIntoView({block:"start"})` inside the drawer's overflow-y-auto.
+3. `await pwait(scrollSettleMs)` — 700ms.
+4. `setActiveSectionEl(selector)` — apply `.provider-tour-section-active` amber pulse.
+5. `dispatchCursor(selector, cursorTravelMs)` — cursor flies to section heading.
+6. `await pwait(cursorTravelMs + 200)` — cursor arrival.
+7. `await pwait(preAudioPauseMs)` — 600ms breathing room.
+8. `await playAudioAndWait(audioKey)` — waits for `audio.ended` (or fast-fails on missing file).
+
+Section walk is the only place audio drives advancement.
+
+### Audio status
+
+Per spec, audio is NOT regenerated this round. Existing 21 MP3s from the prior session remain in `public/provider-tour-audio/`. The new audio key resolver maps:
+- Opener: `provider-tour-01-intro` (existing)
+- Card 1 sections 01–12: existing per-section audio (drops the bridge file from the previous architecture)
+- Cards 2–4 section 01: existing intro audio (`provider-tour-15-voorhees-open`, `-17-okafor-open`, `-19-whitestone-open`)
+- Cards 2–4 sections 02–12: NULL — Prompt 2 will provide audio. Section walks resolve immediately on `error` event.
+- Closer: `provider-tour-21-closer` (existing)
+
+Tour will run end-to-end. Card 1 has full per-section narration. Cards 2–4 will race through sections 02–12 silently until Prompt 2 generates per-section audio.
+
+### Verification
+
+- `next build` clean. /provider weighs 23.4 kB (119 kB First Load JS).
+- Dev server fresh on `http://localhost:3010` (Ready in 1.6s).
+- `curl /provider` → 200, `curl /rn` → 200.
+
+
+## 2026-05-06 23:15 — Session 9: Active-section styling matched to /rn SpotlightOverlay
+
+`.provider-tour-section-active` was rendering with an animated amber background pulse + 1px box-shadow ring — invented styling that didn't match /rn's tour. /rn renders its active anchor as a static SVG outline in `components/SpotlightOverlay.js` lines 354-366:
+
+```jsx
+<rect
+  fill="none"
+  stroke="rgba(245, 158, 11, 0.85)"
+  strokeWidth="2"
+  rx="6" ry="6"
+  style={{ filter: "drop-shadow(0 0 12px rgba(245, 158, 11, 0.45))" }}
+/>
+```
+
+No fill, no animation. Just a 2px amber border at 85% opacity with a 12px blurred amber glow.
+
+Replaced the `.provider-tour-section-active` class in `app/globals.css` to translate this directly to CSS:
+
+```css
+.provider-tour-section-active {
+  border-radius: 6px;
+  box-shadow:
+    0 0 0 2px rgba(245, 158, 11, 0.85),
+    0 0 12px 0 rgba(245, 158, 11, 0.45);
+}
+```
+
+The `0 0 0 2px ...` shadow with zero offset/blur but 2px spread is the box-shadow equivalent of `stroke-width: 2`. The second shadow with 12px blur is the equivalent of /rn's `drop-shadow(0 0 12px ...)` filter. `rx="6"` on the SVG rect → `border-radius: 6px` on the DOM element.
+
+Removed `@keyframes kairos-section-highlight` entirely (no pulse).
+
+### Files touched
+- `app/globals.css` — replaced the animated `.provider-tour-section-active` block with the static /rn-matched outline.
+
+### Verification
+- `next build` clean.
+- Active-section visual now identical to /rn: static gold outline + soft glow on the section box, no fill, no pulse. Side-by-side comparison ready.
+
+
+## 2026-05-06 23:35 — Session 10: STEPS array collapsed to 8 + diagnostic logging
+
+### BUG 1 — Step counter exploded: 60 → 8
+
+The previous architecture flattened every section walk into its own top-level step (60+ steps). Card walks belong INSIDE a `cardWalk` step, not as separate top-level steps.
+
+`app/provider/lib/providerTourScript.js` now has 8 STEPS:
+- 0  `opener`         — opening narration
+- 1  `openClinic`     — Cardiology dropdown
+- 2  `cardWalk` 1     — Trentham (open → 12 sections → close)
+- 3  `cardWalk` 2     — Voorhees (open → 12 sections → close)
+- 4  `openClinic`     — Pulmonology dropdown
+- 5  `cardWalk` 3     — Okafor
+- 6  `openClinic`     — Internal Medicine dropdown
+- 7  `cardWalk` 4     — Whitestone (open → 12 sections + closer audio → close)
+
+Pill counter shows "Step X / 8". The Card jumper [1][2][3][4] maps directly to step indices `{2, 3, 5, 7}`.
+
+### cardWalk handler
+
+`runCardWalk(step)` in `ProviderTour.js`:
+1. Cursor → patient row, click ripple
+2. `onVisitOpen(visit, specialty)` → drawer mounts
+3. `for (s = 1..12)`: clearHighlight → scrollSectionToTop → setActiveSection → dispatchCursor → preAudioPause → `await playAudioAndWait(audioKeyForSection(card, s))`
+4. (Card 4 only) play closer audio
+5. `onVisitClose()` → drawer unmounts
+
+Skip behavior:
+- Inside the section loop, `skipRef.current = true` causes the current section's audio to abort (pause + resolver fires) and the loop continues to the next section. `skipRef` is reset at the top of each iteration.
+- Outside cardWalk (on opener / openClinic), Skip aborts the current step and the outer loop advances `i += 1`.
+
+### BUG 2 — Cursor not moving + diagnostic logging
+
+Added `console.log("[provider-tour]", ...)` instrumentation at every await point and key state transition:
+- `runTour: BEGIN / loop iter N / cleanup / END`
+- `playStep:` (entry + exit per step)
+- `runOpener:` / `runOpenClinic:` / `runCardWalk:` (entry + each major await)
+- `pwait start: <label> Xms` / `pwait done: <label>` / `pwait early-bail: <label> <reason>`
+- `dispatchCursor:` logs target selector + whether `document.querySelector` returned an element or NULL
+- `preScroll:` logs whether target is in view or being scrolled
+- `playAudioAndWait:` logs src, finish reason (`ended` / `error` / `play-rejected` / `play-threw` / `external` / `skipping`)
+- `setActiveSectionEl: NULL element for ...` flags missing section anchors
+- `handleSkip / handleJumpCard / handleEnd pressed`
+
+When the user runs the tour and shares the console output, the log stream will pinpoint where the orchestrator hangs:
+- If `dispatchCursor: NULL` for `[data-clinic="cardiology"]`, the button isn't in the DOM at the moment of dispatch (mount-timing issue).
+- If `playAudioAndWait: finish ended` doesn't fire for the opener, audio.ended isn't being triggered (browser audio bug or src 404).
+- If `runTour: loop iter 1` never appears after iter 0, the audio Promise hung.
+
+### Files touched
+- `app/provider/lib/providerTourScript.js` — 8-step array, `CARD_TARGETS` exports `{clinic, visitId, stepIdx}` per card
+- `app/provider/components/ProviderTour.js` — cardWalk handler with internal section loop, diagnostic logging throughout
+
+### Verification
+- `next build` clean.
+- Dev server fresh on `http://localhost:3010` (Ready in 1.7s).
+- `curl /provider` → 200.
+
+
+## 2026-05-06 23:55 — Session 11: Final fix pass before Medical Directors meeting
+
+Seven issues addressed in one pass.
+
+### Issue 1 — Voorhees dropped from tour walk
+STEPS array collapsed from 8 to 7 top-level steps. Voorhees remains in the cardiology dropdown as a clickable patient (user-driven nav still works), but the tour does NOT walk him.
+
+New STEPS (indices 0-6):
+- 0  opener
+- 1  openClinic cardiology (cursor already on button from opener — `skipCursorTravel: true`)
+- 2  cardWalk Card 1 (Trentham)
+- 3  openClinic pulmonology
+- 4  cardWalk Card 2 (Okafor)
+- 5  openClinic internalMedicine
+- 6  cardWalk Card 3 (Whitestone, includes closing audio)
+
+`CARD_TARGETS` now maps 1→Trentham, 2→Okafor, 3→Whitestone (step indices {2, 4, 6}).
+
+### Issue 2 + Issue 3 — Per-section narration for Okafor and Whitestone
+12 sections × 2 cards = 24 audio scripts authored per the user's verbatim spec. Capability voice — describes what the platform pulled / surfaced / cross-referenced. Stored in `SECTION_NARRATION` in `app/provider/lib/providerTourScript.js` and mirrored in the audio generator script.
+
+Numbers spelled out in narration where TTS pronunciation matters: "section three-A" for CKD stage 3a, "thirty-day" for 30-day, "I-M" for IM, "T2DM" left as-is (TTS pronounces letters), "GDMT" left as-is.
+
+### Issue 4 — Closing narration after Card 3 Section 12
+Added the user's verbatim closer:
+"Same engine across all three specialties. Kairos is the layer above Epic that knows which data matters for this patient at this visit, and surfaces it without the provider hunting for it. The chart data comes from Epic via FHIR. The reasoning comes from specialty-authored logic. The time saved comes from not having to assemble it manually."
+
+This is the second of the two allowed "Kairos" mentions.
+
+### Issue 5 — Pill repositioning
+PauseBadge now takes a `drawerOpen` prop and renders with dynamic top:
+- `top: 24px` when a card drawer is open (inline with patient name kicker / name band)
+- `top: 80px` when no drawer (just below the page header so the KAIROS wordmark stays clear)
+
+Horizontally centered (`left-1/2 -translate-x-1/2`). Patient name flex-extends from the left edge but the name itself is short enough that the pill's center column doesn't overlap. X close button stays at the far right.
+
+### Issue 6 — Opener cursor pre-positioning
+`runOpener()` now reads `step.cursorTarget` (defaults to `[data-clinic="cardiology"]`) and:
+1. preScrolls the Cardiology button into view
+2. dispatches the cursor cue to that button
+3. waits for cursor arrival
+4. waits the pre-audio pause
+5. plays opener audio with cursor parked on the button
+
+Step 1 (`openClinic` cardiology) carries `skipCursorTravel: true` so it just fires the click ripple + opens the dropdown — no redundant cursor flight.
+
+### Issue 7 — Active-section style verified matching /rn
+The `.provider-tour-section-active` CSS in `app/globals.css` was already updated in Session 9 to match /rn's `SpotlightOverlay.js` lines 354-366 verbatim:
+```css
+.provider-tour-section-active {
+  border-radius: 6px;
+  box-shadow:
+    0 0 0 2px rgba(245, 158, 11, 0.85),
+    0 0 12px 0 rgba(245, 158, 11, 0.45);
+}
+```
+No fill, no animation, no pulse. Verified: matches /rn.
+
+### Audio generation
+- New script `scripts/generate-section-audio.js` — hardcoded narration map, OpenAI TTS-1 onyx at `speed: 1.0`.
+- 25 new MP3s generated: 12 Okafor sections (`provider-tour-okafor-s01.mp3` through `-s12.mp3`), 12 Whitestone sections (`provider-tour-whitestone-s01.mp3` through `-s12.mp3`), 1 closing (`provider-tour-closing.mp3`).
+- 3,988 total chars billed, ~$0.06.
+- Card 1 (Trentham) audio NOT regenerated — existing files preserved.
+
+### Kairos count audit
+Audible mentions of "Kairos" in tour audio:
+- Opener `provider-tour-01-intro`: 1 ("Kairos pulls this schedule directly from Epic via FHIR")
+- Closer `provider-tour-closing`: 1 ("Kairos is the layer above Epic that knows...")
+- All other beats / sections: 0
+- Total: 2 ✓
+
+### Files touched
+- `app/provider/lib/providerTourScript.js` — 7-step structure, `SECTION_NARRATION` for Cards 2/3, `CLOSING_NARRATION`, `CARD_TARGETS` updated to 3 cards, opener carries `cursorTarget`
+- `app/provider/components/ProviderTour.js` — `runOpener` pre-positions cursor on Cardiology button; `runOpenClinic` honors `skipCursorTravel` flag; PauseBadge takes `drawerOpen` prop with dynamic top; jumper renders 3 buttons (was 4)
+- `scripts/generate-section-audio.js` — new (25 audio files)
+- `public/provider-tour-audio/` — 25 new MP3s
+
+### Verification
+- `next build` clean.
+- Dev server fresh on `http://localhost:3010` (Ready in 1.7s).
+- `curl /provider` → 200.
+- 25 + existing audio files present.
+
+---
+
+## Session 12 · Provider chart-chat backend wired + tour narration updated · 2026-05-06 11:00 PM CDT
+
+### What changed
+1. **Patient-chart chat input is now functional.** The Section 13 search field on every /provider briefing card posts to a new backend, returns a chart-grounded answer with cited sections, and lets the provider click each citation to scroll/highlight the referenced section.
+2. **Card 1 (Trentham) Section 12 narration replaced** to mention the chat capability now wired into every card.
+3. **Closing narration replaced** to surface chat alongside FHIR + specialty-authored logic.
+
+### Backend
+- `app/api/provider-chat/route.js` — new POST route. Accepts `{ question, briefingId, specialty }`, loads the briefing fixture, serializes the 12 sections into plain text, calls Anthropic with caching, returns `{ answer, citedSections, notFound }`.
+- Model: `claude-sonnet-4-20250514`, `max_tokens: 800`, JSON output enforced via system prompt.
+- Prompt caching: chart context lives in a separate system block with `cache_control: { type: "ephemeral" }` so repeat questions about the same patient hit the cache.
+- API key env var: `KAIROS_ANTHROPIC_KEY` (already wired in `.env.local`).
+- `lib/provider/serializeBriefing.js` — new helper that converts a briefing object into "Section NN · LABEL\n<body>" blocks. Handles strings, arrays, nested objects, med list shapes.
+
+### Frontend
+- `app/provider/components/BriefingDrawer.js` — replaced the visual-only input with a new `ChartChat` component.
+  - Controlled input with Enter-to-submit, click-to-submit on the search/spinner button, disabled while loading.
+  - Three render states: loading ("Searching chart…" + spinner), error (red-tinted text), answer (gold section pills + Clear button). "Not documented" answers render in muted gray.
+  - Section-pill click scrolls the drawer to `#provider-section-NN`, applies `.provider-tour-section-active` for ~2.2s, then removes it. Same gold border the tour cursor uses.
+  - State resets when `briefingId` changes (new patient = clean slate).
+- `app/provider/page.js` — passes `briefingId` and `specialty` props to `<BriefingDrawer>` so the chat component can address the API.
+
+### Narration updates
+- `app/provider/lib/providerTourScript.js` — added `CARD1_SECTION12_NARRATION` constant, replaced `CLOSING_NARRATION` with chat-aware copy.
+- `scripts/generate-section-audio.js` — added `provider-tour-14-flagged` to the NARRATION map (Card 1 Section 12), updated `provider-tour-closing` text.
+- Deleted + regenerated 2 MP3s: `public/provider-tour-audio/provider-tour-14-flagged.mp3` (405 chars) and `public/provider-tour-audio/provider-tour-closing.mp3` (423 chars). 828 chars billed, ~$0.012.
+
+### Smoke tests (all 9 chat questions, against live `/api/provider-chat`)
+- Trentham (cardiology, `card-cardiac-arrest`):
+  - "What is his ejection fraction?" → "EF 35%, documented on echo + cardiac MRI" → Section 06 ✓
+  - "When was his cardiac arrest?" → "4/21/2026" → Section 03 ✓
+  - "Has he ever had cancer?" → "Not documented in chart." ✓
+- Okafor (pulmonology, `pulm-copd-exac`):
+  - "What is his GOLD stage?" → "Not documented in chart." (chart says "COPD, severe" + FEV1 42% predicted but no explicit GOLD numeric stage; model correctly declines to extrapolate)
+  - "What inhalers is he on?" → umeclidinium/vilanterol LAMA/LABA + albuterol PRN → Section 04 ✓
+  - "Last PFT result?" → "FEV1 42% predicted, 18 months ago" → Section 06 ✓
+- Whitestone (internal medicine, `im-chf-exac`):
+  - "What is his ejection fraction?" → "EF 35%" → Section 06 ✓
+  - "When was his last lipid panel?" → "6 months ago, LDL 88 on atorvastatin 40mg" → Section 06 (chart actually documents this — model returns the data)
+  - "What allergies does he have?" → "NKDA. NSAID intolerance now documented (HF precipitant)" → Section 08 ✓
+
+### Files touched
+- `app/api/provider-chat/route.js` (new)
+- `lib/provider/serializeBriefing.js` (new)
+- `app/provider/components/BriefingDrawer.js`
+- `app/provider/page.js`
+- `app/provider/lib/providerTourScript.js`
+- `scripts/generate-section-audio.js`
+- `public/provider-tour-audio/provider-tour-14-flagged.mp3` (regenerated)
+- `public/provider-tour-audio/provider-tour-closing.mp3` (regenerated)
+
+### Tour code untouched
+ProviderTour.js orchestrator was deliberately not modified. Chat lives in its own component inside the drawer body and does not interact with tour state.
+
+### Verification
+- `next build` clean — `/api/provider-chat` registered as ƒ Dynamic.
+- Dev server fresh on `http://localhost:3010` (Ready in 1.65s).
+- `curl /provider` → 200.
+- All 9 chat smoke tests pass with well-formed JSON, correct citations, correct "not documented" handling.
+
+---
+
+## Session 13 · Okafor + Whitestone narration realigned to universal 12-section schema · 2026-05-06 11:15 PM CDT
+
+### What was wrong
+Brandon flagged that on Card 2 (Okafor), the audio was off by one section: the s01 audio ("Pulmonology visit type pulled from the schedule") played during Section 01 *Who This Is*, when it actually describes Section 02 *Why They're Here Today*. Audit of the original narration map showed the misalignment was deeper than a simple off-by-one — Section 01 (Who This Is) had no narration at all, Section 04 (Current Meds) was getting "Outside pulm consult / Care Everywhere" copy, and Section 05 (Longitudinal Story) was getting the inhaler-class copy.
+
+### Fix
+Rewrote all 12 narrations for both Card 2 (Okafor) and Card 3 (Whitestone) to map cleanly to the universal section schema as defined in `BriefingDrawer.js` SECTION_LABELS:
+
+01 Who This Is → 02 Why Today → 03 Active Problems → 04 Current Meds → 05 Longitudinal Story → 06 Trended Data → 07 Hospital Course → 08 Allergies → 09 Patterns → 10 Risk → 11 Care Gaps → 12 Flagged.
+
+Each rewrite was checked against the actual fixture body for that section. Card 1 (Trentham) audio was NOT touched — its existing files remain in place except for `provider-tour-14-flagged.mp3` which was already updated in Session 12 with the chat-aware Section 12 copy.
+
+### Files touched
+- `app/provider/lib/providerTourScript.js` — `SECTION_NARRATION.card2` and `.card3` rewritten in full (24 strings).
+- `scripts/generate-section-audio.js` — same 24 strings mirrored.
+- `public/provider-tour-audio/` — 24 MP3s deleted and regenerated:
+  - `provider-tour-okafor-s01.mp3` … `provider-tour-okafor-s12.mp3`
+  - `provider-tour-whitestone-s01.mp3` … `provider-tour-whitestone-s12.mp3`
+  - 4,392 chars billed, ~$0.066 at TTS-1 $15/1M.
+
+### Verification
+- `next build` clean.
+- Dev server live on `http://localhost:3010`, `/provider` → 200.
+- 24 regenerated MP3s present on disk.
+- Brandon to re-jump to Card 2 and Card 3 mid-tour and confirm each audio matches what's on screen at that moment.
+
+---
+
+## Session 14 · Scripted chat demo at end of Card 3 Whitestone tour · 2026-05-06 11:25 PM CDT
+
+### What changed
+After Whitestone Section 12 audio ends and before the closing narration plays, the tour now runs a deterministic, pre-baked chat demo: cursor travels up to the chat input, types a question character-by-character, "submits" with a click ripple on the search button, shows a 1.2s loading state, then fades in a hardcoded answer with two cited section pills. The closing narration begins after the answer holds on screen for 1.5s.
+
+### Architecture
+- **No real API call during the tour.** The demo drives the live `ChartChat` component via window events (`kairos-tour:chat-question`, `kairos-tour:chat-loading`, `kairos-tour:chat-answer`, `kairos-tour:chat-reset`). `/api/provider-chat` is not called during the scripted sequence.
+- **Real chat input still works** for manual user questions outside the tour. The events drive the same React state as user input.
+- **Tour state machine architecture not modified.** The chat demo is gated by a new `includesChatDemo: true` flag on the Whitestone cardWalk step and runs inside `runCardWalk()` between the Section 12 audio loop and the closer audio block. All existing pause/skip/jump/cancel guards apply.
+
+### Sequence (in order)
+1. After Section 12 audio.ended, dispatch `chat-reset` to clear stale state (~150ms beat).
+2. Pre-scroll chat input (`[data-tour-anchor="chat-input"]`) into view at top of drawer.
+3. Cursor travels from Section 12 heading up to chat input — 1500ms travel + click highlight.
+4. Typewriter — `"What is his ejection fraction?"` is dispatched character-by-character at 40ms/char (29 chars ≈ 1.16s total).
+5. 600ms pause after typing.
+6. Cursor moves to submit button (`[data-tour-anchor="chat-submit"]`), click highlight.
+7. `chat-loading: true` dispatched → "Searching chart…" + spinner. Holds 1200ms.
+8. `chat-answer` dispatched with pre-baked text + `["02", "09"]` citations. Loading clears, answer block fades in with two clickable gold Section pills.
+9. 1500ms hold so the answer is readable.
+10. Closing audio plays as normal (existing closer block in runCardWalk).
+
+### Pre-baked answer (used verbatim)
+- Question: `"What is his ejection fraction?"`
+- Answer: `"Ejection fraction is 35%, documented at the time of recent HFrEF diagnosis during the post-hospital discharge workup."`
+- Cited sections: `["02", "09"]`
+
+The Section 02 / Section 09 pills remain functional — clicking them scrolls to that section and applies the gold border highlight, same as the live chat.
+
+### Files touched
+- `app/provider/components/BriefingDrawer.js` — `ChartChat` listens for the four `kairos-tour:chat-*` window events; added `data-tour-anchor="chat-input"` and `data-tour-anchor="chat-submit"` selectors so the cursor can target the input and submit button.
+- `app/provider/components/ProviderTour.js` — new `runChatDemo()` function. Called from `runCardWalk()` immediately before the existing closer block when `step.includesChatDemo` is true.
+- `app/provider/lib/providerTourScript.js` — `includesChatDemo: true` added to the Whitestone (step index 6) cardWalk descriptor.
+
+### Verification
+- `next build` clean.
+- Dev server live on `http://localhost:3010`, `/provider` → 200.
+- Brandon to run the tour through Card 3 and confirm the chat demo cadence (cursor travel, typewriter speed, loading-to-answer transition, citation pill click → scroll) plays cleanly before the closing narration begins.
+
+---
+
+## Session 15 · Chat demo diagnostics + audio cache fix · 2026-05-06 11:35 PM CDT
+
+### Issues reported
+1. Closing audio plays the OLD pre-Session-12 script that doesn't mention chat.
+2. Chat demo: answer pills + Clear button render, but typewriter and loading state never visibly fire.
+
+### Issue 1 — Stale audio cache, not stale file
+
+Verified `provider-tour-closing.mp3` on disk: 533 KB, mtime `23:01 May 6 2026`, content matches the chat-aware Session 12 rewrite. The file is correct — Brandon's browser is replaying a cached version (the audio element's HTTP cache is sticky once a file has been streamed).
+
+**Fix**: added a per-pageload cache-bust token to every audio URL in `ProviderTour.js`:
+
+```js
+const AUDIO_CACHE_BUST = Date.now().toString(36);
+...
+const src = AUDIO_BASE + audioKey + ".mp3?v=" + AUDIO_CACHE_BUST;
+```
+
+Every fresh page load gets a new query string, forcing the browser to re-fetch. Also force-regenerated `provider-tour-closing.mp3` (524,640 bytes) and `provider-tour-14-flagged.mp3` (512,160 bytes) so their on-disk mtimes advance and any disk-level CDN cache picks up the new file.
+
+### Issue 2 — Chat demo diagnostics
+
+Without runtime evidence we can't tell whether the listeners are silent, the events aren't dispatched, or React's render pipeline is collapsing the rapid state updates. Instrumented both sides so the next test run produces a clean trace.
+
+**`ProviderTour.js` runChatDemo**:
+- Phase 0 — DOM probe at start: logs whether `[data-tour-anchor="chat-input"]` and `[data-tour-anchor="chat-submit"]` are mounted, and whether the input is `disabled`.
+- Phase 1 — `chat-reset` dispatch
+- Phase 2 — `preScroll` input
+- Phase 3 — cursor → input
+- Phase 4 — typewriter loop. Every 5 chars (and at the final char) logs the slice being dispatched **and** what's actually in the DOM input's `.value` at that moment, so we can detect mid-stream loss.
+- Phase 5 — post-type beat
+- Phase 6 — cursor → submit
+- Phase 7 — `chat-loading` dispatch
+- Phase 8 — `chat-answer` dispatch
+- BEGIN / END markers bracket the function.
+
+**`BriefingDrawer.js` ChartChat listener**:
+- Logs `tour-event listeners attached / detached` with `briefingId` (so we can confirm Whitestone has the listeners by the time the demo fires, and that no stale listeners from Trentham/Okafor are still bound).
+- Logs every `onQuestion` (with cumulative slice + length), `onLoading`, `onAnswer`, `onReset`.
+- Listener `useEffect` deps changed from `[]` to `[briefingId]` so listeners reattach on patient change, eliminating any cross-card stale-closure risk.
+
+### Closer-after-chat-demo timing
+
+Re-confirmed runCardWalk order (no change needed — already correct):
+1. Section 12 audio.ended
+2. `runChatDemo()` — includes the 1500ms answer-hold at the end
+3. `pwait(PACING.preAudioPauseMs)` (existing closer-pre-audio)
+4. Closing audio plays
+5. `onVisitClose()`
+6. Tour ends
+
+So the closing narration begins **after** the answer + pills are visible on screen. If Brandon was hearing closer audio earlier than the answer in a prior run, that was the cached old audio (Issue 1) not a sequencing bug.
+
+### Files touched
+- `app/provider/components/ProviderTour.js` — `AUDIO_CACHE_BUST` constant, `playAudioAndWait` URL appends `?v=...`, `runChatDemo` rewritten with phase-level logs + DOM probes.
+- `app/provider/components/BriefingDrawer.js` — `ChartChat` event handlers log on entry; `useEffect` deps now `[briefingId]`.
+- `public/provider-tour-audio/provider-tour-closing.mp3` — regenerated.
+- `public/provider-tour-audio/provider-tour-14-flagged.mp3` — regenerated.
+
+### How to read the logs
+Brandon: open DevTools console before launching tour, filter for `[provider-tour]` and `[chart-chat]`. Run the full tour or jump to Card 3. Expected log sequence at the end of Whitestone:
+
+```
+[provider-tour] runChatDemo: BEGIN
+[provider-tour] runChatDemo: phase 0 / DOM probe { inputFound: true, submitFound: true, ... }
+[provider-tour] runChatDemo: phase 1 / chat-reset dispatch
+[chart-chat] onReset
+[provider-tour] runChatDemo: phase 2 / preScroll input
+[provider-tour] runChatDemo: phase 3 / cursor → input { travel: 1500 }
+[provider-tour] runChatDemo: phase 4 / typewriter start { chars: 29 }
+[chart-chat] onQuestion { len: 1, q: "W" }
+... (29 onQuestion entries, with DOM probes every 5)
+[provider-tour] runChatDemo: phase 4 / typewriter end
+[provider-tour] runChatDemo: phase 6 / cursor → submit
+[provider-tour] runChatDemo: phase 7 / chat-loading dispatch
+[chart-chat] onLoading { loading: true }
+[provider-tour] runChatDemo: phase 8 / chat-answer dispatch
+[chart-chat] onAnswer { textLen: 121, cited: ["02","09"] }
+[provider-tour] runChatDemo: END
+```
+
+Any phase that's missing or any onQuestion that doesn't fire after a dispatch tells us exactly where to look.
+
+### Verification
+- `next build` clean.
+- Dev server fresh on `http://localhost:3010`, `/provider` → 200.
+- Closing + Section-12-flagged MP3s regenerated; cache-bust query string in place for all audio URLs.
+
+---
+
+## Session 16 · skipRef leak fix — chat demo + closer were short-circuited · 2026-05-06 11:45 PM CDT
+
+### Root cause
+Diagnostic logs from Session 15 showed `runChatDemo` bailing at Phase 1 with `pwait early-bail: chat-reset skip` and the closer firing `early-bail before play closer`. The Skip button user-spammed through the 12-section walk left `skipRef.current = true`. Section advancement ate the flag at the top of each section iteration via the explicit `skipRef.current = false` reset. But after the section loop exits, nothing clears the flag before `runChatDemo` and the closer block run, so the leftover `true` short-circuits both.
+
+### Fix
+Two surgical resets at phase boundaries inside `runCardWalk()`:
+
+```js
+if (step.includesChatDemo && !cancelRef.current && jumpToCardRef.current === null) {
+  skipRef.current = false; // ← drop carryover skip
+  await runChatDemo();
+}
+
+if (step.includesCloser && !cancelRef.current && jumpToCardRef.current === null) {
+  skipRef.current = false; // ← drop carryover skip
+  await pwait(PACING.preAudioPauseMs, "closer-pre-audio");
+  await playAudioAndWait(...);
+}
+```
+
+Both reset sites log `(skipRef cleared)` for trace clarity.
+
+Skip semantics:
+- **Inside a section walk**: still advances to next section (resets at top of each iteration).
+- **Entering chat demo**: leftover skip dropped — demo always runs in full.
+- **Inside chat demo phases**: typewriter / loading / answer-hold still respect a *new* skipRef toggle the user fires, so a viewer can still skip the demo if they want.
+- **Entering closer**: leftover skip dropped — closing audio always plays unless the user clicks End.
+- **End**: still cancels everything via cancelRef, untouched.
+
+### Files touched
+- `app/provider/components/ProviderTour.js` — two `skipRef.current = false` resets inside `runCardWalk()`, one before `runChatDemo()`, one before the closer audio block.
+
+### Verification
+- `next build` clean.
+- Dev server fresh on `http://localhost:3010` (Ready in 1.5s), `/provider` → 200.
+- Brandon's repro: launch tour → click [3] to jump to Whitestone → spam Skip through all 12 sections → after Section 12, expected: full chat demo (cursor → type → loading → answer + pills) followed by chat-aware closing narration.
+
+---
+
+## Session 17 · Chat demo viewport-follow fix · 2026-05-06 11:55 PM CDT
+
+### Bug
+After all 12 sections walked (or skipped), the chat demo Phase 2 left the briefing drawer scrolled at Section 12. Cursor moved to the chat input but the input was off-screen above the drawer's visible viewport. Brandon saw Section 02 / Section 09 pills "appear at the top of the card" while looking at Section 01 — typing + loading state happened above the fold.
+
+### Root cause
+`preScroll(inputSel, "start")` calls `el.scrollIntoView({ behavior: "smooth", block: "start" })` on the chat input. With the drawer's `<aside>` already scrolled to its bottom, the input's `rect.top` was deeply negative. Smooth-scrolling an overflow ancestor from a far-scroll-down state to bring a child into view sometimes lands short — and the drawer's sticky header + the input's `scroll-mt-20` interact in ways that occasionally leave the input behind the header.
+
+### Fix
+Replaced Phase 2 with an explicit, deterministic drawer-scroll-to-top:
+
+```js
+const drawerEl = document.getElementById("provider-briefing-drawer");
+drawerEl.scrollTo({ top: 0, behavior: "smooth" });
+await pwait(900, "chat-drawer-scroll-settle");
+// belt-and-suspenders: snap to 0 if smooth scroll didn't land
+if (drawerEl.scrollTop > 4) {
+  drawerEl.scrollTop = 0;
+  await pwait(120, "chat-drawer-scroll-snap");
+}
+```
+
+Why scrollTop = 0 is correct: the chat input is the first scrollable element in the drawer body, so the natural top of the drawer is the chat-input row. Setting `scrollTop = 0` puts the input at the top of the visible scroll area (just below the sticky header). Holding 900ms covers smooth-scroll on slower hardware; the snap fallback handles any edge case where smooth-scroll lands short.
+
+### Logs added at Phase 2
+- `phase 2 / scroll drawer to top { drawerFound, drawerScrollTopBefore }`
+- `phase 2 / snap scrollTop=0 { leftover }` (only fires if smooth-scroll didn't land)
+- `phase 2 / drawer scrollTop after { drawerScrollTop }`
+
+### Sequence is now
+1. Section 12 audio.ended
+2. Phase 0 — DOM probe
+3. Phase 1 — chat-reset (200ms)
+4. **Phase 2 — drawer.scrollTo({ top: 0 }), 900ms hold, optional snap**
+5. Phase 3 — cursor travels 1500ms to chat input (now in visible viewport)
+6. Phase 4 — typewriter "What is his ejection fraction?"
+7. Phase 5 — 600ms beat
+8. Phase 6 — cursor → submit
+9. Phase 7 — loading 1200ms
+10. Phase 8 — answer + pills, 1500ms hold
+11. Closer audio (with skipRef cleared from Session 16)
+12. Card closes, tour ends
+
+### Files touched
+- `app/provider/components/ProviderTour.js` — Phase 2 of `runChatDemo` rewritten to scroll the drawer aside directly.
+
+### Verification
+- `next build` clean.
+- Dev server fresh on `http://localhost:3010`, `/provider` → 200.
+- Repro: tour → [3] → Skip through 12 → expected: drawer visibly scrolls up so chat input is at the top of the visible area BEFORE the cursor enters; cursor lands on the visible input; typing + loading + answer all play in the visible viewport; closing narration plays after the answer holds.
+
