@@ -8265,3 +8265,52 @@ Scribe, Front Desk, Executive cards remain unchanged. `href: "/provider"` was al
 - `next build` clean.
 - Dev server up on `http://localhost:3000`.
 - Awaiting Brandon's Chrome computer-use visual confirmation before push.
+
+
+---
+
+## Session 19 — Epic FHIR R4 sandbox probe (Phase 1 fixture pull)
+**2026-05-07**
+
+### Change
+New one-off script `scripts/sandbox-probe.js` (manual, NOT wired into the app). Reads `CLINAI_PRIVATE_KEY_PEM` from `C:\Users\kents\firekraker-monorepo\.env.master` at runtime (no creds copied into the repo), signs an RS384 Backend Services JWT (`kid: clinai-key-1`), exchanges it for a 1-hour access token at `https://fhir.epic.com/interconnect-fhir-oauth/oauth2/token`, then fetches `Patient` / `Condition` / `MedicationRequest` / `Observation` (lab + LVEF LOINC 10230-1 / LVSF 8806-2) / `DiagnosticReport` (cardiology) / `AllergyIntolerance` / `Encounter` for each candidate patient. Per-patient raw FHIR bundles dumped to `scripts/fixtures/sandbox-{firstname}.json`. Fixtures dir added to `.gitignore`.
+
+### Result
+Auth: clean. 5 / 7 candidate IDs accessible (`Linda Ross eIH9a6H4v6tlBwy0t8QrxSA3` and `Olivia Roberts eq3p3kmtns1Bo4eAitJSOhg3` both return 404; the ID labeled "Elijah Pendrelle" actually resolves to "Dr. Linda Jane Ross" — name→ID map in the brief is stale).
+
+**Phase 1 GDMT candidate: Warren James McGinnis III (`e0w0LEDCYtfckT6N.CkJKCw3`)** — only sandbox patient with cardiac history (`ICD-10 I25.2 Old MI`, `I51.9 Heart disease, unspecified` + parallel SNOMED). No I50.x and no real LVEF observations exist anywhere in the sandbox set (every LVEF query returned a Bundle with `total=0` + a single `OperationOutcome` warning). No GDMT meds on any accessible patient. Phase 1 will need a hand-curated synthetic LVEF + I50 + GDMT med-list grafted onto the Warren fixture.
+
+### Files touched
+- `scripts/sandbox-probe.js` (new) — JWT + token + per-patient fetch.
+- `.gitignore` — added `scripts/fixtures/`.
+- `docs/sandbox-probe-2026-05-07.md` (new) — full console output + per-patient table + recommendation.
+
+### Untouched
+No app code, no `/rn` or `/provider` surfaces, no tour fixtures.
+
+
+---
+
+## Session 20 — Clinical engine foundation (Phase 1)
+**2026-05-07**
+
+### Change
+Built `lib/clinical-engine/` foundation: `types.ts` (PatientBundle, Finding, RuleFunction), `normalize.ts` (FHIR R4 Bundle → PatientBundle, accepts the shape produced by `scripts/sandbox-probe.js`), `rules/gdmt-hfref.ts` (GDMT gap-detection rule), and `index.ts` barrel. Architecture: rules in code, not prompts — every rule is a deterministic `(PatientBundle) => Finding[]`.
+
+The HFrEF rule covers the four GDMT pillars (ACEi/ARB/ARNi, evidence-based beta-blocker, MRA, SGLT2i) with eGFR/K+/severe-asthma contraindications and the metoprolol tartrate non-evidence-based catch (flagged as `non-evidence-based` rather than `present` for HFrEF). HFpEF (I50.30–I50.33) is deliberately excluded — different drug guideline. Source: ACC/AHA/HFSA 2022 HF guideline.
+
+### Note on stack deviation
+Project standard is plain JS (no tsconfig, jsconfig only). This module is `.ts` per the explicit Phase 1 spec — clinical correctness benefits from typed `Finding`/`PatientBundle` shapes. `typescript@6.0.3` added as devDependency; engine module type-checks clean under `--strict --target es2020 --module esnext --moduleResolution bundler --skipLibCheck`. Engine is not imported by any app code yet, so this does not pull TS into the Next.js build path.
+
+### Files touched
+- `lib/clinical-engine/types.ts` (new)
+- `lib/clinical-engine/normalize.ts` (new)
+- `lib/clinical-engine/rules/gdmt-hfref.ts` (new)
+- `lib/clinical-engine/index.ts` (new)
+- `package.json` / `package-lock.json` — `typescript` devDep
+
+### Untouched
+No `/rn`, `/provider`, `/scribe` UI changes. No fixtures, no unit tests yet — those come next session.
+
+### Verification
+- `npx tsc --noEmit --strict --target es2020 --module esnext --moduleResolution bundler --skipLibCheck lib/clinical-engine/index.ts` exits 0.
