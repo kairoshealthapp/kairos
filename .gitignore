@@ -50,3 +50,6 @@ docs/.name-scrub-mapping-*.md
 # Epic FHIR sandbox private key — NEVER commit (also caught by *.pem above)
 sandbox/private-key.pem
 sandbox/*.pem
+
+# Raw Epic FHIR sandbox dumps (one-off probe output) — never commit
+scripts/fixtures/

@@ -8314,3 +8314,12 @@ No `/rn`, `/provider`, `/scribe` UI changes. No fixtures, no unit tests yet — 
 
 ### Verification
 - `npx tsc --noEmit --strict --target es2020 --module esnext --moduleResolution bundler --skipLibCheck lib/clinical-engine/index.ts` exits 0.
+
+
+---
+
+## Session 21 — Sandbox probe artifacts committed
+**2026-05-07**
+
+### Change
+Committed the prior-session sandbox-probe artifacts that were left uncommitted at the end of Session 19: `scripts/sandbox-probe.js`, `docs/sandbox-probe-2026-05-07.md`, and the `.gitignore` rule that excludes `scripts/fixtures/` (raw FHIR dumps stay local-only). No code changes — purely landing the existing files.
