@@ -8323,3 +8323,15 @@ No `/rn`, `/provider`, `/scribe` UI changes. No fixtures, no unit tests yet — 
 
 ### Change
 Committed the prior-session sandbox-probe artifacts that were left uncommitted at the end of Session 19: `scripts/sandbox-probe.js`, `docs/sandbox-probe-2026-05-07.md`, and the `.gitignore` rule that excludes `scripts/fixtures/` (raw FHIR dumps stay local-only). No code changes — purely landing the existing files.
+
+
+---
+
+## Session 22 — Eplerenone RxCUI fix
+**2026-05-07**
+
+### Change
+`lib/clinical-engine/rules/gdmt-hfref.ts`: replaced the placeholder eplerenone RxCUI `321064` with the verified value `298869` (confirmed via FDA UNII 6995V82D0B). The previous code collided with valsartan's RxCUI in the ACEi/ARB/ARNi pillar, which would have caused an HFrEF patient on valsartan to be flagged as "MRA: present" — a real clinical safety bug. TODO comment removed; replaced with a one-line verification-source note above the rxnormCodes array.
+
+### Verification
+- `npx tsc --noEmit --strict --target es2020 --module esnext --moduleResolution bundler --skipLibCheck lib/clinical-engine/index.ts` exits 0.

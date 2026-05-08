@@ -67,9 +67,10 @@ export const GDMT_PILLARS: Record<PillarKey, PillarDef> = {
   },
   mra: {
     displayName: 'MRA',
+    // RxCUIs verified against RxNorm (eplerenone via FDA UNII 6995V82D0B → 298869).
     rxnormCodes: [
       '8629',   // spironolactone
-      '321064', // eplerenone (TODO verify — same RxNorm CUI as valsartan in spec)
+      '298869', // eplerenone
     ],
     genericNames: ['spironolactone', 'eplerenone'],
   },
