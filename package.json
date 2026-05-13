@@ -10,7 +10,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "generate-tour-audio": "node scripts/generate-tour-audio.js"
+    "generate-tour-audio": "node scripts/generate-tour-audio.js",
+    "test": "jest"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.39.0",
@@ -23,7 +24,10 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/jest": "^29.5.14",
+    "jest": "^29.7.0",
     "tailwindcss": "^4",
+    "ts-jest": "^29.4.9",
     "typescript": "^6.0.3"
   }
 }

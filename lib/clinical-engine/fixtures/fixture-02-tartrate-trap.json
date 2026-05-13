@@ -1,0 +1,63 @@
+{
+  "patient": {
+    "id": "fixture-02",
+    "name": "Test Patient 02 — Metoprolol tartrate trap",
+    "dob": "1954-09-20",
+    "sex": "female"
+  },
+  "conditions": [
+    {
+      "code": "I50.22",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Chronic systolic (congestive) heart failure",
+      "status": "active",
+      "onsetDate": "2023-08-04"
+    }
+  ],
+  "medications": [
+    {
+      "rxnormCode": "29046",
+      "name": "lisinopril 20 MG Oral Tablet",
+      "genericName": "lisinopril",
+      "dose": "20 mg daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2024-01-15"
+    },
+    {
+      "name": "metoprolol tartrate 50 MG Oral Tablet",
+      "genericName": "metoprolol tartrate",
+      "dose": "50 mg twice daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2024-01-15"
+    }
+  ],
+  "observations": [
+    {
+      "loincCode": "10230-1",
+      "display": "Left ventricular ejection fraction by 2D echo",
+      "value": 35,
+      "unit": "%",
+      "effectiveDate": "2026-02-28",
+      "category": "imaging"
+    },
+    {
+      "loincCode": "33914-3",
+      "display": "Glomerular filtration rate/1.73 sq M.predicted",
+      "value": 60,
+      "unit": "mL/min/1.73m2",
+      "effectiveDate": "2026-04-15",
+      "category": "laboratory"
+    },
+    {
+      "loincCode": "2823-3",
+      "display": "Potassium [Moles/volume] in Serum or Plasma",
+      "value": 4.5,
+      "unit": "mEq/L",
+      "effectiveDate": "2026-04-15",
+      "category": "laboratory"
+    }
+  ],
+  "allergies": []
+}

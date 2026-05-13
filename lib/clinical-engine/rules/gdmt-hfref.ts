@@ -171,20 +171,11 @@ export const gdmtHfrefRule: RuleFunction = (bundle: PatientBundle): Finding[] =>
       }
     }
 
-    // Present?
+    // Present? Skip emitting a Finding — actionable findings only.
+    // Patient-already-on data is derivable from the medication list.
+    // (Future: add a `confirmations` field if pillar-by-pillar UI detail is needed.)
     const onPillar = bundle.medications.find((m) => medMatchesPillar(m, pillar));
     if (onPillar) {
-      findings.push({
-        ruleId: RULE_ID,
-        ruleName: RULE_NAME,
-        severity: 'info',
-        category: 'gdmt-hfref',
-        subcategory: pillarKey,
-        status: 'present',
-        summary: `${pillar.displayName}: on ${onPillar.name}`,
-        evidence: { medicationsExamined: [onPillar.name] },
-        timestamp: now,
-      });
       continue;
     }
 

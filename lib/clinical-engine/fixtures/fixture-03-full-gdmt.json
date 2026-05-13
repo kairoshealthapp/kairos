@@ -1,0 +1,82 @@
+{
+  "patient": {
+    "id": "fixture-03",
+    "name": "Test Patient 03 — Full quadruple GDMT",
+    "dob": "1967-11-08",
+    "sex": "male"
+  },
+  "conditions": [
+    {
+      "code": "I50.22",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Chronic systolic (congestive) heart failure",
+      "status": "active",
+      "onsetDate": "2022-11-30"
+    }
+  ],
+  "medications": [
+    {
+      "rxnormCode": "1656328",
+      "name": "sacubitril 49 MG / valsartan 51 MG Oral Tablet",
+      "genericName": "sacubitril/valsartan",
+      "dose": "49/51 mg twice daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2023-03-10"
+    },
+    {
+      "rxnormCode": "20352",
+      "name": "carvedilol 25 MG Oral Tablet",
+      "genericName": "carvedilol",
+      "dose": "25 mg twice daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2023-03-10"
+    },
+    {
+      "rxnormCode": "8629",
+      "name": "spironolactone 25 MG Oral Tablet",
+      "genericName": "spironolactone",
+      "dose": "25 mg daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2023-04-05"
+    },
+    {
+      "rxnormCode": "1545653",
+      "name": "dapagliflozin 10 MG Oral Tablet",
+      "genericName": "dapagliflozin",
+      "dose": "10 mg daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2023-09-18"
+    }
+  ],
+  "observations": [
+    {
+      "loincCode": "10230-1",
+      "display": "Left ventricular ejection fraction by 2D echo",
+      "value": 32,
+      "unit": "%",
+      "effectiveDate": "2026-01-22",
+      "category": "imaging"
+    },
+    {
+      "loincCode": "33914-3",
+      "display": "Glomerular filtration rate/1.73 sq M.predicted",
+      "value": 70,
+      "unit": "mL/min/1.73m2",
+      "effectiveDate": "2026-04-30",
+      "category": "laboratory"
+    },
+    {
+      "loincCode": "2823-3",
+      "display": "Potassium [Moles/volume] in Serum or Plasma",
+      "value": 4.4,
+      "unit": "mEq/L",
+      "effectiveDate": "2026-04-30",
+      "category": "laboratory"
+    }
+  ],
+  "allergies": []
+}

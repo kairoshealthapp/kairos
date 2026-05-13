@@ -1,0 +1,73 @@
+{
+  "patient": {
+    "id": "fixture-04",
+    "name": "Test Patient 04 — MRA contraindicated (low eGFR)",
+    "dob": "1947-03-22",
+    "sex": "female"
+  },
+  "conditions": [
+    {
+      "code": "I50.22",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Chronic systolic (congestive) heart failure",
+      "status": "active",
+      "onsetDate": "2021-07-12"
+    }
+  ],
+  "medications": [
+    {
+      "rxnormCode": "29046",
+      "name": "lisinopril 10 MG Oral Tablet",
+      "genericName": "lisinopril",
+      "dose": "10 mg daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2022-02-08"
+    },
+    {
+      "rxnormCode": "20352",
+      "name": "carvedilol 12.5 MG Oral Tablet",
+      "genericName": "carvedilol",
+      "dose": "12.5 mg twice daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2022-02-08"
+    },
+    {
+      "rxnormCode": "1545664",
+      "name": "empagliflozin 10 MG Oral Tablet",
+      "genericName": "empagliflozin",
+      "dose": "10 mg daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2024-06-14"
+    }
+  ],
+  "observations": [
+    {
+      "loincCode": "10230-1",
+      "display": "Left ventricular ejection fraction by 2D echo",
+      "value": 28,
+      "unit": "%",
+      "effectiveDate": "2026-02-04",
+      "category": "imaging"
+    },
+    {
+      "loincCode": "33914-3",
+      "display": "Glomerular filtration rate/1.73 sq M.predicted",
+      "value": 26,
+      "unit": "mL/min/1.73m2",
+      "effectiveDate": "2026-05-01",
+      "category": "laboratory"
+    },
+    {
+      "loincCode": "2823-3",
+      "display": "Potassium [Moles/volume] in Serum or Plasma",
+      "value": 4.6,
+      "unit": "mEq/L",
+      "effectiveDate": "2026-05-01",
+      "category": "laboratory"
+    }
+  ],
+  "allergies": []
+}

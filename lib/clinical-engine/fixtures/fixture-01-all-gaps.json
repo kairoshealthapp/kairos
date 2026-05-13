@@ -1,0 +1,45 @@
+{
+  "patient": {
+    "id": "fixture-01",
+    "name": "Test Patient 01 — All GDMT gaps",
+    "dob": "1961-06-15",
+    "sex": "male"
+  },
+  "conditions": [
+    {
+      "code": "I50.22",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Chronic systolic (congestive) heart failure",
+      "status": "active",
+      "onsetDate": "2024-02-10"
+    }
+  ],
+  "medications": [],
+  "observations": [
+    {
+      "loincCode": "10230-1",
+      "display": "Left ventricular ejection fraction by 2D echo",
+      "value": 30,
+      "unit": "%",
+      "effectiveDate": "2026-03-12",
+      "category": "imaging"
+    },
+    {
+      "loincCode": "33914-3",
+      "display": "Glomerular filtration rate/1.73 sq M.predicted",
+      "value": 75,
+      "unit": "mL/min/1.73m2",
+      "effectiveDate": "2026-04-20",
+      "category": "laboratory"
+    },
+    {
+      "loincCode": "2823-3",
+      "display": "Potassium [Moles/volume] in Serum or Plasma",
+      "value": 4.2,
+      "unit": "mEq/L",
+      "effectiveDate": "2026-04-20",
+      "category": "laboratory"
+    }
+  ],
+  "allergies": []
+}

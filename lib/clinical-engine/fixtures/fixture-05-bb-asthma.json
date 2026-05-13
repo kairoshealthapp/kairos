@@ -1,0 +1,80 @@
+{
+  "patient": {
+    "id": "fixture-05",
+    "name": "Test Patient 05 — Beta-blocker contraindicated (severe asthma)",
+    "dob": "1956-08-14",
+    "sex": "male"
+  },
+  "conditions": [
+    {
+      "code": "I50.22",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Chronic systolic (congestive) heart failure",
+      "status": "active",
+      "onsetDate": "2023-05-19"
+    },
+    {
+      "code": "J45.50",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Severe persistent asthma, uncomplicated",
+      "status": "active",
+      "onsetDate": "2010-04-02"
+    }
+  ],
+  "medications": [
+    {
+      "rxnormCode": "29046",
+      "name": "lisinopril 20 MG Oral Tablet",
+      "genericName": "lisinopril",
+      "dose": "20 mg daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2023-06-01"
+    },
+    {
+      "rxnormCode": "8629",
+      "name": "spironolactone 25 MG Oral Tablet",
+      "genericName": "spironolactone",
+      "dose": "25 mg daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2023-06-01"
+    },
+    {
+      "rxnormCode": "1545653",
+      "name": "dapagliflozin 10 MG Oral Tablet",
+      "genericName": "dapagliflozin",
+      "dose": "10 mg daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2024-01-22"
+    }
+  ],
+  "observations": [
+    {
+      "loincCode": "10230-1",
+      "display": "Left ventricular ejection fraction by 2D echo",
+      "value": 30,
+      "unit": "%",
+      "effectiveDate": "2026-03-08",
+      "category": "imaging"
+    },
+    {
+      "loincCode": "33914-3",
+      "display": "Glomerular filtration rate/1.73 sq M.predicted",
+      "value": 65,
+      "unit": "mL/min/1.73m2",
+      "effectiveDate": "2026-04-28",
+      "category": "laboratory"
+    },
+    {
+      "loincCode": "2823-3",
+      "display": "Potassium [Moles/volume] in Serum or Plasma",
+      "value": 4.3,
+      "unit": "mEq/L",
+      "effectiveDate": "2026-04-28",
+      "category": "laboratory"
+    }
+  ],
+  "allergies": []
+}
