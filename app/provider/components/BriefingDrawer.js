@@ -11,6 +11,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { gdmtHfrefRule, GDMT_PILLARS } from "@/lib/clinical-engine";
+import trenthamFixture from "@/lib/clinical-engine/fixtures/fixture-02-tartrate-trap.json";
+
+const TRENTHAM_BRIEFING_ID = "card-cardiac-arrest";
+const TRENTHAM_GDMT_FINDINGS = gdmtHfrefRule(trenthamFixture);
 
 const SECTION_LABELS = {
   "01": "01 · WHO THIS IS",
@@ -514,9 +519,46 @@ function Section12Body({ briefing }) {
   );
 }
 
-function BriefingBody({ briefing }) {
+function Section09GdmtFindings({ findings }) {
+  if (!findings || findings.length === 0) {
+    return <p>Full GDMT — no gaps identified.</p>;
+  }
+  return (
+    <ul className="space-y-2">
+      {findings.map((f, idx) => {
+        const isInfo = f.status === "contraindicated";
+        const toneBox = isInfo
+          ? "border border-teal/60 bg-teal/10"
+          : "border border-amber/50 bg-amber/10";
+        const toneLabel = isInfo ? "text-teal" : "text-amber";
+        const toneLabelMuted = isInfo ? "text-teal/80" : "text-amber/80";
+        const pillarName =
+          (GDMT_PILLARS[f.subcategory] && GDMT_PILLARS[f.subcategory].displayName) ||
+          f.subcategory ||
+          "GDMT pillar";
+        return (
+          <li
+            key={idx}
+            data-finding-status={f.status}
+            data-finding-severity={f.severity}
+            className={`rounded ${toneBox} px-3 py-2`}
+          >
+            <div className="flex items-center justify-between text-[11px] uppercase tracking-wider mb-1">
+              <span className={toneLabel}>{pillarName}</span>
+              <span className={toneLabelMuted}>{f.status.replace(/-/g, " ")}</span>
+            </div>
+            <p className="text-[13px] leading-snug text-bone">{f.summary}</p>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function BriefingBody({ briefing, briefingId }) {
   if (!briefing) return null;
   const showHospital = briefing.kind === "postHospital";
+  const isTrentham = briefingId === TRENTHAM_BRIEFING_ID;
   return (
     <>
       <Section sectionId="01">
@@ -550,7 +592,11 @@ function BriefingBody({ briefing }) {
         <Para value={briefing.allergies} />
       </Section>
       <Section sectionId="09">
-        <Para value={briefing.patternsKairosSurfaces} />
+        {isTrentham ? (
+          <Section09GdmtFindings findings={TRENTHAM_GDMT_FINDINGS} />
+        ) : (
+          <Para value={briefing.patternsKairosSurfaces} />
+        )}
       </Section>
       <Section sectionId="10">
         <Para value={briefing.riskContext} />
@@ -649,7 +695,7 @@ export default function BriefingDrawer({ open, visit, briefing, briefingId, spec
           <ChartChat briefingId={briefingId} specialty={specialty} />
 
           {briefing ? (
-            <BriefingBody briefing={briefing} />
+            <BriefingBody briefing={briefing} briefingId={briefingId} />
           ) : (
             <div className="text-[13px] text-bone-muted italic">
               No briefing available for this visit.
