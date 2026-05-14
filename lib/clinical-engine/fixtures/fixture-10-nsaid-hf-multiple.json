@@ -1,0 +1,89 @@
+{
+  "patient": {
+    "id": "fixture-10",
+    "name": "Test Patient 10 — HFrEF + multiple NSAIDs",
+    "dob": "1949-02-26",
+    "sex": "female"
+  },
+  "conditions": [
+    {
+      "code": "I50.22",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Chronic systolic (congestive) heart failure",
+      "status": "active",
+      "onsetDate": "2020-11-30"
+    },
+    {
+      "code": "M19.90",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Unspecified osteoarthritis, unspecified site",
+      "status": "active",
+      "onsetDate": "2018-05-14"
+    }
+  ],
+  "medications": [
+    {
+      "rxnormCode": "29046",
+      "name": "lisinopril 10 MG Oral Tablet",
+      "genericName": "lisinopril",
+      "dose": "10 mg daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2024-01-08"
+    },
+    {
+      "rxnormCode": "20352",
+      "name": "carvedilol 12.5 MG Oral Tablet",
+      "genericName": "carvedilol",
+      "dose": "12.5 mg twice daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2024-01-08"
+    },
+    {
+      "rxnormCode": "7258",
+      "name": "naproxen 500 MG Oral Tablet",
+      "genericName": "naproxen",
+      "dose": "500 mg twice daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2025-09-17"
+    },
+    {
+      "rxnormCode": "3355",
+      "name": "diclofenac sodium 75 MG Delayed Release Oral Tablet",
+      "genericName": "diclofenac",
+      "dose": "75 mg twice daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2026-01-22"
+    }
+  ],
+  "observations": [
+    {
+      "loincCode": "10230-1",
+      "display": "Left ventricular ejection fraction by 2D echo",
+      "value": 28,
+      "unit": "%",
+      "effectiveDate": "2026-03-09",
+      "category": "imaging"
+    },
+    {
+      "loincCode": "33914-3",
+      "display": "Glomerular filtration rate/1.73 sq M.predicted",
+      "value": 52,
+      "unit": "mL/min/1.73m2",
+      "effectiveDate": "2026-04-30",
+      "category": "laboratory"
+    },
+    {
+      "loincCode": "2823-3",
+      "display": "Potassium [Moles/volume] in Serum or Plasma",
+      "value": 4.7,
+      "unit": "mEq/L",
+      "effectiveDate": "2026-04-30",
+      "category": "laboratory"
+    }
+  ],
+  "allergies": []
+}

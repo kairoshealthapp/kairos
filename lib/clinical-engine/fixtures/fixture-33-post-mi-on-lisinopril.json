@@ -1,0 +1,39 @@
+{
+  "patient": {
+    "id": "fixture-33",
+    "name": "Test Patient 33 — 58yo F NSTEMI 5 months ago, LVEF 35%, on lisinopril",
+    "dob": "1967-08-25",
+    "sex": "female"
+  },
+  "conditions": [
+    {
+      "code": "I21.4",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Non-ST elevation (NSTEMI) myocardial infarction",
+      "status": "active",
+      "onsetDate": "2025-12-13"
+    }
+  ],
+  "medications": [
+    {
+      "rxnormCode": "29046",
+      "name": "lisinopril 10 MG Oral Tablet",
+      "genericName": "lisinopril",
+      "dose": "10 mg daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2025-12-14"
+    }
+  ],
+  "observations": [
+    {
+      "loincCode": "10230-1",
+      "display": "Left ventricular ejection fraction by 2D echo",
+      "value": 35,
+      "unit": "%",
+      "effectiveDate": "2025-12-15",
+      "category": "imaging"
+    }
+  ],
+  "allergies": []
+}

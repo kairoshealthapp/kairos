@@ -8750,3 +8750,385 @@ For any HFrEF patient sitting on metoprolol tartrate without an MRA or SGLT2i, t
 - The 8 RxCUI mismatches surfaced in `docs/rxnorm-verification-2026-05-13.md` remain flagged for human clinical review — no rule edits.
 
 
+---
+
+## Session 36 — Phase 2 Rule #2: Lp(a) universal screening gap shipped (library only)
+**2026-05-13**
+
+### Scope
+First Phase 2 clinical engine rule. Pure backend/library work — no UI surface touched. Verification scope: `tsc --noEmit` clean and `jest` 100%; no Chrome computer-use needed.
+
+### Guideline sourcing
+- **Citation:** 2026 ACC/AHA/AACVPR/ABC/ACPM/ADA/AGS/APhA/ASPC/NLA/PCNA Guideline on the Management of Dyslipidemia. *Circulation*, published 2026-03-13. DOI: [10.1161/CIR.0000000000001423](https://www.ahajournals.org/doi/10.1161/CIR.0000000000001423).
+- **Recommendation:** "Lp(a) should be measured at least once in adulthood." **Class I.** First US guideline to issue Class I universal Lp(a) screening.
+- **LOE:** Not pinned to primary text this session — full Circulation PDF returned HTTP 403. Class I consistent across all secondary summaries (ACC press release, JACC at-a-glance, AHA Professional, NLA, HCPLive, Patient Care Online, Pharmacy Times, Guideline Central, UIC DIG). Banner notes "to be confirmed at next review"; `nextReviewDue: 2027-05-13` is the gate.
+- **Adult age threshold:** ≥18 (US convention; guideline wording is "in adulthood" with no numeric start age).
+- **LOINC codes (verified):** `10835-7` (mass, mg/dL — LabCorp test 120188 and Quest primary code), `43583-4` (moles, nmol/L). Multi-code support introduced.
+
+### Files written
+| Path | Purpose |
+|---|---|
+| `lib/clinical-engine/rules/lp-a-screening.ts` | New rule. Exports `lpaScreeningRule`, `LPA_LOINC_CODES`, `LPA_ADULT_AGE_THRESHOLD`. Bannered guideline block at top. |
+| `lib/clinical-engine/index.ts` | Registered the new exports alongside `gdmtHfrefRule`. |
+| `lib/clinical-engine/fixtures/fixture-06-lpa-screening-gap.json` | 55yo F, hyperlipidemia, lipid panel present, no Lp(a) ever. Expected: one gap. |
+| `lib/clinical-engine/fixtures/fixture-07-lpa-measured-normal.json` | 47yo M, Lp(a) 25 nmol/L on file (well below 125 inflection). Expected: zero findings. |
+| `lib/clinical-engine/fixtures/fixture-08-lpa-measured-elevated.json` | 58yo F, FHx CAD (Z82.49), Lp(a) 150 nmol/L on file. Expected: zero findings (screening-only rule; elevated value handled by future rule). |
+| `lib/clinical-engine/__tests__/lp-a-screening.test.ts` | 17 test cases: three fixtures + pediatric + multi-LOINC + empty bundle + age boundary + unknown DOB + lipid-panel-no-Lp(a) negative. |
+| `docs/decisions/0006-lpa-screening-rule.md` | ADR: why Lp(a) first, multi-code LOINC introduction, screening-gap vs threshold separation, age-threshold sourcing. |
+| `docs/guideline-watch.md` | NEW. Layer 2 of currency infrastructure. Table of active rules → source guideline → pub date → Class/LOE → review markers. First two rows: `gdmt-hfref`, `lpa-screening`. |
+| `docs/INDEX.md` | Added link to ADR 0006 and new Guideline currency section. |
+
+### Rule shape decisions (see ADR 0006 for full reasoning)
+- **Multi-code LOINC matching** (`['10835-7', '43583-4']`). First rule in the engine with multi-code lab matching. The GDMT eGFR single-code shortcut remains but is flagged to lift before any third lab-touching rule.
+- **Screening-gap only.** No value/threshold inspection. Future "elevated Lp(a)" rule will be separate.
+- **Lifetime bundle scan, no recency filter** — matches once-in-lifetime guideline semantics.
+- **Pediatric and unknown-DOB → zero findings.**
+
+### Validation by Brandon (RN BSN)
+Brandon explicitly approved before tests froze: age=18 threshold, fixture-07 value=25 nmol/L, fixture-08 value=150 nmol/L, fixture-08 ICD-10 Z82.49, and shipping with the "LOE to be confirmed at next review" banner caveat.
+
+### Verification
+- `npx tsc --noEmit` — clean, no output.
+- `npm test` — **40 / 40 passing** in 1.074s (17 new Lp(a) tests + 23 existing GDMT tests). No regressions.
+
+### Not done this session (per task scope)
+- `git push` deliberately not run.
+- No `/provider` UI changes; Trentham wire-up untouched. Wire-up to a card is a separate session.
+- Four-phase maintenance docs bundle from Session 35 still uncommitted (pre-existing follow-up).
+- The 8 GDMT RxCUI mismatches remain flagged for clinical review (pre-existing follow-up).
+
+
+---
+
+## Session 37 — Phase 2 Rule #3: NSAID-in-HFrEF interaction shipped (library only)
+**2026-05-13**
+
+### Scope
+Third clinical engine rule. First **interaction**-shape rule (vs. therapy-gap and screening-gap). Pure backend/library work — no UI surface touched. Verification scope: `tsc --noEmit` clean and `jest` 100%; no Chrome computer-use needed.
+
+### Guideline sourcing (primary text pinned)
+- **Citation:** Heidenreich PA, et al. 2022 AHA/ACC/HFSA Guideline for the Management of Heart Failure. *Circulation*. 2022;145:e895–e1032. Published 2022-05-03. DOI: [10.1161/CIR.0000000000001063](https://www.ahajournals.org/doi/10.1161/CIR.0000000000001063).
+- **Section 7.3.2, Recommendation 7 (verbatim from primary PDF):** "In patients with HFrEF, NSAIDs worsen HF symptoms and should be avoided or withdrawn whenever possible."
+- **Class:** 3: Harm. **LOE:** **B-NR** (pinned from primary text; no caveat).
+- **Supportive text confirms** COX-2 selective inhibitors are in scope: "either nonselective or selective NSAIDs."
+- **Table 13** lists both COX nonselective and COX-2 selective inhibitors as Major exacerbators.
+
+### Brandon's pre-implementation decisions (Step 3 STOP, all approved as a bundle)
+1. Introduce new `FindingStatus` value `'interaction'` (distinct from `'contraindicated'`).
+2. Severity `'critical'` for Class 3: Harm active prescription.
+3. HFrEF only — reuse `HFREF_CONDITION_CODES` from `gdmt-hfref.ts`.
+4. Exclude topical NSAIDs via route-keyword check (`topical|transdermal|cutaneous`); fire when route absent.
+5. Include celecoxib (COX-2) per primary text.
+6. Exclude aspirin entirely (cardioprotective dosing dominance; not in recommendation text).
+
+### Files written
+| Path | Purpose |
+|---|---|
+| `lib/clinical-engine/types.ts` | Added `'interaction'` to `FindingStatus` union. |
+| `lib/clinical-engine/rules/nsaid-hf-interaction.ts` | New rule. Exports `nsaidHfInteractionRule`, `NSAID_RXCUIS`, `NSAID_RXCUI_SET`, `NSAID_GENERIC_NAMES`. Bannered guideline block with full citation. |
+| `lib/clinical-engine/index.ts` | Registered exports alongside `gdmtHfrefRule` and `lpaScreeningRule`. |
+| `lib/clinical-engine/fixtures/fixture-09-nsaid-hf-interaction.json` | HFrEF patient on full quadruple GDMT + ibuprofen 600 mg TID PRN (realistic outside-script scenario). Expected: 1 finding. |
+| `lib/clinical-engine/fixtures/fixture-10-nsaid-hf-multiple.json` | HFrEF + osteoarthritis, on lisinopril + carvedilol + naproxen + diclofenac (oral). Expected: 2 findings. |
+| `lib/clinical-engine/__tests__/nsaid-hf-interaction.test.ts` | 30 test cases including cross-rule isolation against fixtures 01–08 and full per-ingredient coverage. |
+| `docs/decisions/0007-nsaid-hf-interaction-rule.md` | ADR covering interaction shape introduction, aspirin exclusion, COX-2 inclusion, HFrEF-only scope, topical suppression. |
+| `docs/guideline-watch.md` | Added row for `nsaid-hf-interaction`; appended follow-ups for HF-scope and route heuristic. |
+| `docs/INDEX.md` | Linked ADR 0007. |
+
+### NSAID RxCUI verification (live RxNorm REST API, 2026-05-13)
+| Drug | RxCUI | Drug | RxCUI |
+|---|---|---|---|
+| ibuprofen | 5640 | indomethacin | 5781 |
+| naproxen | 7258 | ketorolac | 35827 |
+| diclofenac | 3355 | nabumetone | 31448 |
+| meloxicam | 41493 | piroxicam | 8356 |
+| celecoxib | 140587 | etodolac | 24605 |
+| sulindac | 10237 | aspirin (EXCLUDED) | 1191 |
+
+### Verification
+- `npx tsc --noEmit` — clean, no output.
+- `npm test` — **76 / 76 passing** in 1.642s across three rule suites (30 new NSAID + 17 Lp(a) + 29 GDMT, including expanded cross-rule isolation tests). No regressions.
+
+### New patterns introduced this session
+- **`'interaction'` FindingStatus** — generalizes to future drug-drug, drug-lab, drug-condition interaction rules.
+- **`'critical'` severity** — first rule to use this severity tier.
+- **Cross-rule isolation test pattern** — every fixture (01–08) is exercised against the new rule to verify zero false fires. Should be inherited by every new rule going forward.
+- **Cross-rule condition-set reuse** — `HFREF_CONDITION_CODES` is imported from `gdmt-hfref.ts` rather than re-declared. Validates the modularity hypothesis from ADR 0005.
+
+### Not done this session (per task scope)
+- `git push` deliberately not run.
+- No `/provider` UI changes. `BriefingDrawer.js` currently styles by severity; introducing `'critical'` may need a new tone token — deferred to a UI session.
+- Aspirin-NSAID bleed-risk rule (a natural drug-drug followup) not started.
+- HFmrEF/HFpEF scope expansion deferred pending guideline parallel language.
+- Working-tree maintenance docs bundle from Session 35 still uncommitted (pre-existing).
+
+
+---
+
+## Session 38 — Phase 2 Rules #4 + #5 + eGFR cleanup (library only)
+**2026-05-13**
+
+### Scope
+Chained two rules and a cleanup in one session. Pure backend/library work — no UI surface touched. Verification scope: `tsc --noEmit` clean, `jest` 100%, primary-source citations captured where reachable.
+
+One mid-session STOP fired and was adjudicated: the original task assumed ApoB was a Lp(a)-style universal Class I screening recommendation; the 2026 guideline actually positions ApoB as a selective measurement conditional on a qualifying high-risk profile. Brandon adjudicated **Option A — reshape Rule #4 as a conditional-population gap** with new fixtures aligned to the qualifying-population framing. This introduced a new fourth rule shape to the engine.
+
+### Rule #4 — ApoB measurement (conditional-population screening)
+- **Source:** [2026 ACC/AHA Dyslipidemia Guideline](https://www.ahajournals.org/doi/10.1161/CIR.0000000000001423), DOI 10.1161/CIR.0000000000001423.
+- **Recommendation (verbatim from secondary summaries; primary Circulation PDF paywalled):** "ApoB testing can be useful to improve risk assessment and guide therapy once LDL-C and non-HDL-C goals are met, particularly in those with elevated triglycerides (>200 mg/dL), diabetes, or low achieved LDL-C (<70 mg/dL)."
+- **Class:** likely IIa (wording "can be useful" / "may be used"); not pinned to primary text. **LOE:** TBC.
+- **Qualifiers (any one fires the gap):** diabetes (E10.x/E11.x), established ASCVD (I20–I25, I63.x, I70.x), most-recent LDL-C < 70 mg/dL, most-recent TG > 200 mg/dL. CKM syndrome deferred (no clean ICD-10).
+- **Suppression:** any ApoB observation (LOINC 1884-6) in lifetime bundle scan.
+- **Files:** [rule](lib/clinical-engine/rules/apo-b-measurement.ts), [fixture-11](lib/clinical-engine/fixtures/fixture-11-apob-diabetes-qualifier.json), [fixture-12](lib/clinical-engine/fixtures/fixture-12-apob-ascvd-at-goal.json), [fixture-13](lib/clinical-engine/fixtures/fixture-13-apob-non-qualifying-adult.json), [fixture-14](lib/clinical-engine/fixtures/fixture-14-apob-measured-suppression.json), [tests](lib/clinical-engine/__tests__/apo-b-measurement.test.ts), [ADR 0008](docs/decisions/0008-apob-measurement-rule.md).
+
+### Rule #5 — Statin initiation (threshold-shape gap)
+- **Source:** same 2026 Dyslipidemia Guideline.
+- **v1 deterministic paths:** secondary prevention (ASCVD ICD-10), severe hypercholesterolemia (most-recent LDL-C ≥ 190 mg/dL), diabetes age 40–75 inclusive (E10.x/E11.x). Suppression by any active statin (RxCUI or generic-name fallback).
+- **Deferred to v2:** PREVENT-ASCVD risk path (BP/smoking/BMI not in PatientBundle), CKD-3/4 and HIV primary-prevention paths, contraindication-aware suppression, statin-intensity evaluation.
+- **Emit semantics:** one Finding per patient listing every triggered path in `summary` and `evidence.contraindicationReason` (semantically repurposed; clean field name deferred to a future engine-types pass).
+- **Statin RxCUIs (live RxNorm 2026-05-13):** atorvastatin 83367, rosuvastatin 301542, simvastatin 36567, pravastatin 42463, lovastatin 6472, pitavastatin 861634, fluvastatin 41127.
+- **Files:** [rule](lib/clinical-engine/rules/statin-initiation.ts), [fixture-15](lib/clinical-engine/fixtures/fixture-15-statin-secondary-prevention-gap.json), [fixture-16](lib/clinical-engine/fixtures/fixture-16-statin-ldl-190-gap.json), [fixture-17](lib/clinical-engine/fixtures/fixture-17-statin-diabetes-gap.json), [fixture-18](lib/clinical-engine/fixtures/fixture-18-statin-already-on-therapy.json), [tests](lib/clinical-engine/__tests__/statin-initiation.test.ts), [ADR 0009](docs/decisions/0009-statin-initiation-rule.md).
+
+### Cleanup — eGFR multi-code shortcut lifted
+The follow-up flagged in Sessions 36 and 37 was closed. `gdmt-hfref.ts` now exports `EGFR_LOINC_CODES = ['33914-3', '88293-6', '98979-8']` covering MDRD, CKD-EPI race-stratified, and CKD-EPI 2021. New helper `getLatestObservationByLoincSet` introduced (mirrors the pattern used in ApoB and Lp(a) rules). Regression test added in [gdmt-hfref.test.ts](lib/clinical-engine/__tests__/gdmt-hfref.test.ts) iterating over every eGFR LOINC variant and confirming the MRA contraindication still fires. All existing GDMT tests pass unchanged.
+
+### Cleanup — index.ts registry
+Normalized ordering: GDMT (now exporting EGFR_LOINC_CODES) → NSAID-HF → Lp(a) → ApoB → statin. Each rule exports its core function plus its scope constants and threshold values for downstream consumers and tests. Five rules total.
+
+### New shapes and patterns introduced this session
+- **Conditional-population screening gap** (rule shape #4) — selective measurement conditional on a qualifying profile, distinct from universal screening.
+- **Threshold gap** (rule shape #5) — value-based trigger with explicit numeric thresholds; first rule with suppression-by-active-prescription.
+- **One Finding listing multiple triggered paths** — convention for multi-path rules. Avoids UI clutter when one clinical action satisfies several rule paths.
+- **Multi-code lab matching is now the default across the engine** (eGFR, LDL, Lp(a), ApoB). Single-code matches remain only for unambiguous high-coverage codes (potassium 2823-3).
+
+### Verification
+- `npx tsc --noEmit` — clean.
+- `npm test` — **147 / 147 passing** in 2.338s across 5 rule suites. No regressions.
+
+### Final rule count
+| Rule | Shape | ADR |
+|---|---|---|
+| `gdmt-hfref` | therapy gap (multi-pillar) | 0004 |
+| `lpa-screening` | universal screening gap | 0006 |
+| `nsaid-hf-interaction` | drug-condition interaction | 0007 |
+| `apob-measurement` | conditional-population screening | 0008 |
+| `statin-initiation` | threshold (multi-path) | 0009 |
+
+### Not done this session
+- `git push` deliberately not run.
+- No `/provider` UI changes; Trentham wire-up untouched.
+- PREVENT-risk path, CKD/HIV statin paths, contraindication-aware suppression, statin-intensity evaluation — all deferred to v2 with explicit tracking in [guideline-watch.md](docs/guideline-watch.md) follow-ups.
+- `evidence.qualifyingPaths: string[]` field type addition deferred (would touch all five rules).
+- Working-tree maintenance docs bundle from Session 35 still uncommitted (pre-existing).
+- The 8 GDMT RxCUI mismatches remain flagged for clinical review (pre-existing).
+
+
+---
+
+## Session 40 — Phase 2 Rules #6 + #7 + rule-shapes vocabulary + cross-rule isolation ADR (library only)
+**2026-05-13**
+
+### Scope
+Chained two new rules across new specialties (AFib, HFpEF) plus three documentation cleanups in one session. Pure backend/library work; no UI surface touched. Domain footprint expanded from 2 specialties (HF, Dyslipidemia) to 3 (now adds AFib). Engine shape vocabulary expanded to seven; codified in a new design doc.
+
+### Rule #6 — AFib stroke-prevention anticoagulation (calculated-score-gate shape)
+- **Source:** 2023 ACC/AHA/ACCP/HRS AFib Guideline (Joglar et al, *Circulation* 2024;149:e1–e156, DOI [10.1161/CIR.0000000000001193](https://www.ahajournals.org/doi/10.1161/CIR.0000000000001193)). §6.3.1 Rec. 1 verbatim pinned via pdftotext on cached PDF.
+- **Recommendation:** "For patients with AF and an estimated annual thromboembolic risk of ≥2% per year (eg, CHA₂DS₂-VASc score of 2 in men and 3 in women), anticoagulation is recommended to prevent stroke and systemic thromboembolism." **Class 1, LOE A.**
+- **Related recommendations also pinned:** §6.3.1 Rec. 2 (DOAC preferred over warfarin in non-valvular AFib, Class 1 LOE A); §6.3.1 Rec. 4 (aspirin alone or with antiplatelet in AFib candidates is Class 3: Harm, LOE B-R).
+- **Logic:** detect AFib (ICD I48.x) → suppress if active OAC (warfarin, apixaban, rivaroxaban, dabigatran, edoxaban) → compute CHA₂DS₂-VASc (sex-asymmetric threshold: ≥2 male, ≥3 female) → emit gap.
+- **`calculateChaDsVasc` exported as standalone function** for future composition (HAS-BLED rule, aspirin-only-AFib rule).
+- **Unknown sex:** safer-default emits no finding.
+- **Files:** [rule](lib/clinical-engine/rules/afib-anticoagulation.ts), fixtures [19](lib/clinical-engine/fixtures/fixture-19-afib-anticoagulation-gap-male.json)/[20](lib/clinical-engine/fixtures/fixture-20-afib-anticoagulation-gap-female.json)/[21](lib/clinical-engine/fixtures/fixture-21-afib-on-apixaban.json)/[22](lib/clinical-engine/fixtures/fixture-22-afib-aspirin-only-still-fires.json)/[23](lib/clinical-engine/fixtures/fixture-23-afib-low-risk-no-gap.json), [tests](lib/clinical-engine/__tests__/afib-anticoagulation.test.ts), [ADR 0010](docs/decisions/0010-afib-anticoagulation-rule.md).
+- **Anticoagulant RxCUIs (live-verified 2026-05-13):** warfarin 11289, apixaban 1364430, rivaroxaban 1114195, dabigatran 1546356, edoxaban 1599538.
+
+### Rule #7 — HFpEF SGLT2i recommendation (single-pillar therapy-gap shape)
+- **Source:** 2022 AHA/ACC/HFSA HF Guideline (Heidenreich et al, *Circulation* 2022;145:e895–e1032, DOI [10.1161/CIR.0000000000001063](https://www.ahajournals.org/doi/10.1161/CIR.0000000000001063)). §7.7 Rec. 2 verbatim pinned via pdftotext on cached PDF.
+- **Recommendation:** "In patients with HFpEF, SGLT2i can be beneficial in decreasing HF hospitalizations and cardiovascular mortality." **Class 2a, LOE B-R.**
+- **HFpEF detection two-path:** explicit ICD (I50.30–I50.33) OR any HF code + LVEF ≥ 50% (multi-code LVEF scan: 10230-1, 8806-2).
+- **Three contraindication-aware suppressions (rule-level, justified in ADR):** active SGLT2i (any agent) / eGFR < 20 / T1DM (E10.x).
+- **HFmrEF (LVEF 40-49%) deferred** to a separate v2 rule.
+- **Files:** [rule](lib/clinical-engine/rules/hfpef-sglt2i.ts), fixtures [24](lib/clinical-engine/fixtures/fixture-24-hfpef-sglt2i-gap.json)/[25](lib/clinical-engine/fixtures/fixture-25-hfpef-on-empagliflozin.json)/[26](lib/clinical-engine/fixtures/fixture-26-hfpef-egfr-contraindicated.json)/[27](lib/clinical-engine/fixtures/fixture-27-hfpef-t1dm.json), [tests](lib/clinical-engine/__tests__/hfpef-sglt2i.test.ts), [ADR 0011](docs/decisions/0011-hfpef-sglt2i-rule.md).
+- **SGLT2i RxCUIs (live-verified):** empagliflozin 1545653, dapagliflozin 1488564, canagliflozin 1373458, ertugliflozin 1992672. Diverges from GDMT HFrEF rule's cached values (1545664/1545653) — part of pre-existing 8-RxCUI-mismatch backlog; not touched per active follow-up flag.
+
+### Cleanup deliverables
+- **NEW [docs/rule-shapes.md](docs/rule-shapes.md)** — engine design vocabulary. Seven shapes documented (therapy-gap multi-pillar, therapy-gap single-pillar, universal-screening, conditional-population-screening, drug-condition interaction, threshold, calculated-score-gate). Each entry: definition, example rule file, selection guidance, ADR link. Future shape ADRs link from this doc.
+- **NEW [ADR 0012](docs/decisions/0012-cross-rule-isolation-test-pattern.md)** — codifies the cross-rule isolation testing convention that emerged informally across Sessions 36–37 and has been followed by every rule since. Sets a hard expectation: new rule test files must explicitly enumerate prior fixtures and assert expected findings count.
+- **Index normalization** — `lib/clinical-engine/index.ts` reviewed; rule blocks already follow consistent shape (rule function first, then named constants); no normalization required.
+- **[INDEX.md](docs/INDEX.md) updated** — ADRs 0010, 0011, 0012 linked; new "Engine design vocabulary" section linking [rule-shapes.md](docs/rule-shapes.md).
+- **[guideline-watch.md](docs/guideline-watch.md) updated** — two new rule rows; eight new follow-ups covering AFib Phase 3 candidates (aspirin-only-AFib interaction rule, DOAC-preferred-over-warfarin rule, HAS-BLED rule, unknown-sex enhancement), HFpEF deferrals (HFmrEF rule), and the RxCUI-divergence and evidence-field-cleanup carry-over items.
+
+### Verification
+- `npx tsc --noEmit` — clean, no output.
+- `npm test` — **235 / 235 passing** in 0.985s across 7 rule suites (42 new AFib + HFpEF cases + 193 prior). No regressions.
+
+### Final rule + shape table
+
+| Rule | Shape | Specialty | ADR |
+|---|---|---|---|
+| `gdmt-hfref` | therapy-gap (multi-pillar) | HFrEF | 0004 |
+| `lpa-screening` | universal screening-gap | Dyslipidemia | 0006 |
+| `nsaid-hf-interaction` | drug-condition interaction | HFrEF | 0007 |
+| `apob-measurement` | conditional-population screening | Dyslipidemia | 0008 |
+| `statin-initiation` | threshold (multi-path) | Dyslipidemia | 0009 |
+| `afib-anticoagulation` | calculated-score-gate | AFib | 0010 |
+| `hfpef-sglt2i` | therapy-gap (single-pillar) | HFpEF | 0011 |
+
+### Mid-session findings
+- **Prompt math typo discovered** in master prompt: fixture-19 was documented as CHA₂DS₂-VASc 4 (age 65-74 +1, HTN +1, DM +1 = 3, not 4). Test assertion corrected to expected score 3. Fixture still correctly fires above male threshold 2; clinical scenario realistic.
+- **No STOP conditions tripped** — both primary-text citations and all 9 RxCUI lookups returned clean. Guideline content matched all pre-approved adjudications. CHA₂DS₂-VASc retained sex modifier (no shift to CHA₂DS₂-VA). HFpEF LVEF ≥50% threshold confirmed.
+
+### Not done this session
+- `git push` deliberately not run.
+- No `/provider` UI changes; Trentham wire-up untouched.
+- All eight follow-ups in [guideline-watch.md](docs/guideline-watch.md) carried forward.
+- Working-tree maintenance docs bundle from Session 35 still uncommitted (pre-existing).
+- The 8 GDMT RxCUI mismatches remain flagged for clinical review (pre-existing).
+
+
+---
+
+## Session 42 — Phase 2 Rules #8–#11 + barrel cleanup + 4 ADRs (library only)
+**2026-05-13**
+
+### Scope
+Shipped four rules across two thematic pairs: post-MI cardiology depth (BB + ACEi/ARB) and endocrine specialty entry (T2DM-CKD SGLT2i + T2DM statin). Engine domain footprint expanded from three specialties to four. Two new rule shapes introduced (time-bounded therapy-gap, conditional-population therapy-gap) and two engine-output meta-patterns codified (convergent-evidence, dual-guideline citation). Pure backend/library work — no UI surface touched.
+
+### Rule #8 — Post-MI beta-blocker (time-bounded therapy-gap, new shape #8)
+- **Source:** 2025 ACC/AHA/ACEP/NAEMSP/SCAI ACS Guideline (Rao et al, *Circulation* 2025;151:e00–e00, DOI [10.1161/CIR.0000000000001309](https://www.ahajournals.org/doi/10.1161/CIR.0000000000001309)). §4.6 Rec. 1 verbatim pinned via pdftotext on cached PDF: "In patients with ACS without contraindications, early (<24 hours) initiation of oral beta-blocker therapy is recommended to reduce risk of reinfarction and ventricular arrhythmias." **Class 1, LOE A.**
+- **Logic:** detect recent MI (I21.x/I22.x within 12 months) → suppress if active evidence-based BB (reuses GDMT BB exports) → fire gap, with metoprolol-tartrate-trap mirroring of GDMT pattern.
+- **Files:** [rule](lib/clinical-engine/rules/post-mi-beta-blocker.ts), fixtures [28](lib/clinical-engine/fixtures/fixture-28-post-mi-bb-gap.json)–[31](lib/clinical-engine/fixtures/fixture-31-old-mi-13-months.json), [tests](lib/clinical-engine/__tests__/post-mi-beta-blocker.test.ts), [ADR 0013](docs/decisions/0013-post-mi-beta-blocker-rule.md).
+
+### Rule #9 — Post-MI ACEi/ARB (time-bounded therapy-gap, same shape)
+- **Source:** Same 2025 ACS Guideline. §4.7 Rec. 1 verbatim: "In high-risk patients with ACS (LVEF ≤40%, hypertension, diabetes mellitus, or STEMI with anterior location), an oral angiotensin-converting enzyme inhibitor (ACEi) or an angiotensin receptor blocker (ARB) is indicated to reduce all-cause death and MACE." **Class 1, LOE A.**
+- **Logic:** detect recent MI → suppress if active ACEi/ARB/ARNi (reuses GDMT pillar-1 exports) → check high-risk criteria (LVEF≤40 or missing, HTN, DM, anterior STEMI) → fire gap. Class 2a non-high-risk path deferred to v2.
+- **Files:** [rule](lib/clinical-engine/rules/post-mi-acei-arb.ts), fixtures [32](lib/clinical-engine/fixtures/fixture-32-post-mi-acei-gap-low-ef.json)–[35](lib/clinical-engine/fixtures/fixture-35-post-mi-lvef-unknown.json), [tests](lib/clinical-engine/__tests__/post-mi-acei-arb.test.ts), [ADR 0014](docs/decisions/0014-post-mi-acei-arb-rule.md).
+
+### Rule #10 — T2DM SGLT2i for CKD (conditional-population therapy-gap, new shape #9 + dual-guideline citation)
+- **Sources:** ADA Standards of Care 2026 §11.11a (paraphrased from authoritative summaries; primary text behind Diabetes Care subscription) AND [KDIGO 2022](https://kdigo.org/wp-content/uploads/2022/10/KDIGO-2022-Clinical-Practice-Guideline-for-Diabetes-Management-in-CKD.pdf) §1.3.1 verbatim: "We recommend treating patients with type 2 diabetes, CKD, and eGFR ≥20 mL/min/1.73 m² with a sodium-glucose cotransporter 2 inhibitor (SGLT2i)." **KDIGO Class 1A.**
+- **Logic:** T2DM (E11.x) AND NOT T1DM → multi-modal CKD detection (N18.x OR eGFR 25–59 OR UACR ≥30) → suppress if eGFR<25 → suppress if active SGLT2i → fire gap.
+- **Mid-implementation correction:** initial eGFR-CKD range was 25–89; the cross-rule isolation block caught an over-fire on fixture-24 (eGFR 65 alone shouldn't qualify as CKD per KDIGO). Tightened to strict KDIGO stage-3 range 25–59. This is exactly the regression-control purpose codified in [ADR 0012](docs/decisions/0012-cross-rule-isolation-test-pattern.md) in action.
+- **Files:** [rule](lib/clinical-engine/rules/t2dm-sglt2i-ckd.ts), fixtures [36](lib/clinical-engine/fixtures/fixture-36-t2dm-ckd-sglt2i-gap.json)–[39](lib/clinical-engine/fixtures/fixture-39-t2dm-egfr-contraindicated.json), [tests](lib/clinical-engine/__tests__/t2dm-sglt2i-ckd.test.ts), [ADR 0015](docs/decisions/0015-t2dm-sglt2i-ckd-rule.md).
+
+### Rule #11 — T2DM statin (convergent-evidence pattern with rule #5)
+- **Source:** ADA Standards of Care 2026 §10. ADA Grade A. Adjacent to rule #5 (statin-initiation) which cites the 2026 ACC/AHA Dyslipidemia Guideline's diabetes-age path.
+- **Decision:** ship as separate rule, fire both rules on qualifying patients, do not deduplicate. The clinician sees both societies converging on the same recommendation. v2 Finding-deduplication is the safety valve.
+- **Logic:** T2DM (E11.x) → age 40–75 → suppress if active statin → fire gap with ADA citation.
+- **Files:** [rule](lib/clinical-engine/rules/t2dm-statin.ts), fixtures [40](lib/clinical-engine/fixtures/fixture-40-t2dm-statin-gap.json)–[42](lib/clinical-engine/fixtures/fixture-42-t2dm-age-out-of-band.json), [tests](lib/clinical-engine/__tests__/t2dm-statin.test.ts), [ADR 0016](docs/decisions/0016-t2dm-statin-rule.md).
+
+### Barrel cleanup
+- `gdmt-hfref.ts` now exports `GDMT_BB_RXCUIS`, `GDMT_BB_GENERIC_NAMES`, `GDMT_BB_NON_EVIDENCE_BASED`, `GDMT_PILLAR_1_RXCUIS`, `GDMT_PILLAR_1_GENERIC_NAMES` as named exports extracted from the existing `GDMT_PILLARS` object. Same data, cleaner import surface for post-MI rules.
+- `post-mi-beta-blocker.ts` exports `getMostRecentMi` and `isWithinPostMiWindow` as standalone helpers — `post-mi-acei-arb.ts` reuses both directly.
+- Engine index registry now lists 11 rules in ship order. Each rule block follows consistent shape (rule function first, then named constants).
+
+### New patterns introduced this session
+- **Time-bounded therapy-gap** (shape #8) — gates on Condition.onsetDate against a guideline window. Generalizes to post-stroke, post-procedure, post-transplant, etc.
+- **Conditional-population therapy-gap** (shape #9) — fires when ≥1 clinical qualifier is met. Sibling of conditional-population screening from ADR 0008, applied to therapy instead of measurement.
+- **Multi-modal disease detection** — CKD detected via ICD OR eGFR range OR UACR. Pattern generalizes to any disease where chart coding under-reports the clinical state.
+- **Convergent-evidence meta-pattern** — two rules with different evidence pedigrees fire on the same scenario. v1: fire both; v2: deduplication layer.
+- **Dual-guideline citation meta-pattern** — single rule cites two converging guidelines (ADA + KDIGO) inline.
+
+### Verification
+- `npx tsc --noEmit` — clean, no output.
+- `npm test` — **431 / 431 passing** in 3.741s across 11 rule suites (4 new = 47+34+26+27, plus 297 prior). No regressions.
+
+### Engine domain coverage at end of session
+
+| Specialty | Rule | Shape | Source |
+|---|---|---|---|
+| HF (HFrEF) | `gdmt-hfref` | multi-pillar therapy-gap | 2022 AHA/ACC/HFSA |
+| HF (HFrEF) | `nsaid-hf-interaction` | drug-condition interaction | 2022 AHA/ACC/HFSA |
+| HF (HFrEF) | `post-mi-beta-blocker` | time-bounded therapy-gap | 2025 ACC/AHA ACS |
+| HF (HFrEF) | `post-mi-acei-arb` | time-bounded therapy-gap | 2025 ACC/AHA ACS |
+| HF (HFpEF) | `hfpef-sglt2i` | single-pillar therapy-gap | 2022 AHA/ACC/HFSA |
+| Arrhythmia | `afib-anticoagulation` | calculated-score-gate | 2023 ACC/AHA AFib |
+| Dyslipidemia | `lpa-screening` | universal screening-gap | 2026 ACC/AHA Dyslipidemia |
+| Dyslipidemia | `apob-measurement` | conditional-population screening | 2026 ACC/AHA Dyslipidemia |
+| Dyslipidemia | `statin-initiation` | threshold (multi-path) | 2026 ACC/AHA Dyslipidemia |
+| Endocrine | `t2dm-sglt2i-ckd` | conditional-population therapy-gap | ADA 2026 + KDIGO 2022 |
+| Endocrine | `t2dm-statin` | conditional-population therapy-gap | ADA 2026 |
+
+4 specialties, 6 distinct guidelines, 9 rule shapes, 11 rules, 42 fixtures, 16 ADRs.
+
+### Mid-session findings
+- **Pre-approval over-restrictive on ACEi scope:** pre-approval said "fire when LVEF<40 or unknown" only; primary text from cached PDF made clear the guideline allows ANY of LVEF≤40, HTN, DM, anterior STEMI. v1 encodes the full guideline criteria, broader than pre-approval, defensible because primary text is unambiguous.
+- **CKD-by-eGFR over-fire bug caught by cross-rule isolation:** initial 25–89 range over-fired on fixture-24 (eGFR 65, no albuminuria); tightened to strict KDIGO stage-3 range 25–59. Albuminuric CKD with preserved eGFR remains captured by the UACR detection mode.
+- **fixture-38 in cross-rule isolation list was miscategorized:** 55yo M T2DM no statin correctly fires the t2dm-statin rule. Moved to co-trigger list during test debug.
+
+### Not done this session
+- `git push` deliberately not run.
+- No `/provider` UI changes.
+- All ten new follow-ups appended to [guideline-watch.md](docs/guideline-watch.md) carried forward (post-MI 12-month window v2 work, Class 2a ACS path, atenolol/propranolol scope, eGFR ≥20 relaxation, GLP-1 RA alternative for T2DM-CKD, T1DM-inclusion for T2DM-statin, convergent-evidence deduplication).
+- Working-tree maintenance docs bundle from Session 35 still uncommitted (pre-existing).
+- The 8 GDMT RxCUI mismatches and the SGLT2i RxCUI divergence between gdmt-hfref and hfpef-sglt2i remain flagged for clinical review (pre-existing).
+
+
+---
+
+## Session 45 — Phase 2 status rollup: ten rules + meta-docs (chat summary)
+**2026-05-13**
+
+### Scope
+Status snapshot covering the full Phase 2 chat arc: ten new rules (Rules #2–#11), the eGFR multi-code refactor, ADR 0012 (cross-rule isolation pattern), the rule-shapes vocabulary doc, and the GDMT barrel cleanup. Everything in this entry is library-only; no UI surface touched; no git push.
+
+### Completed
+
+- **Rule #2: Lp(a) universal screening-gap** shipped ([lib/clinical-engine/rules/lp-a-screening.ts](lib/clinical-engine/rules/lp-a-screening.ts), 17 tests, [ADR 0006](docs/decisions/0006-lpa-screening-rule.md)). 2026 ACC/AHA Dyslipidemia Guideline Class I, LOE B-NR caveat-pinned. Fixtures 06–08. Adult age threshold 18, multi-code LOINC support introduced.
+- **Rule #3: NSAID-HF interaction** shipped ([nsaid-hf-interaction.ts](lib/clinical-engine/rules/nsaid-hf-interaction.ts), 30 tests, [ADR 0007](docs/decisions/0007-nsaid-hf-interaction-rule.md)). 2022 AHA/ACC/HFSA Class 3 Harm, LOE B-NR pinned from primary PDF via pdftotext. Fixtures 09–10. New `FindingStatus 'interaction'` introduced. Severity `'critical'`. Route-aware topical suppression. Aspirin excluded. Cross-rule isolation pattern established.
+- **Rule #4: ApoB conditional-population screening** shipped ([apo-b-measurement.ts](lib/clinical-engine/rules/apo-b-measurement.ts), 26 tests, [ADR 0008](docs/decisions/0008-apob-measurement-rule.md)). 2026 Dyslipidemia. STOP fired correctly mid-session — Brandon adjudicated Option A reshape from universal to conditional. New shape introduced. Fixtures 11–14.
+- **Rule #5: Statin initiation threshold** shipped ([statin-initiation.ts](lib/clinical-engine/rules/statin-initiation.ts), 21 tests, [ADR 0009](docs/decisions/0009-statin-initiation-rule.md)). Three deterministic paths (secondary prevention, LDL ≥190, diabetes age 40–75). PREVENT-ASCVD deferred to v2. Suppression-by-active-statin pattern. Fixtures 15–18.
+- **eGFR multi-code refactor** complete in [gdmt-hfref.ts](lib/clinical-engine/rules/gdmt-hfref.ts) — `EGFR_LOINC_CODES = ['33914-3','88293-6','98979-8']`, `getLatestObservationByLoincSet` helper, 3 regression tests added.
+- **Rule #6: AFib anticoagulation** shipped ([afib-anticoagulation.ts](lib/clinical-engine/rules/afib-anticoagulation.ts), 42 tests, [ADR 0010](docs/decisions/0010-afib-anticoagulation-rule.md)). 2023 AFib Guideline Class 1, LOE A pinned from primary PDF. `calculateChaDsVasc` helper as first standalone clinical-score primitive for future composition. Sex-asymmetric threshold (2 men / 3 women). Aspirin-only fires gap. Fixtures 19–23.
+- **Rule #7: HFpEF SGLT2i** shipped ([hfpef-sglt2i.ts](lib/clinical-engine/rules/hfpef-sglt2i.ts), 38 tests, [ADR 0011](docs/decisions/0011-hfpef-sglt2i-rule.md)). 2022 HF Guideline Class 2a, LOE B-R pinned. T1DM exclusion, eGFR contraindication suppression. Fixtures 24–27.
+- **[ADR 0012](docs/decisions/0012-cross-rule-isolation-test-pattern.md)** created — cross-rule isolation test pattern codified.
+- **[docs/rule-shapes.md](docs/rule-shapes.md)** created — engine design vocabulary, all 9 shapes documented plus convergent-evidence and dual-guideline meta-patterns.
+- **GDMT barrel cleanup** — `GDMT_BB_RXCUIS`, `GDMT_BB_GENERIC_NAMES`, `GDMT_BB_NON_EVIDENCE_BASED`, `GDMT_PILLAR_1_RXCUIS`, `GDMT_PILLAR_1_GENERIC_NAMES` exported for cross-rule reuse.
+- **Rule #8: Post-MI beta-blocker** shipped ([post-mi-beta-blocker.ts](lib/clinical-engine/rules/post-mi-beta-blocker.ts), [ADR 0013](docs/decisions/0013-post-mi-beta-blocker-rule.md)). 2025 ACS Guideline Class 1, LOE A pinned. Time-bounded therapy-gap shape introduced. 12-month window. Fixtures 28–31. Metoprolol tartrate non-evidence-based finding mirrors GDMT.
+- **Rule #9: Post-MI ACEi/ARB** shipped ([post-mi-acei-arb.ts](lib/clinical-engine/rules/post-mi-acei-arb.ts), [ADR 0014](docs/decisions/0014-post-mi-acei-arb-rule.md)). 2025 ACS Class 1, LOE A pinned. Mid-session correction: v1 scope expanded to full guideline criteria (HTN/DM/anterior STEMI in addition to LVEF≤40). LVEF-unknown safer default fires. Fixtures 32–35.
+- **Rule #10: T2DM-CKD SGLT2i** shipped ([t2dm-sglt2i-ckd.ts](lib/clinical-engine/rules/t2dm-sglt2i-ckd.ts), [ADR 0015](docs/decisions/0015-t2dm-sglt2i-ckd-rule.md)). ADA 2026 + KDIGO 2022 dual-guideline citation (first dual-source rule). New shape: conditional-population therapy-gap. Mid-session bug caught via cross-rule isolation: initial eGFR 25–89 over-fired; tightened to KDIGO stage-3 25–59. `detectCkd` helper supports multi-modal detection (ICD OR eGFR OR UACR). Fixtures 36–39.
+- **Rule #11: T2DM statin** shipped ([t2dm-statin.ts](lib/clinical-engine/rules/t2dm-statin.ts), [ADR 0016](docs/decisions/0016-t2dm-statin-rule.md)). ADA Standards 2026 Grade A. Convergent-evidence meta-pattern with rule #5 — both rules fire on T2DM age 40–75 patient, each citing own guideline. Fixtures 40–42.
+
+### Engine final state
+**431 / 431 tests passing** across 11 rule suites, `tsc --noEmit` strict-mode clean. 11 rules, 9 distinct shapes + 2 meta-patterns, 4 specialties (HF, Arrhythmia, Dyslipidemia, Endocrine), 6 distinct guidelines, 42 fixtures, 16 ADRs.
+
+### Files modified (all in working tree, ALL UNCOMMITTED)
+- `lib/clinical-engine/rules/` — 10 new rule files (lp-a-screening, nsaid-hf-interaction, apo-b-measurement, statin-initiation, afib-anticoagulation, hfpef-sglt2i, post-mi-beta-blocker, post-mi-acei-arb, t2dm-sglt2i-ckd, t2dm-statin) plus `gdmt-hfref.ts` (eGFR refactor + barrel exports)
+- `lib/clinical-engine/fixtures/` — 37 new fixtures (fixture-06 through fixture-42)
+- `lib/clinical-engine/__tests__/` — 10 new test files
+- `lib/clinical-engine/index.ts` — 10 new rule registrations
+- `lib/clinical-engine/types.ts` — `FindingStatus 'interaction'` added
+- `docs/decisions/0006`–`0016` — eleven new ADRs
+- `docs/rule-shapes.md` — created
+- `docs/guideline-watch.md` — extended with 11 rule rows, 6 guideline sources, ~15 open follow-ups
+- `docs/INDEX.md` — all 16 ADRs linked, rule-shapes prominent
+- `docs/log.md` — Sessions 36 through 45 appended
+
+### Still open
+
+- **Push nothing yet.** Working tree has Session 35 Phase 1 docs bundle plus Sessions 36–45 Phase 2 rule work — all uncommitted.
+- **Tomorrow's first 60–90 min:** Vercel check on origin/main (last push was 6f4aa54 Trentham wire-up); spot-check ADRs 0001–0016 (never reviewed); stack three commits (Phase 1 docs bundle / Phase 2 rules 2–11 + ADRs + meta-docs / eGFR refactor in gdmt-hfref); git push once when working tree is clean.
+- **RxCUI divergence between GDMT rule and HFpEF SGLT2i rule on empagliflozin/dapagliflozin codes** — known, deferred to dedicated reconciliation session before any future rule touches SGLT2i constants.
+- **8 GDMT RxCUI mismatches from Phase 1 verification report** — still awaiting clinical review session.
+- **Provider UI `'critical'` tone token for BriefingDrawer.js** — introduced by NSAID-HF (Session 37), not yet implemented; needed when NSAID-HF wires to UI.
+- **Trentham wire-up currently only fires GDMT rule on Section 09.** Wire-up for remaining 10 rules across appropriate provider cards is a separate UI session — Chrome computer-use verification required, fragile-files territory.
+- **Long-form piece (2000–2500 words)** — production recovery story + 9 rule shapes + ApoB STOP citation discipline + cross-rule isolation bug catch (T2DM-CKD eGFR over-fire) + convergent-evidence pattern. Draft when fresh.
+- **Public README rewrite** with architecture pitch hero, screenshots, design-stage-prototype disclosure.
+- **Repo public** when README solid.
+- **Landing page dual-section update** (architecture pitch hero + role-picker below); de-link `/executive` from main nav.
+- **Healthcare AI applications:** Hippocratic, Notable, Memora, Soap, Abridge, Ambience, Innovaccer, Reveleer, Hello Heart, DeepScribe, Augmedix, +1 stealth.
+- **Phase 3 rule candidates** from this session's follow-ups: HAS-BLED bleeding risk, DOAC-preferred-over-warfarin, aspirin-in-AFib interaction (Class 3 Harm), HFmrEF SGLT2i, PREVENT-ASCVD risk path for statin, statin CKD-3/4 and HIV paths, statin contraindication-aware suppression, statin intensity evaluation, ApoB CKM-syndrome qualifier, T1DM inclusion for T2DM-statin, GLP-1 RA alternative for T2DM-CKD, Class 2a non-high-risk ACS ACEi/ARB path.
+- **Typed evidence fields** (`evidence.scoreBreakdown`, `evidence.qualifyingPaths`) — replaces dirty repurpose of `evidence.contraindicationReason` in statin/AFib rules. Engine-types pass.
+- **Convergent-evidence deduplication v2 layer** — only if clinical noise from dual-firing rules becomes an issue in real deployment.
+- **LOE letter pinning for Lp(a) Class I** (Circulation paywalled, `nextReviewDue 2027-05-13`).
+- **Post-interview follow-up** still pending.
+
+---
+
+## Session 47 — Repo hygiene: name scrub + commit staging
+**2026-05-14**
+
+Pre-commit audit of the three-commit working tree (Phase 1 docs / Phase 2 rules / eGFR refactor). Scrubbed real provider/workplace identifiers from commit-scoped files: ADR 0006 (dropped a named provider + workplace from the "bellwether practice" rationale), and two `docs/log.md` Session 23/46 lines (dropped a real provider filename reference and a real first-name contact). Brandon Sterne's own name retained throughout as intentional portfolio attribution.
+
+### HARD BLOCKER — git history exposes real names
+
+Eight pre-existing tracked docs (`ARCHITECTURE.md`, `CONTEXT.md`, `DEPLOY-CHECKLIST-2026-04-30.md`, `KAIROS-CONTEXT.md`, `KAIROS-SESSION-2026-04-29-AFTERNOON.md`, `NURSE-DEMO-INTRO.md`, `sandbox-probe-2026-05-07.md`, `vercel-clinai-kairos-audit.md`) contain real provider/patient names (Hardenkvist, Vorhelden, Kvalheim, Tregarthen, Wendelfaer) in content **already committed to git history**. The current commits only touch a 2-line breadcrumb header in those files — the real-name content is untouched and remains in history.
+
+Flipping this repo public exposes the full history. This requires a dedicated git-history scrub session (`git filter-repo`, or removal + re-`.gitignore` of internal-only working docs) **BEFORE** the repo is made public. This is a hard blocker on the "Repo public" follow-up above — do not flip public until history is clean.

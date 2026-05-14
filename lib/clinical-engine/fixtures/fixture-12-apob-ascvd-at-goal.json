@@ -1,0 +1,62 @@
+{
+  "patient": {
+    "id": "fixture-12",
+    "name": "Test Patient 12 — Prior MI, LDL at goal, no ApoB",
+    "dob": "1965-10-02",
+    "sex": "female"
+  },
+  "conditions": [
+    {
+      "code": "I25.2",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Old myocardial infarction",
+      "status": "active",
+      "onsetDate": "2021-08-15"
+    },
+    {
+      "code": "E78.0",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Pure hypercholesterolemia, unspecified",
+      "status": "active",
+      "onsetDate": "2021-08-20"
+    }
+  ],
+  "medications": [
+    {
+      "rxnormCode": "83367",
+      "name": "atorvastatin 40 MG Oral Tablet",
+      "genericName": "atorvastatin",
+      "dose": "40 mg daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2021-09-01"
+    }
+  ],
+  "observations": [
+    {
+      "loincCode": "13457-7",
+      "display": "Cholesterol in LDL [Mass/volume] in Serum or Plasma by calculation",
+      "value": 65,
+      "unit": "mg/dL",
+      "effectiveDate": "2026-03-22",
+      "category": "laboratory"
+    },
+    {
+      "loincCode": "2085-9",
+      "display": "Cholesterol in HDL [Mass/volume] in Serum or Plasma",
+      "value": 58,
+      "unit": "mg/dL",
+      "effectiveDate": "2026-03-22",
+      "category": "laboratory"
+    },
+    {
+      "loincCode": "2571-8",
+      "display": "Triglyceride [Mass/volume] in Serum or Plasma",
+      "value": 120,
+      "unit": "mg/dL",
+      "effectiveDate": "2026-03-22",
+      "category": "laboratory"
+    }
+  ],
+  "allergies": []
+}

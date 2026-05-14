@@ -1,0 +1,52 @@
+{
+  "patient": {
+    "id": "fixture-11",
+    "name": "Test Patient 11 — T2DM, ApoB never measured",
+    "dob": "1970-07-19",
+    "sex": "male"
+  },
+  "conditions": [
+    {
+      "code": "E11.9",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Type 2 diabetes mellitus without complications",
+      "status": "active",
+      "onsetDate": "2019-03-04"
+    },
+    {
+      "code": "E78.5",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Hyperlipidemia, unspecified",
+      "status": "active",
+      "onsetDate": "2019-03-04"
+    }
+  ],
+  "medications": [],
+  "observations": [
+    {
+      "loincCode": "13457-7",
+      "display": "Cholesterol in LDL [Mass/volume] in Serum or Plasma by calculation",
+      "value": 95,
+      "unit": "mg/dL",
+      "effectiveDate": "2026-04-10",
+      "category": "laboratory"
+    },
+    {
+      "loincCode": "2085-9",
+      "display": "Cholesterol in HDL [Mass/volume] in Serum or Plasma",
+      "value": 42,
+      "unit": "mg/dL",
+      "effectiveDate": "2026-04-10",
+      "category": "laboratory"
+    },
+    {
+      "loincCode": "2571-8",
+      "display": "Triglyceride [Mass/volume] in Serum or Plasma",
+      "value": 165,
+      "unit": "mg/dL",
+      "effectiveDate": "2026-04-10",
+      "category": "laboratory"
+    }
+  ],
+  "allergies": []
+}

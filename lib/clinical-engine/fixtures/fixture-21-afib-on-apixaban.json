@@ -1,0 +1,37 @@
+{
+  "patient": {
+    "id": "fixture-21",
+    "name": "Test Patient 21 — 75yo M paroxysmal AFib on apixaban",
+    "dob": "1951-01-09",
+    "sex": "male"
+  },
+  "conditions": [
+    {
+      "code": "I48.0",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Paroxysmal atrial fibrillation",
+      "status": "active",
+      "onsetDate": "2020-03-12"
+    },
+    {
+      "code": "I10",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Essential (primary) hypertension",
+      "status": "active",
+      "onsetDate": "2005-02-20"
+    }
+  ],
+  "medications": [
+    {
+      "rxnormCode": "1364430",
+      "name": "apixaban 5 MG Oral Tablet",
+      "genericName": "apixaban",
+      "dose": "5 mg twice daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2020-03-20"
+    }
+  ],
+  "observations": [],
+  "allergies": []
+}

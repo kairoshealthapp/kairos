@@ -1,0 +1,62 @@
+# Guideline Watch
+
+**Last updated:** 2026-05-13
+[← Index](INDEX.md)
+
+Active clinical guidelines that back each rule in the Kairos clinical engine. Each row records the rule, its sourcing guideline, the publication date, the last in-repo clinical review date, and a next-review marker. When a guideline updates or a next-review date passes, the corresponding rule's banner block and ADR need a fresh pass.
+
+This is Layer 2 of the currency infrastructure — the in-repo tracker. Layer 1 is the bannered guideline block at the top of each rule source file. Layer 3 is the ADR record under `docs/decisions/`.
+
+## Active rules
+
+| Rule | Source guideline | Pub date | Class / LOE | Last reviewed | Next review due | Source file | ADR |
+|---|---|---|---|---|---|---|---|
+| `gdmt-hfref` | 2022 ACC/AHA/HFSA Heart Failure Guideline | 2022 | varies by pillar | 2026-05-07 | 2027-05-07 | [`gdmt-hfref.ts`](../lib/clinical-engine/rules/gdmt-hfref.ts) | [0003](decisions/0003-metoprolol-succinate-vs-tartrate-distinction.md), [0004](decisions/0004-rule-signature-pure-function.md) |
+| `lpa-screening` | [2026 ACC/AHA/Multisociety Dyslipidemia Guideline](https://www.ahajournals.org/doi/10.1161/CIR.0000000000001423) (Circulation) | 2026-03-13 | Class I, LOE TBC | 2026-05-13 | 2027-05-13 | [`lp-a-screening.ts`](../lib/clinical-engine/rules/lp-a-screening.ts) | [0006](decisions/0006-lpa-screening-rule.md) |
+| `nsaid-hf-interaction` | [2022 AHA/ACC/HFSA HF Guideline](https://www.ahajournals.org/doi/10.1161/CIR.0000000000001063) §7.3.2 Rec. 7 (Heidenreich et al, Circulation) | 2022-05-03 | Class 3: Harm, LOE B-NR | 2026-05-13 | 2027-05-13 | [`nsaid-hf-interaction.ts`](../lib/clinical-engine/rules/nsaid-hf-interaction.ts) | [0007](decisions/0007-nsaid-hf-interaction-rule.md) |
+| `apob-measurement` | [2026 ACC/AHA Dyslipidemia Guideline](https://www.ahajournals.org/doi/10.1161/CIR.0000000000001423) (Circulation) — conditional-population ApoB | 2026-03-13 | Class likely IIa, LOE TBC | 2026-05-13 | 2027-05-13 | [`apo-b-measurement.ts`](../lib/clinical-engine/rules/apo-b-measurement.ts) | [0008](decisions/0008-apob-measurement-rule.md) |
+| `statin-initiation` | [2026 ACC/AHA Dyslipidemia Guideline](https://www.ahajournals.org/doi/10.1161/CIR.0000000000001423) (Circulation) — multi-path threshold (ASCVD, LDL≥190, DM age 40–75) | 2026-03-13 | Class I/IIa across paths, LOE TBC | 2026-05-13 | 2027-05-13 | [`statin-initiation.ts`](../lib/clinical-engine/rules/statin-initiation.ts) | [0009](decisions/0009-statin-initiation-rule.md) |
+| `afib-anticoagulation` | [2023 ACC/AHA/ACCP/HRS AFib Guideline](https://www.ahajournals.org/doi/10.1161/CIR.0000000000001193) §6.3.1 Rec. 1 (Joglar et al, Circulation) | 2023-11-30 | Class 1, LOE A | 2026-05-13 | 2027-05-13 | [`afib-anticoagulation.ts`](../lib/clinical-engine/rules/afib-anticoagulation.ts) | [0010](decisions/0010-afib-anticoagulation-rule.md) |
+| `hfpef-sglt2i` | [2022 AHA/ACC/HFSA HF Guideline](https://www.ahajournals.org/doi/10.1161/CIR.0000000000001063) §7.7 Rec. 2 (Heidenreich et al, Circulation) | 2022-05-03 | Class 2a, LOE B-R | 2026-05-13 | 2027-05-13 | [`hfpef-sglt2i.ts`](../lib/clinical-engine/rules/hfpef-sglt2i.ts) | [0011](decisions/0011-hfpef-sglt2i-rule.md) |
+| `post-mi-beta-blocker` | [2025 ACC/AHA/ACEP/NAEMSP/SCAI ACS Guideline](https://www.ahajournals.org/doi/10.1161/CIR.0000000000001309) §4.6 Rec. 1 (Rao et al, Circulation) | 2025-02-27 | Class 1, LOE A | 2026-05-13 | 2027-05-13 | [`post-mi-beta-blocker.ts`](../lib/clinical-engine/rules/post-mi-beta-blocker.ts) | [0013](decisions/0013-post-mi-beta-blocker-rule.md) |
+| `post-mi-acei-arb` | [2025 ACC/AHA ACS Guideline](https://www.ahajournals.org/doi/10.1161/CIR.0000000000001309) §4.7 Rec. 1 (Rao et al, Circulation) | 2025-02-27 | Class 1, LOE A | 2026-05-13 | 2027-05-13 | [`post-mi-acei-arb.ts`](../lib/clinical-engine/rules/post-mi-acei-arb.ts) | [0014](decisions/0014-post-mi-acei-arb-rule.md) |
+| `t2dm-sglt2i-ckd` | [ADA Standards of Care 2026](https://diabetesjournals.org/care/issue/49/Supplement_1) §11.11a + [KDIGO 2022](https://kdigo.org/wp-content/uploads/2022/10/KDIGO-2022-Clinical-Practice-Guideline-for-Diabetes-Management-in-CKD.pdf) §1.3.1 (dual-guideline) | 2025-12 (ADA) / 2022-10 (KDIGO) | KDIGO Class 1A | 2026-05-13 | 2027-05-13 | [`t2dm-sglt2i-ckd.ts`](../lib/clinical-engine/rules/t2dm-sglt2i-ckd.ts) | [0015](decisions/0015-t2dm-sglt2i-ckd-rule.md) |
+| `t2dm-statin` | [ADA Standards of Care 2026](https://diabetesjournals.org/care/issue/49/Supplement_1) §10 | 2025-12 | ADA Grade A | 2026-05-13 | 2027-05-13 | [`t2dm-statin.ts`](../lib/clinical-engine/rules/t2dm-statin.ts) | [0016](decisions/0016-t2dm-statin-rule.md) |
+
+## Open follow-ups
+
+- **`lpa-screening` LOE:** Class I confirmed across multiple secondary sources; LOE letter could not be pinned to the primary Circulation PDF this session (paywall, HTTP 403). To be confirmed at next review.
+- **`gdmt-hfref` RxCUI mismatches:** 8 of 12 GDMT drug RxCUIs in the rule source diverge from the live NLM RxNorm API (see [rxnorm-verification-2026-05-13.md](rxnorm-verification-2026-05-13.md)). Awaiting clinical review before edits.
+- **`gdmt-hfref` single-code lab shortcut — LIFTED 2026-05-13.** eGFR now matches the multi-code set `EGFR_LOINC_CODES = ['33914-3', '88293-6', '98979-8']` covering MDRD, CKD-EPI race-stratified, and CKD-EPI 2021. Regression test added in [`gdmt-hfref.test.ts`](../lib/clinical-engine/__tests__/gdmt-hfref.test.ts) iterating over every variant.
+- **`nsaid-hf-interaction` HF scope:** rule fires on HFrEF only per the explicit 2022 guideline wording. NSAID pharmacology (renal prostaglandin inhibition → Na/water retention, blunted diuretic response) plausibly generalizes to HFmrEF and HFpEF; expansion deferred to a future ADR if a parallel Class 3 recommendation lands.
+- **`nsaid-hf-interaction` topical suppression is a soft heuristic:** suppresses on `route` substring match against `topical|transdermal|cutaneous`. Missing/blank route fires the finding (safer default). False-positive rate needs real-chart calibration before this rule fronts production.
+- **`apob-measurement` CKM-syndrome qualifier deferred.** No dedicated ICD-10 code for cardiovascular-kidney-metabolic syndrome as of 2026-05-13; most CKM patients qualify indirectly through the diabetes path. Revisit when an ICD path becomes available.
+- **`apob-measurement` Class/LOE not pinned to primary text** (Circulation PDF paywalled). Secondary-source wording suggests Class IIa. To confirm at next review.
+- **`statin-initiation` PREVENT-risk path deferred to v2.** PREVENT equations require inputs (BP, smoking, BMI) not consistently present in PatientBundle. Surfaced in ADR 0009.
+- **`statin-initiation` CKD-3/4 and HIV primary-prevention paths deferred to v2.** Same age 40–75 framework as the diabetes path; not implemented because they need broader ICD-10 code coverage.
+- **`statin-initiation` contraindication handling not in rule.** Rule recommendation explicitly reminds clinician to review for rhabdo history, active liver disease, pregnancy, statin allergy before initiating.
+- **`statin-initiation` does not check statin intensity.** A patient on low-intensity simvastatin 20 mg with prior MI (guideline target high-intensity) is suppressed as "on therapy." Intensity-evaluation rule is a future enhancement.
+- **`statin-initiation` pediatric LDL ≥ 190 fires.** Severe-hyperchol path is age-independent in v1; documented limitation in tests. Future refinement could route to a pediatric-lipidology referral rule instead.
+- **`afib-anticoagulation` aspirin-only is harmful, not just inadequate.** 2023 AFib Guideline §6.3.1 Rec. 4 (Class 3: Harm, LOE B-R) — aspirin alone or with antiplatelet in AFib candidates for anticoagulation. A separate interaction-shape rule "aspirin-only in AFib is harmful" is a Phase 3 candidate.
+- **`afib-anticoagulation` DOAC-preferred-over-warfarin.** 2023 AFib §6.3.1 Rec. 2 (Class 1, LOE A) for non-valvular AFib. v1 treats any active oral anticoagulant as suppression; a "consider DOAC switch" rule for non-valvular AFib on warfarin is a Phase 3 candidate.
+- **`afib-anticoagulation` HAS-BLED bleeding-risk rule not modeled.** v1 surfaces the gap; clinician adjudicates bleeding risk. Phase 3 candidate; `calculateChaDsVasc` exported so a future HAS-BLED rule can compose with it.
+- **`afib-anticoagulation` unknown sex emits no finding.** Documented safer-default in ADR 0010. Future enhancement could emit a `'manual-review'`-status finding when sex is missing.
+- **`hfpef-sglt2i` HFmrEF deferred.** v1 fires only for LVEF ≥ 50% or explicit HFpEF ICDs. A HFmrEF rule (LVEF 40–49%) belongs in a separate ADR; cross-rule boundary tests would then verify HFmrEF ↔ HFpEF and HFmrEF ↔ HFrEF separation.
+- **`hfpef-sglt2i` and `gdmt-hfref` cache different RxCUIs for empagliflozin / dapagliflozin.** Live-verified vs cached-older. Part of the 8-RxCUI-mismatch backlog from Session 36 still awaiting clinical review. Generic-name fallback in both rules masks the divergence for chart records.
+- **Repurposed `evidence.contraindicationReason` field** carries score/components/paths text across statin, AFib, post-MI ACEi, and T2DM-CKD rules. Future engine-types pass should add typed `evidence.scoreBreakdown` and `evidence.qualifyingPaths` fields; deferred to avoid back-incompatible types changes touching every rule.
+- **`post-mi-beta-blocker` and `post-mi-acei-arb` 12-month window is v1 simplification.** The 2025 ACS Guideline's Class 1 anchor is "early initiation (<24 hours)"; long-term duration is unclear in preserved-LVEF patients per REDUCE-AMI. v2: LVEF-stratified long-term BB rule, and a "BB withdrawal candidate" rule for preserved-LVEF patients past 12 months.
+- **`post-mi-acei-arb` Class 2a path deferred.** Non-high-risk ACS patients qualify for ACEi/ARB at Class 2a, LOE A. v1 fires only on Class 1 high-risk criteria.
+- **`post-mi-beta-blocker` atenolol/propranolol not in evidence-based set.** Conservative scope — anchored to GDMT-validated agents (metoprolol succinate, carvedilol, bisoprolol). May over-fire on outpatient atenolol use; needs real-chart calibration.
+- **`t2dm-sglt2i-ckd` eGFR initiation floor is 25 (conservative).** KDIGO permits ≥20; DAPA-CKD's initiation floor is 25. v2 could relax to 20 once chart-narrative DKA-precipitant screening is feasible.
+- **`t2dm-sglt2i-ckd` GLP-1 RA alternative not modeled.** ADA §11.11a allows either SGLT2i OR GLP-1 RA "with demonstrated benefit". v1 surfaces only the SGLT2i path; GLP-1 RA equivalence is a v2 candidate.
+- **`t2dm-statin` T1DM excluded in v1.** ADA has additional age + risk-factor stratification for T1DM statin recommendations.
+- **Convergent-evidence pattern not deduplicated.** T2DM age 40-75 no statin fires both `statin-initiation` and `t2dm-statin`. v2 Finding-deduplication layer is a safety valve for when convergent-rule count compounds.
+
+## How to add a row
+
+When a new rule lands:
+
+1. Add its source guideline's bannered comment block at the top of the rule's `.ts` file (citation, pub date, Class/LOE, URL, `lastReviewed`, `reviewedBy`, `nextReviewDue`).
+2. Add an ADR under `docs/decisions/` and link it from `INDEX.md`.
+3. Append a row here, linking the rule source file and the ADR.
+4. If a guideline supersedes or modifies a prior one, mark the older row in a separate **Retired** section below (not yet needed; section will be added when the first retirement happens).

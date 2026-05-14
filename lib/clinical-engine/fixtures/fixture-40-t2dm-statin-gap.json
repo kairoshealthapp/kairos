@@ -1,0 +1,39 @@
+{
+  "patient": {
+    "id": "fixture-40",
+    "name": "Test Patient 40 — 55yo M T2DM, no statin, LDL 95",
+    "dob": "1970-09-08",
+    "sex": "male"
+  },
+  "conditions": [
+    {
+      "code": "E11.9",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Type 2 diabetes mellitus without complications",
+      "status": "active",
+      "onsetDate": "2020-04-11"
+    }
+  ],
+  "medications": [
+    {
+      "rxnormCode": "6809",
+      "name": "metformin 1000 MG Oral Tablet",
+      "genericName": "metformin",
+      "dose": "1000 mg twice daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2020-04-15"
+    }
+  ],
+  "observations": [
+    {
+      "loincCode": "13457-7",
+      "display": "Cholesterol in LDL [Mass/volume] in Serum or Plasma by calculation",
+      "value": 95,
+      "unit": "mg/dL",
+      "effectiveDate": "2026-03-12",
+      "category": "laboratory"
+    }
+  ],
+  "allergies": []
+}

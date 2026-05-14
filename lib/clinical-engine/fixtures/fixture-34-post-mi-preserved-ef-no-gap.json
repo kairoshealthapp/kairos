@@ -1,0 +1,48 @@
+{
+  "patient": {
+    "id": "fixture-34",
+    "name": "Test Patient 34 — 55yo M NSTEMI 3 months ago, LVEF 55%, no high-risk criteria",
+    "dob": "1971-04-19",
+    "sex": "male"
+  },
+  "conditions": [
+    {
+      "code": "I21.4",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Non-ST elevation (NSTEMI) myocardial infarction",
+      "status": "active",
+      "onsetDate": "2026-02-13"
+    }
+  ],
+  "medications": [
+    {
+      "rxnormCode": "20352",
+      "name": "carvedilol 12.5 MG Oral Tablet",
+      "genericName": "carvedilol",
+      "dose": "12.5 mg twice daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2026-02-14"
+    },
+    {
+      "rxnormCode": "83367",
+      "name": "atorvastatin 80 MG Oral Tablet",
+      "genericName": "atorvastatin",
+      "dose": "80 mg daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2026-02-14"
+    }
+  ],
+  "observations": [
+    {
+      "loincCode": "10230-1",
+      "display": "Left ventricular ejection fraction by 2D echo",
+      "value": 55,
+      "unit": "%",
+      "effectiveDate": "2026-02-15",
+      "category": "imaging"
+    }
+  ],
+  "allergies": []
+}

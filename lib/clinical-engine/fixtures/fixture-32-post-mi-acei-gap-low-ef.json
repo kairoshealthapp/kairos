@@ -1,0 +1,48 @@
+{
+  "patient": {
+    "id": "fixture-32",
+    "name": "Test Patient 32 — 62yo M STEMI 2 months ago, LVEF 30%, no ACEi",
+    "dob": "1963-12-08",
+    "sex": "male"
+  },
+  "conditions": [
+    {
+      "code": "I21.3",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "ST elevation (STEMI) myocardial infarction of unspecified site",
+      "status": "active",
+      "onsetDate": "2026-03-13"
+    }
+  ],
+  "medications": [
+    {
+      "rxnormCode": "866924",
+      "name": "metoprolol succinate 50 MG Extended Release Oral Tablet",
+      "genericName": "metoprolol succinate",
+      "dose": "50 mg daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2026-03-14"
+    },
+    {
+      "rxnormCode": "83367",
+      "name": "atorvastatin 80 MG Oral Tablet",
+      "genericName": "atorvastatin",
+      "dose": "80 mg daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2026-03-14"
+    }
+  ],
+  "observations": [
+    {
+      "loincCode": "10230-1",
+      "display": "Left ventricular ejection fraction by 2D echo",
+      "value": 30,
+      "unit": "%",
+      "effectiveDate": "2026-03-16",
+      "category": "imaging"
+    }
+  ],
+  "allergies": []
+}

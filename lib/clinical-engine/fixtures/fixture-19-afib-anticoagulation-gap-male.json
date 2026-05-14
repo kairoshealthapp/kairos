@@ -1,0 +1,44 @@
+{
+  "patient": {
+    "id": "fixture-19",
+    "name": "Test Patient 19 — 72yo M paroxysmal AFib, HTN, T2DM, no anticoagulant",
+    "dob": "1954-02-10",
+    "sex": "male"
+  },
+  "conditions": [
+    {
+      "code": "I48.0",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Paroxysmal atrial fibrillation",
+      "status": "active",
+      "onsetDate": "2024-01-19"
+    },
+    {
+      "code": "I10",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Essential (primary) hypertension",
+      "status": "active",
+      "onsetDate": "2015-05-04"
+    },
+    {
+      "code": "E11.9",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Type 2 diabetes mellitus without complications",
+      "status": "active",
+      "onsetDate": "2018-09-12"
+    }
+  ],
+  "medications": [
+    {
+      "rxnormCode": "29046",
+      "name": "lisinopril 20 MG Oral Tablet",
+      "genericName": "lisinopril",
+      "dose": "20 mg daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2015-06-01"
+    }
+  ],
+  "observations": [],
+  "allergies": []
+}

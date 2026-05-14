@@ -1,0 +1,44 @@
+{
+  "patient": {
+    "id": "fixture-26",
+    "name": "Test Patient 26 — 75yo M HFpEF, eGFR 18 (contraindication)",
+    "dob": "1951-08-30",
+    "sex": "male"
+  },
+  "conditions": [
+    {
+      "code": "I50.32",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Chronic diastolic (congestive) heart failure",
+      "status": "active",
+      "onsetDate": "2022-04-11"
+    },
+    {
+      "code": "N18.4",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Chronic kidney disease, stage 4",
+      "status": "active",
+      "onsetDate": "2024-08-02"
+    }
+  ],
+  "medications": [],
+  "observations": [
+    {
+      "loincCode": "10230-1",
+      "display": "Left ventricular ejection fraction by 2D echo",
+      "value": 60,
+      "unit": "%",
+      "effectiveDate": "2024-08-02",
+      "category": "imaging"
+    },
+    {
+      "loincCode": "98979-8",
+      "display": "Glomerular filtration rate by CKD-EPI 2021",
+      "value": 18,
+      "unit": "mL/min/1.73m2",
+      "effectiveDate": "2026-04-15",
+      "category": "laboratory"
+    }
+  ],
+  "allergies": []
+}

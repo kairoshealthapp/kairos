@@ -1,0 +1,29 @@
+{
+  "patient": {
+    "id": "fixture-29",
+    "name": "Test Patient 29 — 55yo F NSTEMI 6 months ago, on metoprolol tartrate",
+    "dob": "1970-12-04",
+    "sex": "female"
+  },
+  "conditions": [
+    {
+      "code": "I21.4",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Non-ST elevation (NSTEMI) myocardial infarction",
+      "status": "active",
+      "onsetDate": "2025-11-13"
+    }
+  ],
+  "medications": [
+    {
+      "name": "metoprolol tartrate 50 MG Oral Tablet",
+      "genericName": "metoprolol tartrate",
+      "dose": "50 mg twice daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2025-11-14"
+    }
+  ],
+  "observations": [],
+  "allergies": []
+}

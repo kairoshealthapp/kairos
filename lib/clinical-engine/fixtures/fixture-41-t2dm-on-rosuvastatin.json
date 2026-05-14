@@ -1,0 +1,39 @@
+{
+  "patient": {
+    "id": "fixture-41",
+    "name": "Test Patient 41 — 60yo F T2DM on rosuvastatin",
+    "dob": "1965-11-22",
+    "sex": "female"
+  },
+  "conditions": [
+    {
+      "code": "E11.9",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Type 2 diabetes mellitus without complications",
+      "status": "active",
+      "onsetDate": "2018-07-09"
+    }
+  ],
+  "medications": [
+    {
+      "rxnormCode": "301542",
+      "name": "rosuvastatin 20 MG Oral Tablet",
+      "genericName": "rosuvastatin",
+      "dose": "20 mg daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2018-07-15"
+    },
+    {
+      "rxnormCode": "6809",
+      "name": "metformin 1000 MG Oral Tablet",
+      "genericName": "metformin",
+      "dose": "1000 mg twice daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2018-07-15"
+    }
+  ],
+  "observations": [],
+  "allergies": []
+}

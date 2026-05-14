@@ -1,0 +1,30 @@
+{
+  "patient": {
+    "id": "fixture-35",
+    "name": "Test Patient 35 — 67yo F STEMI 4 months ago, no LVEF documented, no ACEi",
+    "dob": "1958-10-31",
+    "sex": "female"
+  },
+  "conditions": [
+    {
+      "code": "I21.3",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "ST elevation (STEMI) myocardial infarction of unspecified site",
+      "status": "active",
+      "onsetDate": "2026-01-13"
+    }
+  ],
+  "medications": [
+    {
+      "rxnormCode": "19484",
+      "name": "bisoprolol 5 MG Oral Tablet",
+      "genericName": "bisoprolol",
+      "dose": "5 mg daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2026-01-14"
+    }
+  ],
+  "observations": [],
+  "allergies": []
+}

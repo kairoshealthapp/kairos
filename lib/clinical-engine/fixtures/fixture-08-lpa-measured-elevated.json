@@ -1,0 +1,37 @@
+{
+  "patient": {
+    "id": "fixture-08",
+    "name": "Test Patient 08 — Lp(a) measured, elevated",
+    "dob": "1968-01-30",
+    "sex": "female"
+  },
+  "conditions": [
+    {
+      "code": "Z82.49",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Family history of ischemic heart disease and other diseases of the circulatory system",
+      "status": "active",
+      "onsetDate": "2023-05-18"
+    }
+  ],
+  "medications": [],
+  "observations": [
+    {
+      "loincCode": "43583-4",
+      "display": "Lipoprotein a [Moles/volume] in Serum or Plasma",
+      "value": 150,
+      "unit": "nmol/L",
+      "effectiveDate": "2024-06-22",
+      "category": "laboratory"
+    },
+    {
+      "loincCode": "13457-7",
+      "display": "Cholesterol in LDL [Mass/volume] in Serum or Plasma by calculation",
+      "value": 124,
+      "unit": "mg/dL",
+      "effectiveDate": "2024-06-22",
+      "category": "laboratory"
+    }
+  ],
+  "allergies": []
+}

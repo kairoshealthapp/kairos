@@ -1,0 +1,30 @@
+{
+  "patient": {
+    "id": "fixture-30",
+    "name": "Test Patient 30 — 70yo M STEMI 4 months ago on carvedilol",
+    "dob": "1956-03-22",
+    "sex": "male"
+  },
+  "conditions": [
+    {
+      "code": "I21.3",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "ST elevation (STEMI) myocardial infarction of unspecified site",
+      "status": "active",
+      "onsetDate": "2026-01-13"
+    }
+  ],
+  "medications": [
+    {
+      "rxnormCode": "20352",
+      "name": "carvedilol 12.5 MG Oral Tablet",
+      "genericName": "carvedilol",
+      "dose": "12.5 mg twice daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2026-01-14"
+    }
+  ],
+  "observations": [],
+  "allergies": []
+}

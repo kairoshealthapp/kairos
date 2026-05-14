@@ -1,0 +1,20 @@
+{
+  "patient": {
+    "id": "fixture-23",
+    "name": "Test Patient 23 — 55yo M paroxysmal AFib, no risk factors",
+    "dob": "1971-06-25",
+    "sex": "male"
+  },
+  "conditions": [
+    {
+      "code": "I48.0",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Paroxysmal atrial fibrillation",
+      "status": "active",
+      "onsetDate": "2026-01-04"
+    }
+  ],
+  "medications": [],
+  "observations": [],
+  "allergies": []
+}

@@ -1,0 +1,63 @@
+{
+  "patient": {
+    "id": "fixture-36",
+    "name": "Test Patient 36 — 65yo M T2DM, eGFR 45, UACR 60, no SGLT2i",
+    "dob": "1961-02-28",
+    "sex": "male"
+  },
+  "conditions": [
+    {
+      "code": "E11.22",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Type 2 diabetes mellitus with diabetic chronic kidney disease",
+      "status": "active",
+      "onsetDate": "2019-05-04"
+    },
+    {
+      "code": "N18.32",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Chronic kidney disease, stage 3b",
+      "status": "active",
+      "onsetDate": "2024-08-18"
+    }
+  ],
+  "medications": [
+    {
+      "rxnormCode": "29046",
+      "name": "lisinopril 20 MG Oral Tablet",
+      "genericName": "lisinopril",
+      "dose": "20 mg daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2019-05-10"
+    },
+    {
+      "rxnormCode": "6809",
+      "name": "metformin 1000 MG Oral Tablet",
+      "genericName": "metformin",
+      "dose": "1000 mg twice daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2019-05-10"
+    }
+  ],
+  "observations": [
+    {
+      "loincCode": "98979-8",
+      "display": "Glomerular filtration rate by CKD-EPI 2021",
+      "value": 45,
+      "unit": "mL/min/1.73m2",
+      "effectiveDate": "2026-04-15",
+      "category": "laboratory"
+    },
+    {
+      "loincCode": "9318-7",
+      "display": "Albumin/Creatinine [Mass Ratio] in Urine",
+      "value": 60,
+      "unit": "mg/g",
+      "effectiveDate": "2026-04-15",
+      "category": "laboratory"
+    }
+  ],
+  "allergies": []
+}

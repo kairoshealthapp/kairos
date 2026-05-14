@@ -1,0 +1,46 @@
+{
+  "patient": {
+    "id": "fixture-37",
+    "name": "Test Patient 37 — 60yo F T2DM, eGFR 50, on canagliflozin",
+    "dob": "1966-06-12",
+    "sex": "female"
+  },
+  "conditions": [
+    {
+      "code": "E11.21",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Type 2 diabetes mellitus with diabetic nephropathy",
+      "status": "active",
+      "onsetDate": "2017-09-22"
+    },
+    {
+      "code": "N18.31",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Chronic kidney disease, stage 3a",
+      "status": "active",
+      "onsetDate": "2023-11-05"
+    }
+  ],
+  "medications": [
+    {
+      "rxnormCode": "1373458",
+      "name": "canagliflozin 100 MG Oral Tablet",
+      "genericName": "canagliflozin",
+      "dose": "100 mg daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2023-11-15"
+    }
+  ],
+  "observations": [
+    {
+      "loincCode": "98979-8",
+      "display": "Glomerular filtration rate by CKD-EPI 2021",
+      "value": 50,
+      "unit": "mL/min/1.73m2",
+      "effectiveDate": "2026-04-08",
+      "category": "laboratory"
+    }
+  ],
+  "allergies": []
+}

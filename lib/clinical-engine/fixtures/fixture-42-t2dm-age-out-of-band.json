@@ -1,0 +1,30 @@
+{
+  "patient": {
+    "id": "fixture-42",
+    "name": "Test Patient 42 — 35yo M T2DM, no statin (below age band)",
+    "dob": "1991-02-14",
+    "sex": "male"
+  },
+  "conditions": [
+    {
+      "code": "E11.9",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Type 2 diabetes mellitus without complications",
+      "status": "active",
+      "onsetDate": "2023-06-22"
+    }
+  ],
+  "medications": [
+    {
+      "rxnormCode": "6809",
+      "name": "metformin 500 MG Oral Tablet",
+      "genericName": "metformin",
+      "dose": "500 mg twice daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2023-06-25"
+    }
+  ],
+  "observations": [],
+  "allergies": []
+}

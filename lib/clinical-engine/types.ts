@@ -60,6 +60,7 @@ export type FindingStatus =
   | 'present'
   | 'contraindicated'
   | 'non-evidence-based'
+  | 'interaction'
   | 'manual-review';
 
 export interface FindingEvidence {

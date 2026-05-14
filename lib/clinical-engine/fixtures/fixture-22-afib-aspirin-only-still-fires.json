@@ -1,0 +1,44 @@
+{
+  "patient": {
+    "id": "fixture-22",
+    "name": "Test Patient 22 — 70yo F persistent AFib, HTN, T2DM, aspirin only",
+    "dob": "1956-04-17",
+    "sex": "female"
+  },
+  "conditions": [
+    {
+      "code": "I48.19",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Other persistent atrial fibrillation",
+      "status": "active",
+      "onsetDate": "2022-10-08"
+    },
+    {
+      "code": "I10",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Essential (primary) hypertension",
+      "status": "active",
+      "onsetDate": "2008-03-04"
+    },
+    {
+      "code": "E11.9",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Type 2 diabetes mellitus without complications",
+      "status": "active",
+      "onsetDate": "2019-12-21"
+    }
+  ],
+  "medications": [
+    {
+      "rxnormCode": "1191",
+      "name": "aspirin 81 MG Oral Tablet",
+      "genericName": "aspirin",
+      "dose": "81 mg daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2022-10-15"
+    }
+  ],
+  "observations": [],
+  "allergies": []
+}

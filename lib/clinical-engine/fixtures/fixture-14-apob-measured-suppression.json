@@ -1,0 +1,45 @@
+{
+  "patient": {
+    "id": "fixture-14",
+    "name": "Test Patient 14 — T2DM, ApoB already measured",
+    "dob": "1968-12-30",
+    "sex": "male"
+  },
+  "conditions": [
+    {
+      "code": "E11.65",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Type 2 diabetes mellitus with hyperglycemia",
+      "status": "active",
+      "onsetDate": "2017-04-22"
+    }
+  ],
+  "medications": [],
+  "observations": [
+    {
+      "loincCode": "1884-6",
+      "display": "Apolipoprotein B [Mass/volume] in Serum or Plasma",
+      "value": 95,
+      "unit": "mg/dL",
+      "effectiveDate": "2025-08-13",
+      "category": "laboratory"
+    },
+    {
+      "loincCode": "13457-7",
+      "display": "Cholesterol in LDL [Mass/volume] in Serum or Plasma by calculation",
+      "value": 88,
+      "unit": "mg/dL",
+      "effectiveDate": "2025-08-13",
+      "category": "laboratory"
+    },
+    {
+      "loincCode": "2571-8",
+      "display": "Triglyceride [Mass/volume] in Serum or Plasma",
+      "value": 175,
+      "unit": "mg/dL",
+      "effectiveDate": "2025-08-13",
+      "category": "laboratory"
+    }
+  ],
+  "allergies": []
+}

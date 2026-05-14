@@ -1,0 +1,47 @@
+{
+  "patient": {
+    "id": "fixture-38",
+    "name": "Test Patient 38 — 55yo M T2DM, eGFR 95, no CKD",
+    "dob": "1971-04-04",
+    "sex": "male"
+  },
+  "conditions": [
+    {
+      "code": "E11.9",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Type 2 diabetes mellitus without complications",
+      "status": "active",
+      "onsetDate": "2021-11-18"
+    }
+  ],
+  "medications": [
+    {
+      "rxnormCode": "6809",
+      "name": "metformin 1000 MG Oral Tablet",
+      "genericName": "metformin",
+      "dose": "1000 mg twice daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2021-11-20"
+    }
+  ],
+  "observations": [
+    {
+      "loincCode": "98979-8",
+      "display": "Glomerular filtration rate by CKD-EPI 2021",
+      "value": 95,
+      "unit": "mL/min/1.73m2",
+      "effectiveDate": "2026-03-22",
+      "category": "laboratory"
+    },
+    {
+      "loincCode": "9318-7",
+      "display": "Albumin/Creatinine [Mass Ratio] in Urine",
+      "value": 12,
+      "unit": "mg/g",
+      "effectiveDate": "2026-03-22",
+      "category": "laboratory"
+    }
+  ],
+  "allergies": []
+}

@@ -1,0 +1,45 @@
+{
+  "patient": {
+    "id": "fixture-16",
+    "name": "Test Patient 16 — Severe hypercholesterolemia, LDL 215",
+    "dob": "1978-09-21",
+    "sex": "female"
+  },
+  "conditions": [
+    {
+      "code": "E78.0",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Pure hypercholesterolemia, unspecified",
+      "status": "active",
+      "onsetDate": "2025-10-15"
+    }
+  ],
+  "medications": [],
+  "observations": [
+    {
+      "loincCode": "13457-7",
+      "display": "Cholesterol in LDL [Mass/volume] in Serum or Plasma by calculation",
+      "value": 215,
+      "unit": "mg/dL",
+      "effectiveDate": "2025-10-15",
+      "category": "laboratory"
+    },
+    {
+      "loincCode": "2093-3",
+      "display": "Cholesterol [Mass/volume] in Serum or Plasma",
+      "value": 298,
+      "unit": "mg/dL",
+      "effectiveDate": "2025-10-15",
+      "category": "laboratory"
+    },
+    {
+      "loincCode": "2571-8",
+      "display": "Triglyceride [Mass/volume] in Serum or Plasma",
+      "value": 145,
+      "unit": "mg/dL",
+      "effectiveDate": "2025-10-15",
+      "category": "laboratory"
+    }
+  ],
+  "allergies": []
+}

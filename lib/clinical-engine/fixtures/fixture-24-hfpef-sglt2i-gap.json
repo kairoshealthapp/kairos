@@ -1,0 +1,54 @@
+{
+  "patient": {
+    "id": "fixture-24",
+    "name": "Test Patient 24 — 70yo F HFpEF + T2DM, no SGLT2i",
+    "dob": "1956-11-04",
+    "sex": "female"
+  },
+  "conditions": [
+    {
+      "code": "I50.32",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Chronic diastolic (congestive) heart failure",
+      "status": "active",
+      "onsetDate": "2024-09-18"
+    },
+    {
+      "code": "E11.9",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Type 2 diabetes mellitus without complications",
+      "status": "active",
+      "onsetDate": "2017-02-10"
+    }
+  ],
+  "medications": [
+    {
+      "rxnormCode": "29046",
+      "name": "lisinopril 10 MG Oral Tablet",
+      "genericName": "lisinopril",
+      "dose": "10 mg daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2024-09-25"
+    }
+  ],
+  "observations": [
+    {
+      "loincCode": "10230-1",
+      "display": "Left ventricular ejection fraction by 2D echo",
+      "value": 55,
+      "unit": "%",
+      "effectiveDate": "2024-09-15",
+      "category": "imaging"
+    },
+    {
+      "loincCode": "98979-8",
+      "display": "Glomerular filtration rate by CKD-EPI 2021",
+      "value": 65,
+      "unit": "mL/min/1.73m2",
+      "effectiveDate": "2026-04-22",
+      "category": "laboratory"
+    }
+  ],
+  "allergies": []
+}

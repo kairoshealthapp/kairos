@@ -1,0 +1,48 @@
+{
+  "patient": {
+    "id": "fixture-28",
+    "name": "Test Patient 28 — 60yo M, STEMI 3 months ago, no BB",
+    "dob": "1965-09-10",
+    "sex": "male"
+  },
+  "conditions": [
+    {
+      "code": "I21.09",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "ST elevation (STEMI) myocardial infarction involving other coronary artery of anterior wall",
+      "status": "active",
+      "onsetDate": "2026-02-13"
+    }
+  ],
+  "medications": [
+    {
+      "rxnormCode": "83367",
+      "name": "atorvastatin 80 MG Oral Tablet",
+      "genericName": "atorvastatin",
+      "dose": "80 mg daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2026-02-14"
+    },
+    {
+      "rxnormCode": "29046",
+      "name": "lisinopril 5 MG Oral Tablet",
+      "genericName": "lisinopril",
+      "dose": "5 mg daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2026-02-14"
+    }
+  ],
+  "observations": [
+    {
+      "loincCode": "10230-1",
+      "display": "Left ventricular ejection fraction by 2D echo",
+      "value": 38,
+      "unit": "%",
+      "effectiveDate": "2026-02-15",
+      "category": "imaging"
+    }
+  ],
+  "allergies": []
+}

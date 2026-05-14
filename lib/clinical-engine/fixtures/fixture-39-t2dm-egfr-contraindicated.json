@@ -1,0 +1,36 @@
+{
+  "patient": {
+    "id": "fixture-39",
+    "name": "Test Patient 39 — 70yo M T2DM, eGFR 20 (below SGLT2i floor)",
+    "dob": "1956-09-30",
+    "sex": "male"
+  },
+  "conditions": [
+    {
+      "code": "E11.22",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Type 2 diabetes mellitus with diabetic chronic kidney disease",
+      "status": "active",
+      "onsetDate": "2015-03-12"
+    },
+    {
+      "code": "N18.4",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Chronic kidney disease, stage 4",
+      "status": "active",
+      "onsetDate": "2025-08-04"
+    }
+  ],
+  "medications": [],
+  "observations": [
+    {
+      "loincCode": "98979-8",
+      "display": "Glomerular filtration rate by CKD-EPI 2021",
+      "value": 20,
+      "unit": "mL/min/1.73m2",
+      "effectiveDate": "2026-04-15",
+      "category": "laboratory"
+    }
+  ],
+  "allergies": []
+}

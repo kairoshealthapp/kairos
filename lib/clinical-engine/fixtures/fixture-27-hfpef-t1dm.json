@@ -1,0 +1,44 @@
+{
+  "patient": {
+    "id": "fixture-27",
+    "name": "Test Patient 27 — 60yo F HFpEF + T1DM (SGLT2i contraindicated)",
+    "dob": "1966-02-15",
+    "sex": "female"
+  },
+  "conditions": [
+    {
+      "code": "I50.32",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Chronic diastolic (congestive) heart failure",
+      "status": "active",
+      "onsetDate": "2024-12-04"
+    },
+    {
+      "code": "E10.9",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Type 1 diabetes mellitus without complications",
+      "status": "active",
+      "onsetDate": "1985-06-22"
+    }
+  ],
+  "medications": [],
+  "observations": [
+    {
+      "loincCode": "10230-1",
+      "display": "Left ventricular ejection fraction by 2D echo",
+      "value": 56,
+      "unit": "%",
+      "effectiveDate": "2024-11-30",
+      "category": "imaging"
+    },
+    {
+      "loincCode": "98979-8",
+      "display": "Glomerular filtration rate by CKD-EPI 2021",
+      "value": 72,
+      "unit": "mL/min/1.73m2",
+      "effectiveDate": "2026-04-08",
+      "category": "laboratory"
+    }
+  ],
+  "allergies": []
+}
