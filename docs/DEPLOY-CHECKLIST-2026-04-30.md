@@ -1,5 +1,7 @@
 # Kairos Tour-Mode Deploy Checklist — 2026-04-30
 
+> [← Index](INDEX.md) · Last updated: 2026-04-30 · Pre-deploy checklist for the 2026-04-30 tour-mode release to Vercel.
+
 Prepared 2026-04-29 evening. Execute in order tomorrow morning after local tour-mode build verifies clean.
 
 ## Targets

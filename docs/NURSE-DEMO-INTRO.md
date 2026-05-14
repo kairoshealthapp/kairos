@@ -1,5 +1,7 @@
 # Kairos — A Quick Note Before You Click
 
+> [← Index](INDEX.md) · Last updated: 2026-04-29 · Short intro letter shown to nurses before clicking into the Kairos demo.
+
 Hey —
 
 Thanks for taking five minutes to look at this. I know you just got off shift (or you're trying to), and the last thing you want is one more tab open. I'll keep it short.

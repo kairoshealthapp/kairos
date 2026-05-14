@@ -8335,3 +8335,418 @@ Committed the prior-session sandbox-probe artifacts that were left uncommitted a
 
 ### Verification
 - `npx tsc --noEmit --strict --target es2020 --module esnext --moduleResolution bundler --skipLibCheck lib/clinical-engine/index.ts` exits 0.
+
+
+---
+
+## Session 23 — Observations folder added
+**2026-05-13**
+
+`docs/observations/` created and added to `.gitignore` so field notes from clinician conversations stay local-only. First entry: a field-note from a senior NP chart-review conversation.
+
+
+---
+
+## Session 24 — GDMT HFrEF rule test fixtures (authoring only)
+**2026-05-13**
+
+### Change
+Authored five JSON fixtures under `lib/clinical-engine/fixtures/` matching the `PatientBundle` shape in `types.ts`. Each is a hand-crafted clinical scenario designed to exercise a specific branch of `rules/gdmt-hfref.ts`. No rule code modified, no unit tests authored — fixtures await Brandon's plain-English clinical sign-off before tests are written.
+
+### Files added
+- `lib/clinical-engine/fixtures/fixture-01-all-gaps.json` — 64M HFrEF, no GDMT, normal labs → expects 4 missing-pillar gap findings
+- `lib/clinical-engine/fixtures/fixture-02-tartrate-trap.json` — 71F HFrEF on lisinopril + metoprolol tartrate → expects ACEi present, BB non-evidence-based, MRA + SGLT2i missing
+- `lib/clinical-engine/fixtures/fixture-03-full-gdmt.json` — 58M HFrEF on sac/val + carvedilol + spironolactone + dapagliflozin → expects all four pillars present
+- `lib/clinical-engine/fixtures/fixture-04-mra-contraindicated.json` — 78F HFrEF, eGFR 26 → expects MRA contraindicated; SGLT2i flagged present (rule only checks contraindication when pillar is missing)
+- `lib/clinical-engine/fixtures/fixture-05-bb-asthma.json` — 69M HFrEF + J45.50 severe persistent asthma → expects BB contraindicated by condition
+
+### LOINC discrepancy flagged for review
+The session brief named eGFR LOINC `98979-8` and potassium LOINC `6298-4`. The rule (`gdmt-hfref.ts`) actually reads eGFR via `33914-3` and potassium via `2823-3`. Fixtures use the codes the rule reads so contraindication logic actually fires; if the rule should migrate to the newer LOINCs, that is a separate change in `gdmt-hfref.ts` (not done here). LVEF (`10230-1`) is included for completeness but the rule gates on ICD-10/SNOMED condition codes, not LVEF observations.
+
+### Untouched
+No rule code, no unit tests, no app surfaces.
+
+### Verification
+- All five JSON files parse via `JSON.parse` (Node sanity check, exit 0 per file).
+- No `tsc` step needed — fixtures are runtime JSON, not TS modules.
+
+### Next
+Brandon reviews the plain-English fixture summary, signs off (or amends), then unit tests are authored against the signed-off fixtures.
+
+
+---
+
+## Session 24 — Jest tests authored for GDMT HFrEF rule
+**2026-05-13**
+
+### Change
+- Installed `jest`, `ts-jest`, `@types/jest` as devDeps; added `"test": "jest"` script.
+- Created `jest.config.js` (ts-jest preset, node env) and `tsconfig.json` (commonjs, strict, `ignoreDeprecations: "6.0"` to silence TS 6.0 `moduleResolution: node` deprecation).
+- Authored `lib/clinical-engine/__tests__/gdmt-hfref.test.ts` — one `describe` per fixture, individual tests per expected finding plus a total-count assertion. Fixtures loaded via `fs.readFileSync` + `JSON.parse`.
+
+### Result
+**19 passed / 4 failed.** All four failures are the "exactly N findings total" assertion. Root cause is a single rule/spec mismatch:
+
+- The rule emits a `status: 'present'` finding for every GDMT pillar the patient is already on (severity `info`, e.g. "ACEi / ARB / ARNi: on lisinopril 20 MG Oral Tablet").
+- The spec treats "findings" as actionable items only (gap / contraindicated / non-evidence-based) and excludes informational `present` entries.
+
+Per-fixture mismatches (all from `present` findings being emitted):
+
+| Fixture | Expected | Actual | Extra `present` findings |
+|---|---|---|---|
+| 02-tartrate-trap | 3 | 4 | acei-arb-arni (lisinopril) |
+| 03-full-gdmt | 0 | 4 | all 4 pillars |
+| 04-mra-contraindicated | 1 | 4 | acei-arb-arni, beta-blocker, sglt2i |
+| 05-bb-asthma | 1 | 4 | acei-arb-arni, mra, sglt2i |
+
+All 19 per-finding assertions (gap fires / contraindicated fires / non-evidence-based fires / "does NOT fire" gap-like absences) **pass cleanly** — the rule is producing the right actionable findings; it's just also producing `present` confirmations that the spec didn't anticipate.
+
+### Adjudication needed (Brandon)
+Two clean resolutions, both single-line:
+1. **Rule change** — `lib/clinical-engine/rules/gdmt-hfref.ts` skip the `findings.push({ ... status: 'present', ... })` block; patient-already-on data is still derivable from the medication list without emitting a Finding.
+2. **Spec change** — `present` is a legitimate finding type; update fixture expectations to count 4 / 4 / 4 / 4 instead of 3 / 0 / 1 / 1 (and tests follow).
+
+No rule, fixture, or test was modified — stopped per instructions.
+
+### Files touched
+- `package.json` (test script + Jest devDeps)
+- `jest.config.js` (new)
+- `tsconfig.json` (new)
+- `lib/clinical-engine/__tests__/gdmt-hfref.test.ts` (new)
+
+
+---
+
+## Session 25 — GDMT rule narrowed to actionable findings
+**2026-05-13**
+
+### Change
+`lib/clinical-engine/rules/gdmt-hfref.ts`: removed the block that emitted `status: 'present'` findings (severity `info`) for pillars the patient was already on. The rule now emits findings only for actionable statuses: `missing` (gap), `contraindicated`, `non-evidence-based`. All other logic untouched — gate, pillar iteration, contraindication checks, evidence assembly all unchanged.
+
+### Rationale
+A `Finding` is, semantically, something the provider needs to act on. The rule walks all four pillars on every run, so "this pillar fired no finding" already implies "patient is on this pillar or it's not applicable" under the rule's all-four-pillars contract. The `present` confirmations were duplicating that information as Finding objects, which inflated finding counts and gave the wrong impression at the UI/test layer. Narrowing to actionable items keeps the Finding type honest.
+
+### Result
+`npm test`: **23 / 23 passing.** The four total-count assertions that previously failed on fixtures 02, 03, 04, 05 now pass; all 19 per-finding assertions still pass.
+
+### Forward note (future ADR)
+If Trentham's UI ever needs pillar-by-pillar "patient is on X" detail surfaced from the engine (rather than re-derived in the view layer), the clean path is a separate `confirmations: PillarConfirmation[]` field on the rule's return value — distinct from `Finding[]`. That keeps Findings actionable-only while still letting the UI render full quadruple-therapy status. Defer until there's a real UI requirement; today the medication list itself is enough.
+
+### Files touched
+- `lib/clinical-engine/rules/gdmt-hfref.ts` (one block removed; added a short comment in its place)
+
+
+---
+
+## Session 26 — Phase 1 pushed to origin/main
+**2026-05-13**
+
+### Push
+Pushed four stacked Phase 1 commits to `origin/main` (`cac161e..b241e86`):
+
+| SHA | Subject |
+|---|---|
+| `15b7625` | Phase 1: clinical engine foundation + GDMT HFrEF rule |
+| `b272cfd` | Phase 1: sandbox probe script + report (2026-05-07 session) |
+| `24263d8` | Phase 1: fix eplerenone RxCUI 321064 → 298869 (collision with valsartan) |
+| `b241e86` | Phase 1: fixtures + tests + Finding type narrowed to actionable |
+
+### Verification
+Post-push `npm test`: **23 / 23 passing** against the pushed state.
+
+### Working-tree note
+`.gitignore` (observations folder rule) and `docs/log.md` (Sessions 23–26) remain locally modified; both are out of Phase 1 scope and were intentionally left out of `b241e86`. They'll land in a separate follow-up commit.
+
+
+---
+
+## Session 27 — Phase 1: RxNorm verification pass
+**2026-05-13**
+
+### Scope
+Verify all 12 GDMT HFrEF drug RxCUIs in `lib/clinical-engine/rules/gdmt-hfref.ts` against the RxNorm REST API. Flag-only; no rule edits.
+
+### Result
+**4 MATCH / 8 MISMATCH / 0 NOT FOUND.** Full table written to [`docs/rxnorm-verification-2026-05-13.md`](rxnorm-verification-2026-05-13.md).
+
+### MATCH (4)
+lisinopril 29046, losartan 52175, carvedilol 20352, bisoprolol 19484.
+
+### Notable mismatches
+- valsartan 321064 in repo vs. 69749 from RxNorm — adjacent to the prior eplerenone collision fix (commit `24263d8`).
+- sacubitril/valsartan 1656328 vs. 1656339 — off by one digit; likely typo or stale concept.
+- metoprolol succinate 866924 vs. 221124 — repo code may point at a dose-form, not the ingredient concept.
+- dapagliflozin / empagliflozin appear swapped or offset against current ingredient codes.
+
+### Next
+Human clinical + dev review of mismatches before any code change. No edits in this phase.
+
+
+---
+
+## Session 28 — Phase 2: ADR scaffolding
+**2026-05-13**
+
+### Scope
+Stand up `docs/decisions/` with five Michael Nygard ADRs and a fresh `docs/INDEX.md` linking them.
+
+### ADRs created
+- `decisions/0001-typescript-in-clinical-engine.md`
+- `decisions/0002-synthetic-fixtures-vs-epic-sandbox.md`
+- `decisions/0003-metoprolol-succinate-vs-tartrate-distinction.md`
+- `decisions/0004-rule-signature-pure-function.md`
+- `decisions/0005-three-knowledge-layer-architecture.md`
+
+All five marked **Status: Accepted**, dated 2026-05-13, each section (Status / Context / Decision / Consequences) populated.
+
+### Source-of-context note
+The phase brief referenced `KAIROS-STATE.md` sections 4 and 7 as the context source. That file does not exist in the repo — context was drawn instead from `KAIROS-CONTEXT.md` (sections "THE ARCHITECTURAL PRIMITIVE" and "Three Knowledge Layers"), the 2026-05-07 sandbox probe report, and the fixture-02 ("tartrate trap") test design. `INDEX.md` also did not exist and was created from scratch as part of this phase.
+
+
+---
+
+## Session 29 — Phase 3: repo hygiene sweep
+**2026-05-13**
+
+### Scope
+Run lint, ts-prune (clinical engine), and depcheck (full project). Surface findings only — no auto-fix.
+
+### Result
+Findings consolidated in [`docs/hygiene-2026-05-13.md`](hygiene-2026-05-13.md).
+
+### Notable
+- Project has no ESLint configuration. `npx next lint` is interactive on first run and rewrites `tsconfig.json` + installs `eslint-config-next` and `@types/react` without confirmation. Reverted those mutations during the sweep.
+- ts-prune flagged 17 barrel re-exports in `lib/clinical-engine/index.ts` — expected state for an engine that ships ahead of its first surface consumer. `RawProbeBundle` is the only candidate worth a closer human look.
+- depcheck flagged `@tailwindcss/postcss` and `tailwindcss` as unused (likely false positives — Tailwind v4 wiring) and `@types/node` as missing-but-referenced in `tsconfig.json`.
+
+### Working tree note
+No `lib/clinical-engine/rules/*`, fixtures, `CursorGhost.js`, or audio files were touched. `tsconfig.json` / `package.json` / `package-lock.json` were reverted after `next lint`'s automatic mutation.
+
+
+---
+
+## Session 30 — Phase 4: documentation pass
+**2026-05-13**
+
+### Scope
+Audit every per-feature doc in `docs/` (excluding `log.md`). Verify each contains a one-line description, a last-updated date, and a link back to `INDEX.md`. Backfill missing elements. Confirm `INDEX.md` lists all docs and no link is dangling.
+
+### Result
+All per-feature docs and all five ADRs now carry the three required elements. `INDEX.md` (created in Phase 2) lists every doc under `docs/`. No stubs were needed — every doc INDEX.md references already exists on disk.
+
+### Header pattern added to each doc
+A single-line blockquote inserted right after the H1:
+
+```
+> [← Index](INDEX.md) · Last updated: <date> · <one-line description>
+```
+
+ADRs use a slightly different shape (`- **Index:** [← back to docs index](../INDEX.md)`) inserted into their existing Status/Date metadata block.
+
+### Per-doc audit table
+
+| Doc | Description | Last updated | INDEX backlink |
+|---|---|---|---|
+| ARCHITECTURE.md | ✓ added | ✓ added (2026-04-29) | ✓ added |
+| CONTEXT.md | ✓ added | ✓ already present (2026-04-27) | ✓ added |
+| DEPLOY-CHECKLIST-2026-04-30.md | ✓ added | ✓ added (2026-04-30) | ✓ added |
+| KAIROS-CONTEXT.md | ✓ added | ✓ already present (2026-04-27) | ✓ added |
+| KAIROS-SESSION-2026-04-29-AFTERNOON.md | ✓ already present (Purpose) | ✓ added (2026-04-29) | ✓ added |
+| NURSE-DEMO-INTRO.md | ✓ added | ✓ added (2026-04-29) | ✓ added |
+| sandbox-probe-2026-05-07.md | ✓ added | ✓ added (2026-05-07) | ✓ added |
+| vercel-clinai-kairos-audit.md | ✓ added | ✓ already present (2026-04-27) | ✓ added |
+| rxnorm-verification-2026-05-13.md | ✓ already present | ✓ already present | ✓ added |
+| hygiene-2026-05-13.md | ✓ already present | ✓ already present | ✓ added |
+| decisions/0001…0005 | ✓ title + body | ✓ Date field | ✓ Index field added |
+
+### Stop-condition checklist
+- [x] `docs/rxnorm-verification-2026-05-13.md` exists with 12 populated rows.
+- [x] `docs/decisions/0001…0005` exist with all four Nygard sections (Status / Context / Decision / Consequences).
+- [x] `docs/hygiene-2026-05-13.md` exists with LINT, TS-PRUNE, DEPCHECK sections populated.
+- [x] `docs/INDEX.md` links to ADRs, rxnorm-verification, and hygiene files; all links resolve.
+- [x] No files in `lib/clinical-engine/rules/`, `lib/clinical-engine/fixtures/`, or `components/CursorGhost.js`, or any audio file modified.
+- [x] `git push` not run.
+
+
+---
+
+## Session 31 — Production-build recovery: three-step fix
+**2026-05-13**
+
+### What broke
+Production build on commit `b241e86` (Phase 1) failed with `Module not found` for `@/lib/version` and four `@/lib/fixtures/*` imports. The Phase 1 `tsconfig.json` (added for `ts-jest`) did not include the `@/*` path alias that `jsconfig.json` had carried, and Next 14 prefers `tsconfig.json` over `jsconfig.json` for path resolution.
+
+### Fix 1 — restore `@/*` alias (commit b708624 part 1)
+Added `baseUrl: "."` and `paths: { "@/*": ["./*"] }` to `tsconfig.json`, mirroring `jsconfig.json`. `jsconfig.json` left in place untouched.
+
+### Fix 2 — move `calculateCost` out of route.js (commit b708624 part 2)
+After the alias fix, Next's TypeScript type-checker (now actually picking up the tsconfig) caught a Next 14 violation: `app/api/hvc/balance/route.js` had `export function calculateCost(...)` alongside its `GET`/`POST` handlers. Next 14 route files only allow HTTP verbs + the documented config exports.
+- Created `app/api/hvc/balance/cost.js` containing `PRICING_OPUS`, `PRICING_SONNET`, and the `calculateCost` export.
+- Removed those three definitions from `route.js`.
+- Added `import { calculateCost } from './cost';` to `route.js`.
+- Verified only `GET` and `POST` remain as exports.
+
+Local `npm run build`: clean. Committed and pushed.
+
+### Fix 3 — split ts-jest tsconfig from Next tsconfig (commit 3e7794c)
+The production build ran clean, but `npm test` then failed with `TS5011: The common source directory of 'tsconfig.json' is './lib/clinical-engine/__tests__'`. Root cause: Next had auto-mutated `tsconfig.json` during the build (added `allowJs`, `noEmit`, `incremental`, `jsx`, `plugins`, expanded `include` to `.next/types/**/*.ts`). The wider source tree broke `ts-jest`'s `rootDir` inference.
+- Created `tsconfig.jest.json` scoped to `lib/clinical-engine/**/*.ts` with `rootDir: "."` and the original Phase 1 strict-mode settings.
+- Updated `jest.config.js` to use `transform: { '^.+\.tsx?$': ['ts-jest', { tsconfig: 'tsconfig.jest.json' }] }` instead of the `preset: 'ts-jest'` default.
+- Left `tsconfig.json` alone — Next owns it now.
+
+### Verification
+- `npm test`: **23 / 23 passing** post-push against `3e7794c`.
+- `npm run build`: clean, 53 pages generated.
+
+### Pushed commits
+| SHA | Subject |
+|---|---|
+| `b708624` | Fix: production build — move calculateCost out of route.js, restore @/* alias in tsconfig |
+| `3e7794c` | Fix: split ts-jest tsconfig from Next tsconfig |
+
+### Files left out of these commits
+By instruction: `.gitignore`, all Phase 2–4 docs artifacts (`docs/INDEX.md`, `docs/decisions/*`, `docs/hygiene-2026-05-13.md`, `docs/rxnorm-verification-2026-05-13.md`, the docs header-backlink edits, and this `docs/log.md` entry itself) remain locally modified. None of them are required for prod build or test green.
+
+### Lessons captured
+- `next lint` and `next build` will both silently rewrite `tsconfig.json` if Next thinks fields are missing. Any tooling that depends on a stable tsconfig (ts-jest, ts-prune, editor type-check) needs its own config file from day one.
+- A Next 14 route file's export surface is type-enforced via auto-generated `.next/types/...` — non-HTTP-verb exports become hard errors the moment Next's type checker runs.
+
+
+---
+
+## Session 32 — Production-build recovery: install @types/react and @types/node
+**2026-05-13**
+
+### What broke
+After commits `b708624` (path-alias + route fix) and `3e7794c` (jest tsconfig split), the production build still failed with:
+
+> It looks like you're trying to use TypeScript but do not have the required package(s) installed.
+> Please install @types/react.
+
+Root cause: Next 14 requires `@types/react` to be installed as soon as a root `tsconfig.json` is present, even if no React component is actually TypeScript. The Phase 1 setup added `tsconfig.json` for `ts-jest` without adding the React/Node type packages, so Next's type-check phase has been gating on this since `b241e86`. Earlier local builds masked the issue because `next build` will auto-install `@types/react` on first encounter — but Vercel's build environment treats that as a hard fail.
+
+### Fix (commit `e566454`)
+- `npm install --save-dev @types/react @types/node`
+- No other code or config changes.
+- Engine TypeScript remains scoped to `lib/clinical-engine/**`. Rest of project remains plain JS.
+- These are dev-only and have zero runtime effect.
+
+### Verification
+- `npm run build`: clean, 53 pages generated.
+- `npm test` (pre-push): **23 / 23 passing**.
+- `npm test` (post-push against `e566454`): **23 / 23 passing** in 1.042s.
+
+### Pushed commit
+| SHA | Subject |
+|---|---|
+| `e566454` | Fix: add @types/react and @types/node for Next type-check |
+
+### Files left out of this commit
+Per instruction: `.gitignore`, all Phase 2–4 docs artifacts, and this `docs/log.md` entry itself remain locally modified. None are required for prod build or test green.
+
+### Cumulative recovery sequence (b241e86 → e566454)
+| SHA | Fix |
+|---|---|
+| `b241e86` | Phase 1 baseline (commit that broke prod). |
+| `b708624` | `@/*` path alias restored in tsconfig + `calculateCost` moved out of route.js into sibling `cost.js`. |
+| `3e7794c` | `tsconfig.jest.json` created; `jest.config.js` switched to explicit `transform` so Next's tsconfig mutations don't break ts-jest. |
+| `e566454` | `@types/react` and `@types/node` installed as devDependencies. |
+
+Production build now passes end-to-end. The Phase 1 engine + tests survive intact.
+
+
+---
+
+## Session 33 — Repo maintenance verification pass (Phases 1–4)
+**2026-05-13**
+
+Goal-driven verification of the four-phase maintenance plan. All four phase artifacts existed from prior session work; this session re-verified them end-to-end without modifying `lib/clinical-engine/rules/*`, fixtures, `components/CursorGhost.js`, or any audio file, and without `git push`.
+
+### Phase 1 — RxNorm verification
+- File: `docs/rxnorm-verification-2026-05-13.md` (40 lines, 12 rows populated).
+- Re-queried RxNorm REST live for 4 spot-check drugs: `lisinopril` (29046), `enalapril` (3827), `spironolactone` (9997), `empagliflozin` (1545653). All four match the values already recorded in the file.
+- 4 MATCH / 8 MISMATCH / 0 NOT FOUND. No edits to `gdmt-hfref.ts`. Flag-only.
+
+### Phase 2 — ADR scaffolding
+- 5 ADRs present in `docs/decisions/`. Word counts: 361, 328, 300, 350, 383 — all within the 200–400 target.
+- Each ADR has `Status: Accepted`, `Date: 2026-05-13`, and the four Nygard sections (Status/Context/Decision/Consequences).
+- INDEX.md links all five.
+
+### Phase 3 — Repo hygiene
+- File: `docs/hygiene-2026-05-13.md` (93 lines) with sections **LINT**, **TS-PRUNE**, **DEPCHECK**.
+- LINT: project has no ESLint config; `next lint` is interactive and mutates `tsconfig.json` — flagged for human decision, no setup performed.
+- TS-PRUNE: 17 barrel re-exports flagged in `lib/clinical-engine/index.ts`; all expected pre-integration.
+- DEPCHECK: likely-false-positive unused devDeps (`@tailwindcss/postcss`, `tailwindcss`); one real missing dep (`@types/node`) — already added in commit `e566454`.
+
+### Phase 4 — Documentation pass
+- Every per-feature doc referenced by `docs/INDEX.md` resolves to an existing file.
+- Each per-feature doc has the three required elements: one-line description in a `> [← Index](INDEX.md)` quote block, a Last-updated date, and an INDEX backlink.
+- INDEX.md already includes the ADR section, the rxnorm-verification entry, and the hygiene entry.
+
+### Stop condition
+All four phase artifacts exist at the paths specified, INDEX.md links resolve, no protected files modified, no push performed.
+
+
+---
+
+## Session 34 — Wire GDMT HFrEF rule into Trentham Section 09
+**2026-05-13**
+
+### What changed
+- **Modified:** `app/provider/components/BriefingDrawer.js` (single file).
+- **Imported:** `gdmtHfrefRule` and `GDMT_PILLARS` from `@/lib/clinical-engine`, and the JSON bundle `@/lib/clinical-engine/fixtures/fixture-02-tartrate-trap.json`.
+- **Computed once at module load:** `TRENTHAM_GDMT_FINDINGS = gdmtHfrefRule(trenthamFixture)`. The rule is a pure function; the fixture is static; no per-render cost.
+- **New component:** `Section09GdmtFindings({ findings })` renders each `Finding` as a styled row showing the pillar display name (mapped from `subcategory` via `GDMT_PILLARS`), the human-readable `status`, and the rule's `summary`. Empty array → "Full GDMT — no gaps identified."
+- **Severity styling:**
+  - `gap` and `non-evidence-based` → amber (warning) border + tinted fill.
+  - `contraindicated` → teal (info) border + tinted fill.
+- **Targeted swap:** Only when `briefingId === "card-cardiac-arrest"` (the Trentham card) does Section 09 render the rule output. Every other card still renders `briefing.patternsKairosSurfaces` exactly as before.
+- **No other cards or sections touched.** No edits in `lib/clinical-engine/rules/*` or `lib/clinical-engine/fixtures/*`.
+
+### Expected output against fixture-02 (tartrate-trap)
+Patient on lisinopril + metoprolol tartrate, K+ 4.5, eGFR 60, HFrEF (I50.22). Rule emits:
+1. **Evidence-based beta-blocker** — `non-evidence-based` — "patient is on metoprolol tartrate 50 MG Oral Tablet, which is not GDMT-evidence-based for HFrEF" (warning/amber).
+2. **MRA** — `missing` — "MRA: missing — recommended for HFrEF" (gap/amber).
+3. **SGLT2i** — `missing` — "SGLT2i: missing — recommended for HFrEF" (gap/amber).
+
+ACEi pillar is satisfied by lisinopril and emits no Finding (actionable-only contract).
+
+### Verification
+- **Build:** `npm run build` — `✓ Compiled successfully`, all 53 pages generated; `/provider` 28 kB, 124 kB First Load JS.
+- **Tests:** `npm test` — **23 / 23 passing** in 1.332s.
+- **Dev server:** `npm run dev` — Ready in 4.6s on `http://localhost:3000`.
+- **/provider smoke test:** `curl /provider` → 200.
+
+### Status
+**Awaiting Chrome verification.** Dev server is running. No commit. No push. Stop until Brandon reports T1/T2/T3 PASS via the Chrome computer-use plugin against the localhost URL.
+
+
+---
+
+## Session 35 — Trentham GDMT wire-up shipped (Chrome-verified, committed, pushed)
+**2026-05-13**
+
+### Sequence
+Trentham Section 09 wire-up (from Session 34) passed all three Chrome computer-use tests in Brandon's local Chrome with the Claude plugin: **T1 drawer open PASS · T2 three findings render PASS · T3 severity styling + clean console PASS**. Cleared to commit and push.
+
+### Commit
+| SHA | Subject |
+|---|---|
+| `6f4aa54` | Phase 1: Trentham card wired to GDMT HFrEF rule |
+
+Single file changed: `app/provider/components/BriefingDrawer.js` (+49 / −3). No other working-tree files were staged — the four-phase docs bundle (`docs/INDEX.md`, `docs/decisions/*`, `docs/hygiene-2026-05-13.md`, `docs/rxnorm-verification-2026-05-13.md`, the docs header-backlink edits, `.gitignore`, `.claude/settings.local.json`, and this `docs/log.md` entry itself) remain locally modified and untracked, to be shipped as a separate commit.
+
+### Push
+`git push origin main` succeeded: `e566454..6f4aa54  main -> main` against `github.com/kairoshealthapp/kairos`.
+
+### Post-push verification
+`npm test` against the pushed working tree: **23 / 23 passing** in 1.269s. No regressions.
+
+### What's live on origin/main now
+For any HFrEF patient sitting on metoprolol tartrate without an MRA or SGLT2i, the Trentham card's Section 09 ("PATTERNS KAIROS SURFACES") renders three deterministic findings from the rule engine in place of the prior hand-authored fixture string. Every other card on `/provider` still uses its existing `patternsKairosSurfaces` text. The clinical engine itself (`lib/clinical-engine/**`) was not touched in this commit.
+
+### Open follow-ups (not done in this commit)
+- The four-phase maintenance docs bundle is still uncommitted.
+- The 8 RxCUI mismatches surfaced in `docs/rxnorm-verification-2026-05-13.md` remain flagged for human clinical review — no rule edits.
+
+

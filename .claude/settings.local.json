@@ -8,7 +8,9 @@
       "Bash(git remote *)",
       "Bash(rm -rf public/tour-audio/*)",
       "Bash(node scripts/generate-tour-audio.js)",
-      "mcp__plugin_claude-mem_mcp-search__smart_outline"
+      "mcp__plugin_claude-mem_mcp-search__smart_outline",
+      "WebFetch(domain:rxnav.nlm.nih.gov)",
+      "Bash(npm run *)"
     ]
   }
 }

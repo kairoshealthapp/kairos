@@ -1,5 +1,7 @@
 # Kairos Architecture — Three Surfaces, One Platform
 
+> [← Index](INDEX.md) · Last updated: 2026-04-29 · One Next.js app, three role-specific surfaces (RN, Scribe, Provider) sharing a common backend.
+
 ## Overview
 Kairos is a single Next.js app with three role-specific surfaces sharing a common backend.
 

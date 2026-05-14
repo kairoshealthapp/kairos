@@ -1,5 +1,7 @@
 # Epic FHIR R4 sandbox probe — 2026-05-07
 
+> [← Index](INDEX.md) · Last updated: 2026-05-07 · Results of the one-off Epic FHIR R4 sandbox probe for HFrEF candidate patients.
+
 One-off probe (`node scripts/sandbox-probe.js`) ran end-to-end against
 `https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4`. Backend Services JWT
 auth (RS384, kid `clinai-key-1`, client `a85de553-…`) succeeded and returned a

@@ -1,5 +1,7 @@
 # Vercel Audit — clinai and kairos projects
 
+> [← Index](INDEX.md) · Read-only Vercel deployment audit across the `clinai` and `kairos` projects.
+
 **Generated:** 2026-04-27
 **Team:** `firekrakerproductions-2999's projects` (`team_VB6pSq4dwMh2zVjvuk0sMjGx`)
 **Method:** Vercel MCP, read-only (`list_teams`, `get_project`, `list_deployments`, `get_deployment`). No settings modified.

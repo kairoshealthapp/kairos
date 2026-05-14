@@ -1,5 +1,7 @@
 # Kairos Session — 2026-04-29 Afternoon Shift Continuation
 
+> [← Index](INDEX.md) · Last updated: 2026-04-29 · Afternoon-shift continuation of the 2026-04-29 design walkthrough; pre-merge source for `CONTEXT.md`.
+
 **Purpose:** Continuation of `KAIROS-SESSION-2026-04-29.md` (morning walkthrough). Afternoon shift produced 8 additional cards plus discovery of the `.triage` SmartPhrase as a Kairos primitive. Source material for tonight's Phase 3.3 design doc.
 
 **Status:** Pre-merge into `docs/CONTEXT.md`. Read alongside `KAIROS-CONTEXT.md`, `KAIROS-CONTEXT-ADDENDUM-2026-04-28.md`, and `KAIROS-SESSION-2026-04-29.md` (morning).

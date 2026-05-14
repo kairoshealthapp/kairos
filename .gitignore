@@ -53,3 +53,6 @@ sandbox/*.pem
 
 # Raw Epic FHIR sandbox dumps (one-off probe output) — never commit
 scripts/fixtures/
+
+# Field observation notes — private, never committed
+docs/observations/

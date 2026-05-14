@@ -1,5 +1,7 @@
 # Kairos — Project Context & Persistent Memory
 
+> [← Index](INDEX.md) · Single source of truth for Kairos identity, north-star, and architecture. Read at the start of every Kairos session.
+
 **Last updated:** 2026-04-27 (evening session — full ClinAI chat history integrated; name scrub applied)
 **Maintained by:** Brandon (and future Claude sessions)
 **Purpose:** Single source of truth for Kairos. Read this at the start of every Kairos chat and every Claude Code session in the kairos repo. If anything in this file conflicts with assumptions a Claude session is making, this file wins.
