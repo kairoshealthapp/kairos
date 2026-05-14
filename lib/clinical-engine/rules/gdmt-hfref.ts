@@ -84,12 +84,36 @@ export const GDMT_PILLARS: Record<PillarKey, PillarDef> = {
   },
 };
 
+// ── Pillar constants exported for reuse by post-MI rules ────────────────────
+// Session 42: extracted from GDMT_PILLARS for direct import by
+// post-mi-beta-blocker.ts and post-mi-acei-arb.ts. Same data, cleaner
+// import surface for downstream rules.
+export const GDMT_BB_RXCUIS: readonly string[] = GDMT_PILLARS['beta-blocker'].rxnormCodes;
+export const GDMT_BB_GENERIC_NAMES: readonly string[] = GDMT_PILLARS['beta-blocker'].genericNames;
+export const GDMT_BB_NON_EVIDENCE_BASED: readonly string[] =
+  GDMT_PILLARS['beta-blocker'].nonEvidenceBased ?? [];
+export const GDMT_PILLAR_1_RXCUIS: readonly string[] = GDMT_PILLARS['acei-arb-arni'].rxnormCodes;
+export const GDMT_PILLAR_1_GENERIC_NAMES: readonly string[] = GDMT_PILLARS['acei-arb-arni'].genericNames;
+
 export const CONTRAINDICATION_THRESHOLDS = {
   egfr_low: 30,        // mL/min/1.73m^2 — below this, MRA + SGLT2i contraindicated
   potassium_high: 5.5, // mEq/L — above this, ACEi/ARB/ARNi + MRA contraindicated
   // Severe persistent uncontrolled asthma — beta-blocker contraindicated.
   bb_contraindicated_conditions: ['J45.50', '493.91'] as string[],
 };
+
+// eGFR LOINC codes — multi-code to cover the formula variants US labs
+// actually report. Verified against loinc.org on 2026-05-13.
+//   33914-3 — MDRD (older; discouraged by LOINC but still active in many US labs).
+//   88293-6 — CKD-EPI race-stratified (legacy; being phased out).
+//   98979-8 — CKD-EPI 2021 (current standard; race-free).
+// All three report the same units (mL/min/1.73m²) and the same
+// contraindication threshold (<30) applies regardless of formula.
+export const EGFR_LOINC_CODES: readonly string[] = [
+  '33914-3',
+  '88293-6',
+  '98979-8',
+];
 
 const RULE_ID = 'gdmt-hfref';
 const RULE_NAME = 'GDMT gap detection (HFrEF)';
@@ -100,6 +124,16 @@ function getLatestObservation(
 ): PatientObservation | undefined {
   const matches = bundle.observations
     .filter((o) => o.loincCode === loincCode)
+    .sort((a, b) => (b.effectiveDate ?? '').localeCompare(a.effectiveDate ?? ''));
+  return matches[0];
+}
+
+function getLatestObservationByLoincSet(
+  bundle: PatientBundle,
+  loincCodes: readonly string[]
+): PatientObservation | undefined {
+  const matches = bundle.observations
+    .filter((o) => typeof o.loincCode === 'string' && loincCodes.includes(o.loincCode))
     .sort((a, b) => (b.effectiveDate ?? '').localeCompare(a.effectiveDate ?? ''));
   return matches[0];
 }
@@ -140,7 +174,11 @@ export const gdmtHfrefRule: RuleFunction = (bundle: PatientBundle): Finding[] =>
   if (!hasHfref) return [];
 
   // Step 2: pull latest contraindication-relevant labs.
-  const latestEgfr = getLatestObservation(bundle, '33914-3');
+  // eGFR uses the multi-code scan to cover MDRD (33914-3), CKD-EPI
+  // race-stratified (88293-6), and CKD-EPI 2021 (98979-8) — see
+  // EGFR_LOINC_CODES above. Potassium remains single-code; the
+  // canonical 2823-3 covers >99% of US labs.
+  const latestEgfr = getLatestObservationByLoincSet(bundle, EGFR_LOINC_CODES);
   const latestK = getLatestObservation(bundle, '2823-3');
 
   const now = new Date().toISOString();

@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { gdmtHfrefRule } from '../rules/gdmt-hfref';
+import { gdmtHfrefRule, EGFR_LOINC_CODES } from '../rules/gdmt-hfref';
 import type { Finding, PatientBundle } from '../types';
 
 const FIXTURES_DIR = path.join(__dirname, '..', 'fixtures');
@@ -178,4 +178,42 @@ describe('fixture-05-bb-asthma.json — J45.50 contraindicates beta-blocker', ()
   test('exactly 1 finding total', () => {
     expect(findings).toHaveLength(1);
   });
+});
+
+describe('eGFR multi-code coverage — MRA contraindication fires for every eGFR LOINC variant', () => {
+  // Regression test for the eGFR single-code shortcut lift
+  // (session 38 cleanup). Verifies the multi-code scan covers
+  // all three eGFR LOINC variants we expect to see in US labs.
+  for (const loinc of EGFR_LOINC_CODES) {
+    test(`HFrEF + eGFR 26 via LOINC ${loinc} → MRA contraindicated`, () => {
+      const bundle: PatientBundle = {
+        patient: { id: `egfr-${loinc}`, name: 'Test', dob: '1955-01-01', sex: 'male' },
+        conditions: [
+          {
+            code: 'I50.22',
+            codeSystem: 'http://hl7.org/fhir/sid/icd-10-cm',
+            display: 'Chronic systolic (congestive) heart failure',
+            status: 'active',
+          },
+        ],
+        medications: [],
+        observations: [
+          {
+            loincCode: loinc,
+            display: 'Glomerular filtration rate',
+            value: 26,
+            unit: 'mL/min/1.73m2',
+            effectiveDate: '2026-04-15',
+            category: 'laboratory',
+          },
+        ],
+        allergies: [],
+      };
+      const findings = gdmtHfrefRule(bundle);
+      const mraFinding = findings.find(
+        (f) => f.subcategory === 'mra' && f.status === 'contraindicated'
+      );
+      expect(mraFinding).toBeDefined();
+    });
+  }
 });
