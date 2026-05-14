@@ -20,6 +20,10 @@ const AUDIO_BASE = "/provider-tour-audio/";
 // not served from the browser's stale audio cache.
 const AUDIO_CACHE_BUST =
   typeof Date !== "undefined" ? Date.now().toString(36) : "0";
+// Watchdog ceiling for narration that never starts playing. If a clip
+// neither plays, errors, nor ends within this window, the tour advances
+// anyway so a missing/blocked/hung MP3 cannot freeze the walk.
+const AUDIO_START_TIMEOUT_MS = 6000;
 
 const log = (...args) => console.log("[provider-tour]", ...args);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -260,21 +264,41 @@ export default function ProviderTour({
 
     await new Promise((resolve) => {
       let resolved = false;
+      let startWatchdog = null;
+      const clearWatchdog = () => {
+        if (startWatchdog !== null) {
+          clearTimeout(startWatchdog);
+          startWatchdog = null;
+        }
+      };
       const finish = (reason) => {
         if (resolved) return;
         resolved = true;
+        clearWatchdog();
         log("playAudioAndWait: finish", { audioKey, reason });
         try {
           audio.removeEventListener("ended", onEnded);
           audio.removeEventListener("error", onError);
+          audio.removeEventListener("playing", onPlaying);
         } catch {}
         resolve();
       };
       function onEnded() { finish("ended"); }
       function onError() { finish("error"); }
+      // Once playback actually starts, real narration is underway — drop
+      // the watchdog and let "ended" drive section advancement.
+      function onPlaying() { clearWatchdog(); }
       audioResolverRef.current = () => finish("external");
       audio.addEventListener("ended", onEnded);
       audio.addEventListener("error", onError);
+      audio.addEventListener("playing", onPlaying);
+      // Watchdog: a clip that never reaches the "playing" state (missing
+      // file, blocked autoplay, hung network) would otherwise leave this
+      // promise pending forever and freeze the tour. Advance anyway.
+      startWatchdog = setTimeout(
+        () => finish("start-timeout"),
+        AUDIO_START_TIMEOUT_MS
+      );
       try {
         const p = audio.play();
         if (p && typeof p.catch === "function") {

@@ -34,6 +34,9 @@ const ACTIVE_KEY = "kairos-tour-active";
 const MUTED_KEY = "kairos.tour.muted";
 const AUDIO_BASE = "/tour-audio/";
 const AUDIO_TAIL_BUFFER_MS = 500;
+// Ceiling for a play() call to settle. loadAudio already gives us
+// duration, so if play() hangs we still advance on the correct dwell.
+const AUDIO_PLAY_TIMEOUT_MS = 3000;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -267,7 +270,16 @@ export default function TourMode() {
         const s = Math.max(1, speedRef.current || 1);
         audio.playbackRate = s;
         try {
-          await audio.play();
+          const playPromise = audio.play();
+          if (playPromise && typeof playPromise.catch === "function") {
+            // Swallow a late rejection so it can't surface as an unhandled
+            // rejection if the timeout below wins the race.
+            playPromise.catch(() => {});
+          }
+          // Race play() against a timeout — a hung play() promise must not
+          // freeze the tour. Duration is already known, so dwell is correct
+          // even if playback never actually begins.
+          await Promise.race([playPromise, sleep(AUDIO_PLAY_TIMEOUT_MS)]);
         } catch (e) {
           // Browsers can reject autoplay; we still know duration so dwell
           // remains correct, just silent for this bubble.
