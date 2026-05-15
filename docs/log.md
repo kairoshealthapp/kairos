@@ -9132,3 +9132,35 @@ Pre-commit audit of the three-commit working tree (Phase 1 docs / Phase 2 rules 
 Eight pre-existing tracked docs (`ARCHITECTURE.md`, `CONTEXT.md`, `DEPLOY-CHECKLIST-2026-04-30.md`, `KAIROS-CONTEXT.md`, `KAIROS-SESSION-2026-04-29-AFTERNOON.md`, `NURSE-DEMO-INTRO.md`, `sandbox-probe-2026-05-07.md`, `vercel-clinai-kairos-audit.md`) contain real provider/patient names (Hardenkvist, Vorhelden, Kvalheim, Tregarthen, Wendelfaer) in content **already committed to git history**. The current commits only touch a 2-line breadcrumb header in those files — the real-name content is untouched and remains in history.
 
 Flipping this repo public exposes the full history. This requires a dedicated git-history scrub session (`git filter-repo`, or removal + re-`.gitignore` of internal-only working docs) **BEFORE** the repo is made public. This is a hard blocker on the "Repo public" follow-up above — do not flip public until history is clean.
+
+---
+
+## Session 48 — Production walk punch-list: 4 demo blockers
+**2026-05-14**
+
+Acted on the production QA walk's ranked punch list. Four blockers addressed; verified per the localhost-handoff protocol (Brandon drove Chrome, reported PASS).
+
+### Fix 1 — tour audio-hang watchdog (`1874438`)
+Both tour orchestrators awaited narration audio with no upper bound — a clip that never reached the `playing` state would leave the await pending and freeze the walk. `ProviderTour.js` `playAudioAndWait` now arms a 6s start watchdog that a `playing` event cancels (real narration unaffected; only a dead clip triggers a silent advance). `TourMode.js` `beginBubble` now races `audio.play()` against a 3s timeout (`loadAudio` was already guarded). **Note:** the walk's observed "hang" turned out to be a Chrome computer-use automation artifact — verified the tour plays fine in real Chrome on production. The watchdog ships as defensive hardening: a tour must never be able to freeze regardless of cause.
+
+### Fix 2 — `/provider` empty initial state (`f1ea41b`)
+`/provider` rendered header + clinic filter buttons + nothing until a visitor happened to click a dropdown. `openClinic` now defaults to `cardiology` (`DEFAULT_CLINIC`) so the schedule shows on load; Reset demo returns to that populated state instead of the empty body. Dead right-half-of-screen space left for the polish pass — the dropdown is an absolute-positioned overlay; making it inline would touch tour cursor anchoring.
+
+### Fix 3 — `/api/provider-chat` 500 — diagnosed, no code change
+Production returns `{"error":"Anthropic API key not configured on server"}`. The route code is correct (works locally, HTTP 200, same model ID). Root cause: neither `KAIROS_ANTHROPIC_KEY` nor `ANTHROPIC_API_KEY` is set in the Vercel `kairos-tour` production environment — it was never added there. This is infra, not code; no commit. Brandon is capping cost separately (scoped key + console spend limit) and gating the chat UI behind the tour (Fix 4), so the endpoint only matters in-tour.
+
+### Fix 4 — gate chart-chat behind tour-active state (UI-only)
+The chart-query box on `/provider` and the "Ask Kairos…" shell on `/encounter` are now hidden entirely outside a guided tour, so a static visitor never sees a non-functioning feature. New `lib/useTourActive.js` hook reads the tour's sessionStorage flag and re-reads on `kairos-tour:start` / `:beat-start` / `:end` window events (all already dispatched by the existing tours — no orchestrator changes). `BriefingDrawer.js` `ChartChat` gates on `kairos-provider-tour-active`; `ChatBar.js` gates on `kairos-tour-active` (the two tours use different keys — each surface gated by its own). UI-only gating by design — `/api/provider-chat` stays publicly reachable; cost is capped separately.
+
+### Files
+- `app/provider/components/ProviderTour.js` — `playAudioAndWait` start watchdog
+- `components/TourMode.js` — `beginBubble` play() timeout race
+- `app/provider/page.js` — `openClinic` defaults to `DEFAULT_CLINIC`
+- `lib/useTourActive.js` — new reactive tour-active hook
+- `app/provider/components/BriefingDrawer.js` — `ChartChat` tour-gated
+- `components/panels/ChatBar.js` — encounter chat shell tour-gated
+
+### Still open
+- **Vercel env var** — `KAIROS_ANTHROPIC_KEY` still not set in `kairos-tour` production. Brandon's call to leave it; chat is UI-gated to in-tour only and cost is capped separately. If the in-tour chart chat is ever expected to return live answers on production, the var must be added (Settings → Environment Variables → Production) and the deployment redeployed.
+- **`/provider` dead right-half space** — polish pass; requires restructuring the absolute-positioned clinic dropdown into an inline panel without breaking tour cursor anchoring.
+- Remaining punch-list "rough/minor" items (empty role cards on landing, hero gap, tour-widget overlap, debug `console.log` noise, wrong `/provider` `<title>`, mis-categorized `/rn` SECURE CHAT card) — not yet triaged.

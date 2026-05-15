@@ -11,6 +11,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import useTourActive from "@/lib/useTourActive";
 import { gdmtHfrefRule, GDMT_PILLARS } from "@/lib/clinical-engine";
 import trenthamFixture from "@/lib/clinical-engine/fixtures/fixture-02-tartrate-trap.json";
 
@@ -79,6 +80,10 @@ function ChartChat({ briefingId, specialty }) {
   const [answer, setAnswer] = useState(null); // { text, citedSections, notFound }
   const [error, setError] = useState(null);
   const inputRef = useRef(null);
+  // The chart-query box is only meaningful inside a guided tour, which
+  // drives a scripted demo of it. Outside a tour it's hidden entirely so
+  // a static visitor never sees a non-functioning feature.
+  const tourActive = useTourActive("kairos-provider-tour-active");
 
   // Reset chat state when the patient changes.
   useEffect(() => {
@@ -186,6 +191,10 @@ function ChartChat({ briefingId, specialty }) {
     setError(null);
     if (inputRef.current) inputRef.current.focus();
   };
+
+  // Hidden outside a tour — listeners above stay registered so the box
+  // appears the moment a tour starts.
+  if (!tourActive) return null;
 
   return (
     <div

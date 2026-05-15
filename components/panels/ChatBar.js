@@ -6,14 +6,20 @@
 "use client";
 
 import { useState } from "react";
+import useTourActive from "@/lib/useTourActive";
 
 export default function ChatBar() {
   const [value, setValue] = useState("");
+  // Shell-only feature — hidden outside a guided tour so a static
+  // visitor never sees a non-functioning input.
+  const tourActive = useTourActive("kairos-tour-active");
 
   function handleSubmit(e) {
     e.preventDefault();
     // No-op shell — wiring lands later.
   }
+
+  if (!tourActive) return null;
 
   return (
     <form
