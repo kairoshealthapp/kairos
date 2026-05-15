@@ -390,14 +390,14 @@ details[open] > summary .drawer-chev { transform: rotate(90deg); }
 }
 
 /* hero ─────────────────────────────────────────────── */
+/* Section sizes to its content — no forced 100vh band. The old
+   100vh hero + 100vh tiles section left large empty gaps; the page
+   is now a single continuous scroll. */
 .kl-hero {
-  height: 100vh;
-  height: 100dvh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 80px 40px 40px;
+  padding: 120px 40px 72px;
   text-align: center;
 }
 
@@ -487,17 +487,84 @@ details[open] > summary .drawer-chev { transform: rotate(90deg); }
   font-weight: 500;
 }
 
+/* architecture pitch (hero section 1) ──────────────── */
+.kl-pitch {
+  max-width: 680px;
+  margin: 56px auto 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+}
+.kl-pitch-lead {
+  font-size: clamp(15px, 1.5vw, 17px);
+  line-height: 1.6;
+  color: var(--kl-ink-dim);
+  margin: 0;
+}
+.kl-pitch-diff {
+  font-size: clamp(13px, 1.3vw, 15px);
+  line-height: 1.6;
+  color: var(--kl-ink-mute);
+  margin: 0;
+}
+.kl-proof {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px 28px;
+  margin-top: 6px;
+}
+.kl-proof-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.kl-proof-num {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-size: 26px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--kl-gold);
+}
+.kl-proof-label {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--kl-ink-mute);
+}
+.kl-pitch-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px 28px;
+  margin-top: 8px;
+}
+.kl-pitch-link {
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--kl-gold);
+  text-decoration: none;
+  border-bottom: 1px solid var(--kl-rule-strong);
+  padding-bottom: 3px;
+  transition: color 0.4s ease, border-color 0.4s ease;
+}
+.kl-pitch-link::after { content: ' \2192'; }
+.kl-pitch-link:hover {
+  color: var(--kl-gold-hi);
+  border-color: var(--kl-gold);
+}
+
 /* tiles ────────────────────────────────────────────── */
 .kl-tiles-section {
-  min-height: 100vh;
-  min-height: 100dvh;
-  padding: clamp(48px, 8vh, 96px) 40px clamp(40px, 6vh, 72px);
+  padding: clamp(56px, 7vh, 88px) 40px clamp(40px, 6vh, 72px);
   width: 100%;
   max-width: 1400px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  justify-content: center;
 }
 
 .kl-tiles-label {
@@ -584,6 +651,15 @@ details[open] > summary .drawer-chev { transform: rotate(90deg); }
   box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
 }
 
+/* One-line description of what each surface shows — fills the tile
+   body so a card no longer reads as an empty shell. */
+.kl-tile-blurb {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--kl-ink-mute);
+  margin: 6px 0 0;
+}
+
 .kl-tile-arrow {
   position: relative;
   width: 24px;
@@ -643,7 +719,8 @@ details[open] > summary .drawer-chev { transform: rotate(90deg); }
     gap: 12px;
   }
   .kl-tile {
-    aspect-ratio: 16 / 9;
+    aspect-ratio: auto;
+    min-height: 210px;
     grid-column: span 2;
     max-height: none;
     padding: 20px 22px 18px;
@@ -654,26 +731,25 @@ details[open] > summary .drawer-chev { transform: rotate(90deg); }
   .kl-tiles-section {
     padding-top: 48px;
     padding-bottom: 48px;
-    min-height: 100vh;
-    min-height: 100dvh;
   }
 }
 
 @media (max-width: 767px) {
   .kl-topbar { padding: 20px 22px; font-size: 10px; }
   .kl-hero {
-    padding: 56px 22px 24px;
-    height: auto;
-    min-height: 100vh;
-    min-height: 100dvh;
+    padding: 88px 22px 48px;
   }
-  .kl-tiles-section { min-height: 0; padding: 56px 22px 48px; }
+  .kl-tiles-section { padding: 56px 22px 48px; }
   .kl-eyebrow { font-size: 9px; margin-bottom: 22px; }
   .kl-eyebrow::before, .kl-eyebrow::after { width: 20px; }
   .kl-wordmark { font-size: clamp(64px, 22vw, 110px); letter-spacing: 0.06em; }
   .kl-wordmark-rule { margin: 24px auto 22px; }
   .kl-tagline { font-size: 19px; }
   .kl-now { font-size: 10px; letter-spacing: 0.36em; margin-top: 12px; }
+
+  .kl-pitch { margin-top: 40px; gap: 18px; }
+  .kl-proof { gap: 12px 22px; }
+  .kl-proof-num { font-size: 22px; }
 
   .kl-tiles-label { margin-bottom: 24px; font-size: 9px; }
   .kl-tiles-label::before, .kl-tiles-label::after { flex-basis: 30px; }
@@ -682,12 +758,12 @@ details[open] > summary .drawer-chev { transform: rotate(90deg); }
   .kl-tile {
     aspect-ratio: auto;
     padding: 22px 22px;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
     max-height: none;
   }
-  .kl-tile-body { flex-direction: row; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .kl-tile-body { flex-direction: column; align-items: flex-start; gap: 6px; }
   .kl-tile-arrow { display: none; }
   .kl-tile-role { font-size: 22px; }
 
@@ -740,9 +816,13 @@ details[open] > summary .drawer-chev { transform: rotate(90deg); }
     opacity: 0;
     animation: kl-rise 1.4s cubic-bezier(.2,.7,.2,1) 0.6s forwards;
   }
+  .kl-pitch {
+    opacity: 0;
+    animation: kl-rise 1.4s cubic-bezier(.2,.7,.2,1) 0.72s forwards;
+  }
   .kl-tiles-label {
     opacity: 0;
-    animation: kl-rise 1.4s cubic-bezier(.2,.7,.2,1) 0.7s forwards;
+    animation: kl-rise 1.4s cubic-bezier(.2,.7,.2,1) 0.84s forwards;
   }
   .kl-tile {
     opacity: 0;

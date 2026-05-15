@@ -9186,3 +9186,34 @@ The designated observational-credibility line — phrased as **"over a year of s
 - Doctor-briefing one-pager — must be corrected before any further copies are distributed.
 
 This is a hard blocker on: **showing the tour to anyone, distributing any further public materials, and the public repo flip.** None of those proceed until every occurrence above is corrected.
+
+---
+
+## Session 50 — Landing page dual-section restructure
+**2026-05-14**
+
+Restructured `kairoshealth.app/` (`app/page.js` + `.kairos-landing` CSS in `app/globals.css`) into two clear sections, addressing the production-walk findings: "empty shell" role cards, the large empty hero gap, and the role-card label inconsistency. No tour machinery touched — `AppChrome` short-circuits `/`, and the landing page carries no tour anchors.
+
+### Section 1 — architecture pitch hero
+KAIROS wordmark + tagline retained; added a `.kl-pitch` block stating what Kairos is (design-stage prototype, deterministic rules engine, FHIR-shaped data), the differentiator (rules in code not prompts; model never in the decision path; human-authorized commits), five repo-verified proof points (11 rules / 4 clinical areas / 431 tests / 6 guideline sources / 16 ADRs — matching `README.md` exactly), and links to the GitHub repo + README.
+
+### Section 2 — role picker
+Each of the five tiles now carries a one-line description of what that surface shows — fixes the "empty shell" cards. Status labels normalized to a consistent **Live** / **In development** pair (was the inconsistent "Live tour" / "Live" / "Coming soon"); the per-tile blurb carries the tour-vs-readout nuance.
+
+### Empty-gap fix
+Removed the forced `height:100vh` on `.kl-hero` and `min-height:100vh` on `.kl-tiles-section`. The page is now a single continuous content-sized scroll instead of two centered full-viewport bands with dead space between them.
+
+### Cover-story correction (footer)
+The landing footer read "Brandon Sterne RN BSN, cardiology nurse and developer" — the same cardiology-tenure overclaim flagged in Session 49. Corrected to "a registered nurse with 26 years of clinical experience, now working in cardiology." **This footer was not on the Session 49 blocker list — that list should be considered non-exhaustive.** Any further sweep for the cover-story overclaim must grep all surfaces, not just the four files Session 49 named.
+
+### Files
+- `app/page.js` — two-section restructure, proof-point data, tile blurbs, corrected footer, updated metadata description
+- `app/globals.css` — `.kl-pitch*` / `.kl-proof*` / `.kl-tile-blurb` styles, removed `100vh` bands, responsive + motion updates
+
+### Verified
+Build clean. Localhost handoff protocol: Brandon drove Chrome, T1–T4 all PASS (T4 responsive caveat noted, acceptable).
+
+### Still open
+- Session 49 cover-story blocker remains in force for `CLAUDE.md`, `KAIROS-PLAN-2026-Q2.md`, tour narration scripts + audio, and the doctor-briefing one-pager — plus a full grep sweep, since the landing footer proves the blocker list was non-exhaustive.
+- `/provider` dead right-half space — still deferred to a polish pass.
+- Remaining punch-list "rough/minor" items (hero/tour-widget overlap, debug `console.log` noise, wrong `/provider` `<title>`, mis-categorized `/rn` SECURE CHAT card) — not yet triaged.
