@@ -9164,3 +9164,25 @@ The chart-query box on `/provider` and the "Ask Kairos…" shell on `/encounter`
 - **Vercel env var** — `KAIROS_ANTHROPIC_KEY` still not set in `kairos-tour` production. Brandon's call to leave it; chat is UI-gated to in-tour only and cost is capped separately. If the in-tour chart chat is ever expected to return live answers on production, the var must be added (Settings → Environment Variables → Production) and the deployment redeployed.
 - **`/provider` dead right-half space** — polish pass; requires restructuring the absolute-positioned clinic dropdown into an inline panel without breaking tour cursor anchoring.
 - Remaining punch-list "rough/minor" items (empty role cards on landing, hero gap, tour-widget overlap, debug `console.log` noise, wrong `/provider` `<title>`, mis-categorized `/rn` SECURE CHAT card) — not yet triaged.
+
+---
+
+## Session 49 — Public README + cover-story overclaim flagged
+**2026-05-14**
+
+Wrote the public-facing `README.md` (replacing the create-next-app default) — architecture pitch, 11-rule engine state, 9 rule shapes, governance model, ADR pointer, stack, status/disclosure. All numeric claims verified against the repo before writing (11 rules, 431 tests / 11 suites passing, 16 ADRs, 6 guideline sources).
+
+### HARD BLOCKER — cover-story overclaim on cardiology tenure
+
+The designated observational-credibility line — phrased as **"over a year of studying the synthesis patterns directly in cardiology practice"** — is an **OVERCLAIM**. Actual: Brandon has been in his cardiology role **120 days**; it is his **first cardiology position**. He has 26 years of nursing experience overall, but not in cardiology. Honest framing anchors on "26 years of clinical experience" + "now working in cardiology" + "direct observation of clinical workflow" — and never asserts a cardiology-specific duration.
+
+**Corrected this session:**
+- `README.md` author line — rewritten to honest framing.
+
+**Still requiring correction before any further public exposure:**
+- `CLAUDE.md` — the designated cover-story line must be rewritten to honest framing (26 years nursing experience, currently in cardiology, direct workflow observation — no cardiology-specific duration claim).
+- `KAIROS-PLAN-2026-Q2.md` — same line, same fix.
+- Tour narration scripts + regenerated audio — if the phrase is in the recorded narration, the script must change AND the audio must be regenerated. **Hard blocker before the tour is shown to anyone else.**
+- Doctor-briefing one-pager — must be corrected before any further copies are distributed.
+
+This is a hard blocker on: **showing the tour to anyone, distributing any further public materials, and the public repo flip.** None of those proceed until every occurrence above is corrected.
