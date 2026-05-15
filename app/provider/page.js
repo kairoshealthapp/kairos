@@ -39,6 +39,11 @@ const BRIEFINGS = {
   internalMedicine: INTERNAL_MEDICINE_BRIEFINGS,
 };
 
+// Open a clinic on load (and on reset) so the page shows a schedule
+// immediately instead of an empty body — a first-time visitor has no
+// affordance telling them to click a dropdown.
+const DEFAULT_CLINIC = "cardiology";
+
 function ResetIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -50,7 +55,7 @@ function ResetIcon() {
 
 export default function ProviderPage() {
   // openClinic: which dropdown is open ('cardiology' | 'pulmonology' | 'internalMedicine' | null)
-  const [openClinic, setOpenClinic] = useState(null);
+  const [openClinic, setOpenClinic] = useState(DEFAULT_CLINIC);
   // openVisit: { visit, specialty } or null. specialty is needed to
   // resolve the briefing fixture lookup.
   const [openVisit, setOpenVisit] = useState(null);
@@ -73,7 +78,7 @@ export default function ProviderPage() {
     setOpenVisit(null);
   }, []);
   const handleResetDemo = useCallback(() => {
-    setOpenClinic(null);
+    setOpenClinic(DEFAULT_CLINIC);
     setOpenVisit(null);
   }, []);
 
