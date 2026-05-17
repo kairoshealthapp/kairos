@@ -51,9 +51,9 @@ const CLINIC_COLUMNS = [
   { key: "pulmonology", label: "Pulmonology" },
 ];
 
-// Mobile-default expanded state — all 4 columns expanded on first
-// render so a viewer sees every clinic. User can tap headers to
-// collapse on mobile. md+ ignores collapsed state.
+// Default expanded state — all 4 columns expanded on first render so
+// a viewer sees every clinic. User can click headers to collapse on
+// any viewport.
 function makeInitialCollapsed() {
   const out = {};
   for (const c of CLINIC_COLUMNS) out[c.key] = false;

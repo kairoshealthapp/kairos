@@ -149,7 +149,7 @@ export default function PatientColumn({
           onClick={onToggleCollapse}
           aria-expanded={!collapsed}
           aria-controls={`clinic-column-body-${clinicKey}`}
-          className="md:cursor-default md:pointer-events-none flex items-center gap-1.5 text-bone text-[13px] font-medium"
+          className="flex items-center gap-1.5 text-bone text-[13px] font-medium cursor-pointer"
         >
           <ChevronIcon open={!collapsed} />
           <span>{label}</span>
@@ -168,7 +168,7 @@ export default function PatientColumn({
         id={`clinic-column-body-${clinicKey}`}
         className={
           "flex-1 flex flex-col gap-1.5 p-2 border-x border-b border-mist/40 rounded-b-md " +
-          (collapsed ? "hidden md:flex" : "")
+          (collapsed ? "hidden" : "")
         }
       >
         {schedule.map((visit) => (
