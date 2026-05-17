@@ -26,8 +26,8 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata = {
-  title: "Kairos — Cardiology Nurse Workstation",
-  description: "Clinical decision intelligence for cardiology nursing. Demonstration data. No PHI.",
+  title: "Kairos — Clinical Workstation",
+  description: "Clinical decision intelligence for the care team. Demonstration data. No PHI.",
 };
 
 // Explicit graphite theme-color stops iOS Safari (and Android Chrome) from
