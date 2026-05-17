@@ -8850,3 +8850,57 @@ Substitution policy across the 6 bodies: "Phelps Health" / "Phelps" → "partner
 
 ### Tooling note
 `git-filter-repo` is not on PATH; invoked via `/c/Users/kents/AppData/Local/uv/cache/.../git-filter-repo.exe`. Callback script at `scripts/scrub-callback.py` (untracked, kept for audit but not committed).
+
+## 2026-05-17 — Session E: landing hero stats refresh + tile-grid centering + /provider desktop chevron
+
+### Scope
+Three independent production-surface fixes, audited and applied in one session.
+
+### Fix 1 — landing hero stats
+Five-stat proof-points row on the homepage was stale. Audited the engine and refreshed all five values:
+
+| Stat | Was | Now |
+|---|---|---|
+| deterministic rules | 11 | 23 |
+| clinical areas | 4 | 4 |
+| unit tests | 431 | 1508 |
+| guideline sources | 6 | 9 |
+| ADRs | 16 | 28 |
+
+Guideline-source audit counted distinct issuing bodies cited in the 23 rule banners' `Source:` / `Underlying guideline source:` blocks. Settled on 9: ACC/AHA umbrella (cardiology multi-society guidelines), HFSA (split out — co-author on HF), USPSTF, ADA, KDIGO, GINA, GOLD, ACIP/CDC, NCQA/HEDIS. ADR count is the literal numbered file count in `docs/decisions/` (0001–0028).
+
+Edit at `app/page.js` (PROOF array).
+
+### Fix 2 — tile grid centering
+`.kl-tiles` was `grid-template-columns: repeat(5, 1fr)` — left over from when Executive was the fifth tile. After /executive removal (Session C) the four remaining tiles rendered flush-left with an empty fifth column on the right, breaking the hero's centered alignment.
+
+- Desktop: `repeat(5, 1fr)` → `repeat(4, 1fr)`
+- Tablet (768–1023px): swapped the 6-column `nth-child` positioning (also tuned for the old 5-tile 3+2 layout) for a clean `repeat(2, 1fr)` 2×2 grid
+- Mobile single-column stack unchanged
+
+Edits at `app/globals.css` (`.kl-tiles` and the 1023/768 breakpoint block).
+
+### Fix 3 — /provider desktop chevron wiring
+The four clinic-column chevrons collapsed columns on mobile (verified Saturday in T-Mob-4) but did nothing on desktop. Diagnosed as deliberate mobile-only scoping, not a wiring gap:
+- `app/provider/components/PatientColumn.js:153` — button had `md:cursor-default md:pointer-events-none`
+- `app/provider/components/PatientColumn.js:171` — column body had `hidden md:flex` (overrode the collapsed state on desktop)
+- `app/provider/page.js:56` — comment read "md+ ignores collapsed state"
+
+Brandon picked Option A (wire desktop collapse, same affordance as mobile). Removed the two `md:` gates and updated the stale comment. Click handler and collapsed state now apply on every viewport; mobile accordion unchanged.
+
+### Verification
+- `npm run build`: clean, 52 routes (no /executive).
+- Localhost dev server probed: `/` → 200, `/provider` → 200.
+- Chrome computer-use handoff: T1 (hero stats 23/4/1508/9/28), T2 (tile row visually centered), T3 (desktop chevron collapse + ARIA toggle), T4 (mobile accordion regression). Brandon reported all four PASS.
+
+### Commits
+- `41bcf3b` update landing hero stats to current engine counts
+- `c6003e9` center landing page tile grid after /executive removal
+- `9686605` wire /provider clinic chevron collapse on desktop
+
+All three pushed to `origin/main`. Vercel production build on HEAD `9686605` (deployment `dpl_Kr8rdcjotfa8p6jgCsDDCfGoYBh1`): READY.
+
+### Boundaries respected
+- No engine/rule logic touched. Counts audited from current state, not invented.
+- No real names introduced.
+- Audio re-record for Halbrook tour MP3s remains a Phase 1.5 follow-up (Session D carry-over).
