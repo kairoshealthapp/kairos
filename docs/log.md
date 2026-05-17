@@ -8716,3 +8716,60 @@ See new entries appended to `docs/guideline-watch.md` "Open follow-ups" — 12 p
 
 ### Not committed
 Per-clinic commits performed at end of session (4 commits: family-practice, internal-medicine, pulmonology, barrel+docs). No push.
+
+## 2026-05-17 — Session B: /provider 4-column rebuild + per-clinic tours + audio
+
+Parallel to Session 53's engine work. Replaced the dropdown-per-clinic surface with a 4-column grid and the unified cross-clinic tour with four independent per-clinic tours, each driven by a single narration MP3.
+
+### Scope
+- New 4-column layout: Cardiology / Family Practice / Internal Medicine / Pulmonology, equal width on desktop, vertical-stack on mobile with tap-to-collapse headers.
+- Each patient card runs the full clinical-engine rule registry against its inline bundle and renders firing rule subcategories as compact finding chips (max 4 visible + `+N` overflow).
+- BriefingDrawer Section 09 generalized: now renders `runAllRules(bundle)` output for any patient (rule label / status / summary / recommendation / source). Replaces the Trentham-only GDMT special case.
+- Four per-clinic tours: ~2-minute single-MP3 narration each. Five timed beats (intro / open-patient / drill-finding / architecture / closer) advance on `audio.currentTime`-vs-`startPct * duration` cues. Per-clinic tour buttons in each column header dispatch `kairos-provider-tour:start-clinic` to a rewritten `ProviderTour` orchestrator.
+
+### Fixtures
+- **NEW**: `lib/fixtures/providerSchedule.familyPractice.js` (7 patients with bundles) + `providerBriefings.familyPractice.js` (full briefing for Daugherty as tour anchor; minimal briefings for the other 6).
+- **TRIMMED**: IM and Pulm schedules from 15 → 7 patients each. Whitestone (IM tour anchor) and Okafor (Pulm tour anchor) retained with bundles tuned to their existing briefings.
+- **ADDITIVE**: Cardiology schedule unchanged in header fields; an inline `bundle` field added per patient so cross-clinic rules fire on the column display.
+
+### Tour patients (Beat 3 firing-rule verification, all 4 anchors)
+- **Trentham** (Cardio, card-0840): 11 findings. Beat 3 narrates GDMT SGLT2i pillar gap — `gdmt-hfref / sglt2i` ✓.
+- **Daugherty** (FP, fp-1020): 14 findings. Beat 3 narrates T2DM + CKD SGLT2i gap — `t2dm-sglt2i-ckd` ✓.
+- **Whitestone** (IM, im-0840): 13 findings. Beat 3 swapped (CKD-ACEi/ARB → osteoporosis screening) because Whitestone is on lisinopril. Now `osteoporosis-screening` ✓ (Bone Health & Osteoporosis Foundation 2022 + USPSTF clinical-judgment guidance for men ≥70).
+- **Okafor** (Pulm, pulm-0840): 13 findings. Beat 3 swapped (LSC → CBP uncontrolled) because LSC's required smoking-status / pack-years / quit-date observations aren't in Okafor's bundle. Now `cbp-hypertension-control / uncontrolled` ✓ — narrated as the cross-clinic firing pattern in action (an FP HEDIS rule firing on the pulm column).
+
+### Multi-finding handling
+- `aisAdultImmunizationRule` and `tscTobaccoCessationRule` emit multiple Findings per ruleId (one per missing antigen / cessation gap-type). Existing PatientCard chip rendering and BriefingDrawer Section 09 already handle this: React keys are `ruleId + ":" + idx`, chip labels are `subcategory || ruleId`. No UI fix required.
+
+### New helpers / wiring
+- `app/provider/lib/runAllRules.js` — imports all 23 rules from the public barrel, runs each against a `PatientBundle`, returns flat `Finding[]`.
+- `app/provider/lib/buildBundle.js` — turns a schedule entry into a `PatientBundle` (DOB synthesized from age, pinned to 2026-05-17).
+- `app/provider/lib/providerTourScript.js` — REWRITTEN. Each tour carries `clinicKey`, `audioKey`, `patientId`, `beats[]` with `startPct`, and `narration` (the exact text passed to OpenAI TTS).
+- `app/provider/components/ProviderTour.js` — REWRITTEN. Listens for `kairos-provider-tour:start-clinic`. Single audio playback per tour, beat advancement on timed cues, watchdog at 6s for stalled start, pause/mute/end controls in floating pill.
+- `app/provider/components/PatientColumn.js` — NEW. Renders column header + tour button + stacked patient cards. Cards run rule engine per render and surface finding chips.
+- Deleted: `ClinicNav.js`, `ClinicDropdown.js`, `ProviderTourLauncher.js` (now-dead).
+
+### Audio
+- 4 MP3s generated at `public/provider-tour-audio/provider-tour-{cardiology,familyPractice,internalMedicine,pulmonology}.mp3` via `scripts/generate-provider-tour-audio.js` (OpenAI TTS-1, voice `onyx`, speed 1.0).
+- Total spend: \~\$0.11. One-shot regeneration; no iteration.
+- Gen script updated to accept new per-tour `narration` field (legacy `voiceText` still supported).
+
+### Commits
+- `ad6683f` Part 1 — 4-column layout + fixtures + cross-clinic rule firing
+- `aadca8a` Part 2 — per-clinic tour scripts + ProviderTour rewrite + Section 09 generalization
+- `5a0a177` Part 2.5 — proportional startPct beat cues
+- `8e54096` Wire Session 53 rules 12-23 into runAllRules
+- `d347305` Swap IM + Pulm Beat 3 examples to firing rules
+- `389ac23` Generate 4 tour MP3s
+
+### Verification
+- `npm run build`: clean. `/provider` route 37.7 kB / 134 kB First Load JS.
+- Throwaway jest probe (deleted post-verification) ran all 23 rules against the 4 anchor patients and asserted Beat 3 narration ↔ rule firing alignment for each clinic.
+- Localhost dev server up at `http://localhost:3000/provider`. Chrome computer-use handoff prepared (T1-T5: layout / chip rendering / drawer Section 09 / tour smoke / mobile stacking).
+
+### Boundaries respected
+- `lib/clinical-engine/*` untouched.
+- No real names introduced; no claim of cardiology-specific tenure anywhere on the new surfaces.
+
+### Not committed / not pushed
+docs/log.md update + this entry will land as a single docs commit. No push.
