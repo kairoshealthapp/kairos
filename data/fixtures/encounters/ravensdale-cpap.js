@@ -1,5 +1,5 @@
 // Pattern 2 — SYNTHESIS + NEW ORDER (CPAP DME with referral + DME forms + atomic commit)
-// Source: docs/KAIROS-SESSION-2026-04-29-AFTERNOON.md CASE 18 (Morris/Norhelden)
+// Source: internal session record CASE 18
 // "20+ discrete UI actions across 5 Epic surfaces + paper fax form" — most
 // field-heavy variant. Demonstrates Document Packet Auto-Assembly + DME Forms.
 

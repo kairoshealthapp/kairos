@@ -2,7 +2,7 @@
 
 Owner: Devin
 Route: /scribe
-Scope: live-encounter capture during physician rounding (Dr. E and others) — note transcription, order placement, plan structuring
+Scope: live-encounter capture during physician rounding (Dr. S and others) — note transcription, order placement, plan structuring
 
 ## Boundaries
 - This folder is the scribe module. Scribe-specific UI, capture flows, and order-staging code live here.

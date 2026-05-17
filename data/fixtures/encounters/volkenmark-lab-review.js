@@ -1,10 +1,10 @@
 // Pattern 1 — SYNTHESIS only (skeleton; ADDENDUM Howard reference)
 // Source: docs/KAIROS-CONTEXT-ADDENDUM-2026-04-28.md Pattern 1 examples
-// Different clinical issue than halbrook-dme-pa (same patient, different day).
+// Different clinical issue than volkenmark-dme-pa (same patient, different day).
 
 const fixture = {
-  id: "halbrook-lab-review",
-  slug: "halbrook-lab-review",
+  id: "volkenmark-lab-review",
+  slug: "volkenmark-lab-review",
   patternId: 1,
   patternName: "SYNTHESIS only",
   tab: "resultsfu",

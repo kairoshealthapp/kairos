@@ -249,7 +249,7 @@ NURSE WORKSTATION (Phase 1 — building first)
 - Front desk phone-answering (Twilio agent)
 - Devin (live ordering scribe) → Provider Mode 1
 - DAX subscription (~$369-600/provider/mo) → Provider Mode 2
-- Both nurses for Dr. E + Brandon for Ballinger → Nurse Workstation handles 80-90% of bucket work
+- Both nurses for Dr. S + Brandon for Ballinger → Nurse Workstation handles 80-90% of bucket work
 
 **Not replaced (intentionally):**
 - The providers themselves (clinical decision-making)

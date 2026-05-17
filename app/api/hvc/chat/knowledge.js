@@ -1079,7 +1079,7 @@ SPECIFIC CARDIOLOGISTS:
 
 ELECTROPHYSIOLOGY:
 - Dr. Tregarthen: Ph: 555-555-1291, Fax: 555-555-8250
-- Dr. Mitchell Vellacott / Dr. Dan Cooper: Ph: 555-555-1291, Fax: 555-555-8250
+- Dr. Mitchell Vellacott / Dr. Dan Birchington: Ph: 555-555-1291, Fax: 555-555-8250
 - Dr. Reardon Eldenfaer ("Hit table"/ablation): Ph: 555-555-1291, Fax: 555-555-4278
 
 VASCULAR SURGERY:
@@ -1130,7 +1130,7 @@ CARDIAC SCHEDULING:
 ===== ST. LUKE'S HOSPITAL / CLEVELAND CLINIC =====
 
 CARDIOLOGY/ELECTROPHYSIOLOGY:
-- Dr. Jasper Vesperwild / Dr. Norhaven -- nurse: Rachel
+- Dr. Jasper Vesperwild / Dr. Norhaven -- nurse: Anya
   Ph: (555) 555-7738, Fax: (555) 555-5927
 
 HEART HEALTH SPECIALISTS:
@@ -1326,7 +1326,7 @@ MISSOURI IMAGING CENTER:
 - Fax: 555-555-9876 (scheduling)
 
 DR. KARUPARTHIA:
-- Ph: 555-555-3278, Fax: 555-555-1351, Donni: 555-555-6129
+- Ph: 555-555-3278, Fax: 555-555-1351, Coordinator: 555-555-6129
 
 ===== COLUMBIA VA =====
 

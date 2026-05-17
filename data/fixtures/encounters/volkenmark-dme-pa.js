@@ -2,8 +2,8 @@
 // Source: docs/KAIROS-SESSION-2026-04-29-AFTERNOON.md CASE 16
 
 const fixture = {
-  id: "halbrook-dme-pa",
-  slug: "halbrook-dme-pa",
+  id: "volkenmark-dme-pa",
+  slug: "volkenmark-dme-pa",
   patternId: 10,
   patternName: "COORDINATION",
   tab: "securechat",
