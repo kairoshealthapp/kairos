@@ -8803,3 +8803,50 @@ Both pushed to `origin/main`. Vercel production rebuild pending green confirmati
 ### Boundaries respected
 - Historical references to `/executive` in `docs/log.md` (session entries from April/early May) are left untouched — those are history, not navigation.
 - No real names introduced.
+
+## 2026-05-17 — Session D: commit-message history scrub (filter-repo)
+
+### Scope
+A pickaxe pass across all commit messages for institutional and PII-adjacent strings (`Phelps`, `Phelps Health`, `Phelps HIPAA`, `Heart and Vascular Clinic`, `Halbrook`, `coincidence-deniable`) surfaced 9 candidate commits. Six were rewritten via `git filter-repo --commit-callback`; three were intentionally left alone (fictional surnames introduced by the prior Saturday scrub, plus the canonical author-attribution line).
+
+### Rewrites applied (old SHA → new SHA, new subject)
+- `cddeaa3` → `951a1ce` — feat: add executive readout page
+- `9e28b23` → `91c52f0` — remove voicemail content per HIPAA policy update
+- `5cab348` → `a2d82e7` — scrub: adjust fixture patient first name
+- `4c90162` → `ee6395d` — feat(executive): 10/10 polish revision — restructured to 8 sections, prototype-accurate language
+- `11d5b29` → `32e62bc` — docs: cinematic tour build summary
+- `8408610` → `a4309e9` — fix(kairos): tour bugfixes (cursor, speed, click, skip, scroll) + PHI rename pass 2
+
+Substitution policy across the 6 bodies: "Phelps Health" / "Phelps" → "partner site"; "Heart and Vascular Clinic" stripped from institutional-rename list; "Halbrook" / "coincidence-deniable" framing replaced with neutral "fixture patient" / "fixture-patient encounters" language.
+
+### Left untouched (per explicit policy)
+- `7721667` body L16 — "Halbrook, Strathorne, Hesperdale, Wendelfaer" are the *fictional* names introduced by that scrub commit, not PII.
+- `6d60854` body L25 — "Card 7 (Halbrook DME)" references a fictional patient.
+- `1a211d5` body L7 — "Brandon Sterne is the only real name" is consistent with the public landing-page byline.
+- ~25 Co-Authored-By / workflow references to "Brandon" — consistent with the public byline.
+
+### Verification (post-rewrite, pre-push)
+- Pickaxe re-scan: `Phelps`, `Phelps HIPAA`, `Phelps Health`, `Heart and Vascular Clinic`, `coincidence-deniable` → 0 hits. `Halbrook` → 2 hits, both in the policy-protected commits.
+- `npm test`: 1508 / 23 suites passing (identical to pre-rewrite count).
+- Local HEADs: `main` `ad9e0f0`, `recovery-and-tour-choreography` `b394971`.
+
+### Phase 2 force-push
+- Brandon disabled both repo-level rulesets via Chrome before push (org-level confirmed empty).
+- `git remote add origin` restored (filter-repo had stripped it by default).
+- `git push --force origin main` → `b7ebe37 → ad9e0f0` (forced update).
+- `git push --force origin recovery-and-tour-choreography` → `b76c8e4 → b394971` (forced update).
+- Remote ↔ local SHA parity confirmed via `git ls-remote`.
+
+### Vercel deployment
+- Production build on `ad9e0f0` (deployment `dpl_GyuGBNW5qfK3cXWh6KRz6AWejnfh`): READY in ~25s.
+- Aliases reattached: `kairoshealth.app`, `www.kairoshealth.app`, etc.
+- Prod smoke: `/` → 200, `/executive` → 404, `/rn` → 200, `/provider` → 200.
+- Preview build on `b394971` (recovery-and-tour-choreography): also triggered, separate preview URL.
+
+### Boundaries respected
+- No code blobs modified — message rewrite only.
+- Rulesets are Brandon's responsibility (manual via Chrome). CC re-flips them back to Active after he confirms.
+- The 3 untouched commits remain as-is by explicit instruction.
+
+### Tooling note
+`git-filter-repo` is not on PATH; invoked via `/c/Users/kents/AppData/Local/uv/cache/.../git-filter-repo.exe`. Callback script at `scripts/scrub-callback.py` (untracked, kept for audit but not committed).
