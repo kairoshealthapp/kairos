@@ -78,7 +78,11 @@ function collectBeats(src) {
     const windowEnd = nextMatch ? nextMatch.index : src.length;
     audioKeyRe.lastIndex = nextMatch ? nextMatch.index : src.length;
     const window = src.slice(idx, windowEnd);
-    const voiceText = extractStringLiteralAfter(window, 0, "voiceText");
+    // New per-clinic tours use `narration` per-tour; legacy per-beat
+    // structure used `voiceText`. Accept either.
+    const voiceText =
+      extractStringLiteralAfter(window, 0, "narration") ||
+      extractStringLiteralAfter(window, 0, "voiceText");
     if (voiceText) beats.push({ key: key, voiceText: voiceText });
   }
   return beats;

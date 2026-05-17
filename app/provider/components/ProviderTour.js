@@ -258,8 +258,18 @@ export default function ProviderTour({
     }
 
     const firedBeats = new Set();
-    // Fire intro immediately (startMs 0) before the first poll tick.
-    if (tour.beats[0] && tour.beats[0].startMs === 0) {
+    // Compute beat start times in ms. Tours use startPct (preferred,
+    // multiplied by audio.duration at runtime) or fall back to a fixed
+    // startMs if explicitly specified.
+    function beatStartMsAt(b, durSec) {
+      if (typeof b.startMs === "number") return b.startMs;
+      if (typeof b.startPct === "number" && durSec > 0) {
+        return Math.max(0, Math.floor(b.startPct * durSec * 1000));
+      }
+      return 0;
+    }
+    // Fire intro immediately (startPct 0) before the first poll tick.
+    if (tour.beats[0] && (tour.beats[0].startPct === 0 || tour.beats[0].startMs === 0)) {
       await handleBeat(tour, tour.beats[0]);
       firedBeats.add(0);
     }
@@ -277,17 +287,19 @@ export default function ProviderTour({
         continue;
       }
       const t = (audio.currentTime || 0) * 1000;
+      const dur = audio.duration || 0;
       for (let i = 0; i < tour.beats.length; i++) {
         if (firedBeats.has(i)) continue;
         const b = tour.beats[i];
-        if (t >= b.startMs) {
+        const startMs = beatStartMsAt(b, dur);
+        if (t >= startMs) {
           firedBeats.add(i);
           await handleBeat(tour, b);
           if (cancelRef.current) break;
         }
       }
       // End once all beats have fired AND audio is finished or near-end.
-      if (firedBeats.size >= tour.beats.length && (audio.ended || (audio.duration && t >= audio.duration * 1000 - 50))) {
+      if (firedBeats.size >= tour.beats.length && (audio.ended || (dur && t >= dur * 1000 - 50))) {
         break;
       }
       await sleep(BEAT_POLL_MS);

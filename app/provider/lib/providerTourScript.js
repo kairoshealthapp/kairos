@@ -35,12 +35,15 @@ const CARDIOLOGY_TOUR = {
   patientId: "card-0840",
   patientName: "Robert Trentham",
   estMinutes: 2,
+  // Percentage cues — multiplied by audio.duration at runtime so beats
+  // auto-adapt to the actual MP3 length and don't drift if narration
+  // gets re-edited and re-synthesized.
   beats: [
-    { startMs: 0, kind: "intro", durationMs: 18000 },
-    { startMs: 18000, kind: "open-patient", durationMs: 32000 },
-    { startMs: 50000, kind: "drill-finding", durationMs: 48000 },
-    { startMs: 98000, kind: "architecture", durationMs: 30000 },
-    { startMs: 128000, kind: "closer", durationMs: 15000 },
+    { startPct: 0.00, kind: "intro" },
+    { startPct: 0.12, kind: "open-patient" },
+    { startPct: 0.38, kind: "drill-finding" },
+    { startPct: 0.73, kind: "architecture" },
+    { startPct: 0.93, kind: "closer" },
   ],
   narration:
     "When this cardiology provider opened their schedule this morning, Kairos had already analyzed every patient and surfaced their open care gaps. No reports to run. No chart-by-chart review. " +
@@ -58,12 +61,15 @@ const FAMILY_PRACTICE_TOUR = {
   patientId: "fp-1020",
   patientName: "Yvette Daugherty",
   estMinutes: 2,
+  // Percentage cues — multiplied by audio.duration at runtime so beats
+  // auto-adapt to the actual MP3 length and don't drift if narration
+  // gets re-edited and re-synthesized.
   beats: [
-    { startMs: 0, kind: "intro", durationMs: 18000 },
-    { startMs: 18000, kind: "open-patient", durationMs: 32000 },
-    { startMs: 50000, kind: "drill-finding", durationMs: 48000 },
-    { startMs: 98000, kind: "architecture", durationMs: 30000 },
-    { startMs: 128000, kind: "closer", durationMs: 15000 },
+    { startPct: 0.00, kind: "intro" },
+    { startPct: 0.12, kind: "open-patient" },
+    { startPct: 0.38, kind: "drill-finding" },
+    { startPct: 0.73, kind: "architecture" },
+    { startPct: 0.93, kind: "closer" },
   ],
   narration:
     "When this family practice provider opened their schedule this morning, Kairos had already analyzed every patient on the day's list and surfaced their open care gaps. No reports to run. No chart-by-chart review. " +
@@ -81,12 +87,15 @@ const INTERNAL_MEDICINE_TOUR = {
   patientId: "im-0840",
   patientName: "Howard Whitestone",
   estMinutes: 2,
+  // Percentage cues — multiplied by audio.duration at runtime so beats
+  // auto-adapt to the actual MP3 length and don't drift if narration
+  // gets re-edited and re-synthesized.
   beats: [
-    { startMs: 0, kind: "intro", durationMs: 18000 },
-    { startMs: 18000, kind: "open-patient", durationMs: 32000 },
-    { startMs: 50000, kind: "drill-finding", durationMs: 48000 },
-    { startMs: 98000, kind: "architecture", durationMs: 30000 },
-    { startMs: 128000, kind: "closer", durationMs: 15000 },
+    { startPct: 0.00, kind: "intro" },
+    { startPct: 0.12, kind: "open-patient" },
+    { startPct: 0.38, kind: "drill-finding" },
+    { startPct: 0.73, kind: "architecture" },
+    { startPct: 0.93, kind: "closer" },
   ],
   narration:
     "When this internal medicine provider opened their schedule this morning, Kairos had already analyzed every patient and surfaced their open care gaps. No reports to run. No chart-by-chart review. " +
@@ -104,12 +113,15 @@ const PULMONOLOGY_TOUR = {
   patientId: "pulm-0840",
   patientName: "Lawrence Okafor",
   estMinutes: 2,
+  // Percentage cues — multiplied by audio.duration at runtime so beats
+  // auto-adapt to the actual MP3 length and don't drift if narration
+  // gets re-edited and re-synthesized.
   beats: [
-    { startMs: 0, kind: "intro", durationMs: 18000 },
-    { startMs: 18000, kind: "open-patient", durationMs: 32000 },
-    { startMs: 50000, kind: "drill-finding", durationMs: 48000 },
-    { startMs: 98000, kind: "architecture", durationMs: 30000 },
-    { startMs: 128000, kind: "closer", durationMs: 15000 },
+    { startPct: 0.00, kind: "intro" },
+    { startPct: 0.12, kind: "open-patient" },
+    { startPct: 0.38, kind: "drill-finding" },
+    { startPct: 0.73, kind: "architecture" },
+    { startPct: 0.93, kind: "closer" },
   ],
   narration:
     "When this pulmonology provider opened their schedule this morning, Kairos had already analyzed every patient and surfaced their open care gaps. No reports to run. No chart-by-chart review. " +
