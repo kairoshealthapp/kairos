@@ -1,13 +1,13 @@
 # Rule Shapes — Kairos Clinical Engine Vocabulary
 
-**Last updated:** 2026-05-13
+**Last updated:** 2026-05-17
 [← Index](INDEX.md)
 
 The Kairos clinical engine deliberately surfaces a small set of recurring rule shapes. Every rule belongs to one. Naming and reusing shapes lets new rule authors pick a pattern rather than improvise structure, lets reviewers focus on what's different about a given rule rather than re-reading boilerplate, and gives the portfolio audience a vocabulary for talking about engine coverage.
 
 A rule shape is a structural template, not a clinical category. The same shape can serve any specialty.
 
-## The nine shapes shipped
+## The fourteen shapes shipped
 
 ### 1. Therapy-gap, multi-pillar
 
@@ -80,7 +80,47 @@ A therapy-gap rule that fires only when the patient meets ≥1 clinical qualifie
 
 - **Example:** [`t2dm-sglt2i-ckd.ts`](../lib/clinical-engine/rules/t2dm-sglt2i-ckd.ts) — fires only when T2DM + CKD (multi-modal detection: ICD `N18.x`, eGFR 25–59, or UACR ≥30).
 - **When to choose:** the guideline conditions a therapy on a clinical risk profile beyond a single disease code (e.g., "SGLT2i in T2DM with CKD" vs. "SGLT2i in all T2DM"). Often pairs with multi-modal disease detection (ICD OR observation OR derived state).
-- **ADR:** [0015](decisions/0015-t2dm-sglt2i-ckd-rule.md)
+- **ADR:** [0015](decisions/0015-t2dm-sglt2i-ckd-rule.md); composed again in [0021](decisions/0021-ckd-acei-arb-rule.md) (CKD ACEi/ARB) and [0026](decisions/0026-asthma-controller-rule.md) (asthma ICS).
+
+### 10. Conditional-population control-gap
+
+The rule must fire under two distinct conditions on the same population: (a) most recent qualifying measurement is above the control threshold (uncontrolled), or (b) no qualifying measurement exists in the recency window (missing). One `ruleId`, two `subcategory` values: `'uncontrolled'` and `'missing-measurement'`. Distinct from #3 (universal screening — no value inspection) and #6 (threshold-only — no missing-recency path). Pairs naturally with HEDIS process-control measures.
+
+- **Example:** [`cbp-hypertension-control.ts`](../lib/clinical-engine/rules/cbp-hypertension-control.ts) — HTN patient with BP ≥140/90 OR no BP in 12 months. Reused by [`gsd-glycemic-status.ts`](../lib/clinical-engine/rules/gsd-glycemic-status.ts).
+- **When to choose:** a measure that scores both "did you measure it?" and "did you control it?" on one population.
+- **ADRs:** [0017](decisions/0017-cbp-hypertension-control-rule.md), [0018](decisions/0018-gsd-glycemic-status-rule.md)
+
+### 11. Multi-modality screening gap
+
+Extends shape #3 by accepting ANY of several qualifying modalities, each with its own recency window. Optionally suppressed by anatomical-absence ICD. Lp(a) (ADR 0006) accepts multiple LOINC codes for the same test; this shape accepts entirely different procedures with different cadences.
+
+- **Example:** [`col-e-colorectal-screening.ts`](../lib/clinical-engine/rules/col-e-colorectal-screening.ts) — colonoscopy (10yr) OR FIT (12mo) OR Cologuard (3yr) OR sigmoidoscopy (5yr) OR CT colonography (5yr).
+- **When to choose:** any one of several acceptable screenings satisfies the recommendation.
+- **ADRs:** [0019](decisions/0019-col-e-colorectal-screening-rule.md), [0020](decisions/0020-bcs-e-breast-screening-rule.md)
+
+### 12. Per-item gap fan-out
+
+Emits MULTIPLE Findings per patient invocation, one per missing item. Each Finding is independently actionable. Shares `ruleId`, uses `subcategory` to identify the item. Distinct from all prior shapes where at most one Finding per `ruleId` per patient was emitted.
+
+- **Example:** [`ais-e-adult-immunization.ts`](../lib/clinical-engine/rules/ais-e-adult-immunization.ts) — one Finding per missing antigen (flu, Tdap, pneumo, zoster, COVID-19).
+- **When to choose:** a measure aggregates several independently-actionable deliverables on the same population (e.g., immunization panels, diabetes bundles).
+- **ADR:** [0022](decisions/0022-ais-e-adult-immunization-rule.md)
+
+### 13. Two-stage screening with conditional follow-up
+
+Fires under either of two paths sharing one `ruleId`: (a) initial screen missing in recency window → `subcategory: 'missing-screen'`, or (b) initial screen positive but follow-up tool not administered → `subcategory: 'missing-followup'`. The follow-up must postdate the positive initial screen.
+
+- **Examples:** [`depression-screening.ts`](../lib/clinical-engine/rules/depression-screening.ts) (PHQ-2 → PHQ-9), [`tsc-e-tobacco-cessation.ts`](../lib/clinical-engine/rules/tsc-e-tobacco-cessation.ts) (smoking status → cessation intervention).
+- **When to choose:** a measure encodes both an initial screener and a follow-up triggered by positive-screen status.
+- **ADRs:** [0024](decisions/0024-depression-screening-rule.md), [0028](decisions/0028-tsc-e-tobacco-cessation-rule.md)
+
+### 14. Score-classified therapy gap
+
+Computes a clinical classification from chart inputs; the recommended therapy depends on the classification; emits one Finding per patient with a `subcategory` identifying the classification-specific gap. Distinct from #7 (single-threshold score gate) because the score routes to one of multiple distinct recommendations.
+
+- **Example:** [`copd-gold-abe.ts`](../lib/clinical-engine/rules/copd-gold-abe.ts) — GOLD ABE group classification dictates LABA/LAMA/ICS recommendation.
+- **When to choose:** a guideline ships a multi-tier classification system where each tier has a distinct first-line therapy.
+- **ADR:** [0025](decisions/0025-copd-gold-abe-rule.md)
 
 ## Conventions inherited by every rule, regardless of shape
 

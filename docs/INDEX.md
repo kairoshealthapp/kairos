@@ -1,6 +1,6 @@
 # Kairos Documentation Index
 
-**Last updated:** 2026-05-13
+**Last updated:** 2026-05-17
 
 This index lists every doc under `docs/` and links to it. The build log (`log.md`) is intentionally not enumerated here — it is the chronological session journal and is read directly.
 
@@ -30,6 +30,18 @@ Michael Nygard format. New ADRs go in `docs/decisions/` with the next available 
 - [0014 — Post-MI ACEi/ARB rule (high-risk siblings of ADR 0013)](decisions/0014-post-mi-acei-arb-rule.md)
 - [0015 — T2DM-CKD SGLT2i: dual-guideline citation and conditional-population therapy-gap](decisions/0015-t2dm-sglt2i-ckd-rule.md)
 - [0016 — T2DM statin rule: convergent-evidence pattern](decisions/0016-t2dm-statin-rule.md)
+- [0017 — CBP rule: conditional-population control-gap shape](decisions/0017-cbp-hypertension-control-rule.md)
+- [0018 — GSD rule: control-gap shape applied to A1C](decisions/0018-gsd-glycemic-status-rule.md)
+- [0019 — COL-E rule: multi-modality screening shape](decisions/0019-col-e-colorectal-screening-rule.md)
+- [0020 — BCS-E rule: women 40-74, biennial mammography, USPSTF 2024 update](decisions/0020-bcs-e-breast-screening-rule.md)
+- [0021 — CKD ACEi/ARB rule: dual-guideline conditional-population therapy-gap](decisions/0021-ckd-acei-arb-rule.md)
+- [0022 — AIS-E rule: per-item gap fan-out shape](decisions/0022-ais-e-adult-immunization-rule.md)
+- [0023 — Osteoporosis screening rule](decisions/0023-osteoporosis-screening-rule.md)
+- [0024 — Depression screening (PHQ-2/PHQ-9) two-stage rule](decisions/0024-depression-screening-rule.md)
+- [0025 — COPD GOLD ABE rule: score-classified therapy gap](decisions/0025-copd-gold-abe-rule.md)
+- [0026 — Asthma ICS-containing controller rule](decisions/0026-asthma-controller-rule.md)
+- [0027 — LSC lung cancer screening rule (LDCT, USPSTF 2021)](decisions/0027-lsc-lung-cancer-screening-rule.md)
+- [0028 — TSC-E tobacco screening and cessation rule](decisions/0028-tsc-e-tobacco-cessation-rule.md)
 
 ## Engine design vocabulary
 

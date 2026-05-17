@@ -8659,3 +8659,60 @@ The following items contain plausibly-collidable real surnames but were not scru
 ### Still open (waiting for Brandon)
 - Phase 2 (git history rewrite via git-filter-repo) — **NOT** started, awaiting explicit go-ahead.
 - Phase 1.5 follow-ups: tour-audio re-recording for Halbrook cards; cardiology providerSchedule cascade decision; phiGuard allowlist review.
+
+## 2026-05-17 — Session 53: Phase 3 Clinical Engine — 12 rules across Family Practice, Internal Medicine, Pulmonology
+
+### Scope
+Mega-build extending the engine from 11 rules to 23. Four rules per specialty.
+
+### Family Practice (rules 12-15)
+- **Rule 12 — CBP** (`cbp-hypertension-control`): HEDIS CBP / 2017 ACC/AHA HTN. Population: HTN ICD I10-I15, age 18-85. Fires `subcategory: 'uncontrolled'` (BP ≥140/90) or `'missing-measurement'` (no BP in 12mo). Introduces shape #10 conditional-population control-gap. ADR 0017. Fixtures 43-45.
+- **Rule 13 — GSD** (`gsd-glycemic-status`): HEDIS GSD / ADA Standards 2026 §6. Reuses shape #10. Fires on A1C >9% or missing A1C in 6mo for E10/E11 adults. ADR 0018. Fixtures 46-48.
+- **Rule 14 — COL-E** (`col-e-colorectal-screening`): HEDIS COL-E / USPSTF 2021. Multi-modality (colonoscopy 10yr / FIT 12mo / Cologuard 3yr / sig 5yr / CTC 5yr). Z90.49 suppresses. Introduces shape #11 multi-modality screening. ADR 0019. Fixtures 49-52.
+- **Rule 15 — BCS-E** (`bcs-e-breast-screening`): HEDIS BCS-E / USPSTF 2024 Grade B 40-74. Reuses shape #11 with singleton mammography family. Z90.13 suppresses. ADR 0020. Fixtures 53-55.
+
+### Internal Medicine (rules 16-19)
+- **Rule 16 — CKD ACEi/ARB** (`ckd-acei-arb`): KDIGO 2024 §3.6.1 + 2017 ACC/AHA HTN §9.5 (dual-guideline). Shape #9 conditional-population therapy-gap. Reuses `detectCkd`, `UACR_LOINC_CODES`, `GDMT_PILLAR_1_*` exports — three-way composition. ADR 0021. Fixtures 56-58.
+- **Rule 17 — AIS-E** (`ais-e-adult-immunization`): HEDIS AIS-E / ACIP 2026. Five antigens: flu (12mo), Tdap (10yr), pneumococcal (≥65 or high-risk ICD), zoster RZV (≥50), COVID-19 (≥65, 12mo). Introduces shape #12 per-item gap fan-out — first rule emitting multiple Findings per patient. ADR 0022. Fixtures 59-61.
+- **Rule 18 — Osteoporosis** (`osteoporosis-screening`): USPSTF 2018 Grade B women ≥65; consensus path for men ≥70. Shape #4 with derived eligibility. M81.x suppresses. ADR 0023. Fixtures 62-64.
+- **Rule 19 — Depression** (`depression-screening`): HEDIS DSF-E / USPSTF 2023 Grade B. PHQ-2 (LOINC 55758-7) → PHQ-9 (44249-1) two-stage. Introduces shape #13 two-stage screening with conditional follow-up. ADR 0024. Fixtures 65-67.
+
+### Pulmonology (rules 20-23)
+- **Rule 20 — COPD GOLD ABE** (`copd-gold-abe`): GOLD 2024 Report. Spirometry-confirmed COPD (J44.x + FEV1/FVC <0.7). Computes A/B/E group from mMRC/CAT + exacerbation count. Recommends bronchodilator (A), LABA+LAMA (B), LABA+LAMA[+ICS] (E based on eos ≥300). Introduces shape #14 score-classified therapy gap. Exports `classifyGold`. ADR 0025. Fixtures 68-70.
+- **Rule 21 — Asthma controller** (`asthma-controller`): GINA 2024 + NAEPP 2020. Fires when J45.x patient is on SABA OR had recent exacerbation but no ICS-containing controller. Reuses `COPD_ICS_GENERIC_NAMES` and `COPD_SABA_GENERIC_NAMES` exports — first intra-specialty composition. ADR 0026. Fixtures 71-73.
+- **Rule 22 — LSC** (`lsc-lung-cancer-screening`): HEDIS LSC / USPSTF 2021 Grade B. Four-input eligibility chain: age 50-80, smoking status (current/former), pack-years ≥20, quit ≤15yr. LDCT recency 12mo. C34.x suppresses. ADR 0027. Fixtures 74-76.
+- **Rule 23 — TSC-E** (`tsc-e-tobacco-cessation`): new HEDIS TSC-E MY 2026 / USPSTF 2021 Grade A. Reuses shape #13 (sibling of depression rule). Smoking status (12mo) + cessation intervention (counseling display tokens or active varenicline/bupropion/nicotine) for current smokers. ADR 0028. Fixtures 77-79.
+
+### Verification
+- `npm test`: **1508 passing across 23 suites** (up from 431 across 11). Zero failures.
+- `tsc --noEmit`: clean.
+- Cross-rule isolation patterns vary by rule:
+  - Most rules use programmatic age/sex sweep against all existing fixtures.
+  - High-fanout rules (AIS-E, osteoporosis, CKD ACEi/ARB, asthma) use "does-not-throw" guards plus targeted unit-test coverage of qualifier logic.
+  - Two existing tests (cbp, gsd) updated when later rules introduced fixtures with previously-uncombined condition sets (`fixture-49` HTN+COL-E, `fixture-56` CKD+HTN, `fixture-61` T2DM+AIS-E).
+
+### Engine surface
+- 23 rules registered in `lib/clinical-engine/index.ts`.
+- 14 rule shapes documented in `docs/rule-shapes.md` (was 9; added #10 control-gap, #11 multi-modality screening, #12 per-item fan-out, #13 two-stage, #14 score-classified).
+- ADRs 0017-0028 added.
+- `docs/guideline-watch.md` extended with 12 new rows; 12 new open-follow-ups documented.
+
+### Citation discipline
+Banner blocks cite primary guidelines (DOI/URL). LOE/Class "TBC at next review" used where primary text could not be pinned, mirroring the lpa-screening (ADR 0006) / apo-b-measurement (ADR 0008) precedent. HEDIS measure IDs cross-referenced but NCQA proprietary spec text NOT reproduced. All `lastReviewed: 2026-05-17 / reviewedBy: Brandon Sterne, RN BSN / nextReviewDue: 2027-05-17`.
+
+### Boundaries respected
+- Brandon Sterne is the only real name in any new fixture, rule, ADR, or test.
+- No `app/provider/`, `components/`, tour script, or audio files touched (Session B parallel scope).
+
+### Open follow-ups (carried to backlog)
+See new entries appended to `docs/guideline-watch.md` "Open follow-ups" — 12 per-rule scope-decision items including: pregnancy/ESRD exclusions, A1C 7-9% suboptimal band, multi-modality procedure CPT coding, sex-canonicalization, contraindication modeling, CVX-via-loincCode shim, FRAX integration, adolescent depression path, exacerbation-row coder dependence, SABA dispensing cadence, smoking-status display tokenization, counseling-token softening.
+
+### Cross-rule co-trigger inventory (notable patterns documented in test code)
+- 4 AFib fixtures (19-22) carry I10 → CBP `missing-measurement`.
+- All 14 existing diabetes fixtures fire GSD `missing-measurement` (no A1C on file).
+- Most adult fixtures in 45-75 age band fire COL-E.
+- Female 40-74 fixtures fire BCS-E.
+- AIS-E and TSC-E fire on most adult fixtures because vaccines and tobacco screening are not documented.
+
+### Not committed
+Per-clinic commits performed at end of session (4 commits: family-practice, internal-medicine, pulmonology, barrel+docs). No push.

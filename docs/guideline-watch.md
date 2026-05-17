@@ -1,6 +1,6 @@
 # Guideline Watch
 
-**Last updated:** 2026-05-13
+**Last updated:** 2026-05-17
 [← Index](INDEX.md)
 
 Active clinical guidelines that back each rule in the Kairos clinical engine. Each row records the rule, its sourcing guideline, the publication date, the last in-repo clinical review date, and a next-review marker. When a guideline updates or a next-review date passes, the corresponding rule's banner block and ADR need a fresh pass.
@@ -22,6 +22,18 @@ This is Layer 2 of the currency infrastructure — the in-repo tracker. Layer 1 
 | `post-mi-acei-arb` | [2025 ACC/AHA ACS Guideline](https://www.ahajournals.org/doi/10.1161/CIR.0000000000001309) §4.7 Rec. 1 (Rao et al, Circulation) | 2025-02-27 | Class 1, LOE A | 2026-05-13 | 2027-05-13 | [`post-mi-acei-arb.ts`](../lib/clinical-engine/rules/post-mi-acei-arb.ts) | [0014](decisions/0014-post-mi-acei-arb-rule.md) |
 | `t2dm-sglt2i-ckd` | [ADA Standards of Care 2026](https://diabetesjournals.org/care/issue/49/Supplement_1) §11.11a + [KDIGO 2022](https://kdigo.org/wp-content/uploads/2022/10/KDIGO-2022-Clinical-Practice-Guideline-for-Diabetes-Management-in-CKD.pdf) §1.3.1 (dual-guideline) | 2025-12 (ADA) / 2022-10 (KDIGO) | KDIGO Class 1A | 2026-05-13 | 2027-05-13 | [`t2dm-sglt2i-ckd.ts`](../lib/clinical-engine/rules/t2dm-sglt2i-ckd.ts) | [0015](decisions/0015-t2dm-sglt2i-ckd-rule.md) |
 | `t2dm-statin` | [ADA Standards of Care 2026](https://diabetesjournals.org/care/issue/49/Supplement_1) §10 | 2025-12 | ADA Grade A | 2026-05-13 | 2027-05-13 | [`t2dm-statin.ts`](../lib/clinical-engine/rules/t2dm-statin.ts) | [0016](decisions/0016-t2dm-statin-rule.md) |
+| `cbp-hypertension-control` | HEDIS CBP / [2017 ACC/AHA HTN Guideline](https://www.ahajournals.org/doi/10.1161/CIR.0000000000000596) | 2018-05 | Class I, LOE B-R / A | 2026-05-17 | 2027-05-17 | [`cbp-hypertension-control.ts`](../lib/clinical-engine/rules/cbp-hypertension-control.ts) | [0017](decisions/0017-cbp-hypertension-control-rule.md) |
+| `gsd-glycemic-status` | HEDIS GSD / [ADA Standards 2026](https://diabetesjournals.org/care/issue/49/Supplement_1) §6 | 2025-12 | ADA Grade A/B | 2026-05-17 | 2027-05-17 | [`gsd-glycemic-status.ts`](../lib/clinical-engine/rules/gsd-glycemic-status.ts) | [0018](decisions/0018-gsd-glycemic-status-rule.md) |
+| `col-e-colorectal-screening` | HEDIS COL-E / [USPSTF 2021 CRC Screening](https://www.uspreventiveservicestaskforce.org/uspstf/recommendation/colorectal-cancer-screening) | 2021-05 | Grade A (50-75), Grade B (45-49) | 2026-05-17 | 2027-05-17 | [`col-e-colorectal-screening.ts`](../lib/clinical-engine/rules/col-e-colorectal-screening.ts) | [0019](decisions/0019-col-e-colorectal-screening-rule.md) |
+| `bcs-e-breast-screening` | HEDIS BCS-E / [USPSTF 2024 Breast Cancer Screening](https://www.uspreventiveservicestaskforce.org/uspstf/recommendation/breast-cancer-screening) | 2024-04 | Grade B | 2026-05-17 | 2027-05-17 | [`bcs-e-breast-screening.ts`](../lib/clinical-engine/rules/bcs-e-breast-screening.ts) | [0020](decisions/0020-bcs-e-breast-screening-rule.md) |
+| `ckd-acei-arb` | [KDIGO 2024 CKD Guideline](https://kdigo.org/wp-content/uploads/2024/03/KDIGO-2024-CKD-Guideline.pdf) §3.6.1 + [2017 ACC/AHA HTN](https://www.ahajournals.org/doi/10.1161/CIR.0000000000000596) §9.5 (dual-guideline) | 2024-04 (KDIGO) / 2018-05 (ACC/AHA) | KDIGO Grade 1B | 2026-05-17 | 2027-05-17 | [`ckd-acei-arb.ts`](../lib/clinical-engine/rules/ckd-acei-arb.ts) | [0021](decisions/0021-ckd-acei-arb-rule.md) |
+| `ais-e-adult-immunization` | HEDIS AIS-E / [ACIP 2026 Adult Schedule](https://www.cdc.gov/vaccines/hcp/imz-schedules/adult-age.html) | 2026 | per-antigen ACIP | 2026-05-17 | 2027-05-17 | [`ais-e-adult-immunization.ts`](../lib/clinical-engine/rules/ais-e-adult-immunization.ts) | [0022](decisions/0022-ais-e-adult-immunization-rule.md) |
+| `osteoporosis-screening` | [USPSTF 2018 Osteoporosis Screening](https://www.uspreventiveservicestaskforce.org/uspstf/recommendation/osteoporosis-screening) | 2018-06 | Grade B (women ≥65); men consensus | 2026-05-17 | 2027-05-17 | [`osteoporosis-screening.ts`](../lib/clinical-engine/rules/osteoporosis-screening.ts) | [0023](decisions/0023-osteoporosis-screening-rule.md) |
+| `depression-screening` | HEDIS DSF-E / [USPSTF 2023 Depression and Suicide Risk Screening](https://www.uspreventiveservicestaskforce.org/uspstf/recommendation/screening-depression-suicide-risk-adults) | 2023-06 | Grade B | 2026-05-17 | 2027-05-17 | [`depression-screening.ts`](../lib/clinical-engine/rules/depression-screening.ts) | [0024](decisions/0024-depression-screening-rule.md) |
+| `copd-gold-abe` | [GOLD 2024 Report](https://goldcopd.org/2024-gold-report/) | 2024 | guideline-class TBC | 2026-05-17 | 2027-05-17 | [`copd-gold-abe.ts`](../lib/clinical-engine/rules/copd-gold-abe.ts) | [0025](decisions/0025-copd-gold-abe-rule.md) |
+| `asthma-controller` | [GINA 2024 Strategy](https://ginasthma.org/2024-gina-main-report/) + [NAEPP 2020](https://www.nhlbi.nih.gov/health-topics/asthma-management-guidelines-2020-updates) | 2024 (GINA) / 2020 (NAEPP) | strong-rec ICS for all | 2026-05-17 | 2027-05-17 | [`asthma-controller.ts`](../lib/clinical-engine/rules/asthma-controller.ts) | [0026](decisions/0026-asthma-controller-rule.md) |
+| `lsc-lung-cancer-screening` | HEDIS LSC / [USPSTF 2021 Lung Cancer Screening](https://www.uspreventiveservicestaskforce.org/uspstf/recommendation/lung-cancer-screening) | 2021-03 | Grade B | 2026-05-17 | 2027-05-17 | [`lsc-lung-cancer-screening.ts`](../lib/clinical-engine/rules/lsc-lung-cancer-screening.ts) | [0027](decisions/0027-lsc-lung-cancer-screening-rule.md) |
+| `tsc-e-tobacco-cessation` | HEDIS TSC-E (new MY 2026) / [USPSTF 2021 Tobacco Cessation](https://www.uspreventiveservicestaskforce.org/uspstf/recommendation/tobacco-use-in-adults-and-pregnant-women-counseling-and-interventions) | 2021-01 | Grade A | 2026-05-17 | 2027-05-17 | [`tsc-e-tobacco-cessation.ts`](../lib/clinical-engine/rules/tsc-e-tobacco-cessation.ts) | [0028](decisions/0028-tsc-e-tobacco-cessation-rule.md) |
 
 ## Open follow-ups
 
@@ -51,6 +63,18 @@ This is Layer 2 of the currency infrastructure — the in-repo tracker. Layer 1 
 - **`t2dm-sglt2i-ckd` GLP-1 RA alternative not modeled.** ADA §11.11a allows either SGLT2i OR GLP-1 RA "with demonstrated benefit". v1 surfaces only the SGLT2i path; GLP-1 RA equivalence is a v2 candidate.
 - **`t2dm-statin` T1DM excluded in v1.** ADA has additional age + risk-factor stratification for T1DM statin recommendations.
 - **Convergent-evidence pattern not deduplicated.** T2DM age 40-75 no statin fires both `statin-initiation` and `t2dm-statin`. v2 Finding-deduplication layer is a safety valve for when convergent-rule count compounds.
+- **`cbp-hypertension-control` pregnancy/ESRD NOT excluded.** HEDIS spec excludes; deferred for clinical review. Frailty / age ≥65 individualized targets NOT modeled.
+- **`gsd-glycemic-status` pregnancy NOT excluded; A1C 7-9% suboptimal band emits no finding.** Future "suboptimal control" rule is v2.
+- **`col-e-colorectal-screening` procedure modality match is display-substring.** Real-chart calibration needed; CPT-coded ProcedureBundle slot is v2.
+- **`bcs-e-breast-screening` sex match is exact 'female' string.** Sex-field canonicalization in `normalize.ts` is a future enhancement.
+- **`ckd-acei-arb` contraindications (renal artery stenosis, K>5.5, pregnancy) NOT modeled.** Recommendation reminds clinician to assess.
+- **`ais-e-adult-immunization` CVX matched via PatientObservation.loincCode field.** Code-system collision risk acknowledged; PatientImmunization slot is v2 type-system enhancement. ACIP cadences change annually — re-review at `nextReviewDue` carefully, especially COVID-19 CVX list.
+- **`osteoporosis-screening` postmenopausal <65 with risk factors NOT modeled.** FRAX integration is v2.
+- **`depression-screening` adolescent path (12-17) NOT modeled.** Separate USPSTF 2022 recommendation; v2 candidate. Active F32/F33 diagnosis does NOT suppress.
+- **`copd-gold-abe` exacerbation counting via J44.1 condition rows is coder-practice-dependent.** Real-chart calibration needed.
+- **`asthma-controller` active-SABA-as-uncontrolled-proxy is generous.** Dispensing-cadence rule (≥2 canisters/12mo per GINA) is v2.
+- **`lsc-lung-cancer-screening` smoking-status display tokens are coarse** (`current`/`former`/`never` substring). Real-chart calibration needed.
+- **`tsc-e-tobacco-cessation` counseling display-token matching is fragile.** 'smoking cessation' softer token addition is a v2 calibration choice.
 
 ## How to add a row
 
