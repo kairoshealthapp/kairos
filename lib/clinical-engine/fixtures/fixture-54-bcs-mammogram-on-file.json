@@ -1,0 +1,19 @@
+{
+  "patient": {
+    "id": "fixture-54",
+    "name": "Test Patient 54 — 50yo F, screening mammogram 8 months ago",
+    "dob": "1975-10-02",
+    "sex": "female"
+  },
+  "conditions": [],
+  "medications": [],
+  "observations": [
+    {
+      "loincCode": "24604-1",
+      "display": "Screening mammography bilateral (CPT 77067)",
+      "effectiveDate": "2025-09-21",
+      "category": "imaging"
+    }
+  ],
+  "allergies": []
+}

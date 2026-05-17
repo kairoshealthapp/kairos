@@ -1,0 +1,20 @@
+{
+  "patient": {
+    "id": "fixture-55",
+    "name": "Test Patient 55 — 62yo F, status-post bilateral mastectomy (Z90.13)",
+    "dob": "1963-12-08",
+    "sex": "female"
+  },
+  "conditions": [
+    {
+      "code": "Z90.13",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Acquired absence of bilateral breasts and nipples",
+      "status": "active",
+      "onsetDate": "2018-05-22"
+    }
+  ],
+  "medications": [],
+  "observations": [],
+  "allergies": []
+}

@@ -1,0 +1,21 @@
+{
+  "patient": {
+    "id": "fixture-51",
+    "name": "Test Patient 51 — 47yo M, FIT 4 months ago (Grade B band)",
+    "dob": "1978-11-22",
+    "sex": "male"
+  },
+  "conditions": [],
+  "medications": [],
+  "observations": [
+    {
+      "loincCode": "29771-3",
+      "display": "Fecal Hemoglobin [Presence] in Stool",
+      "value": 0,
+      "unit": "{negative}",
+      "effectiveDate": "2026-01-15",
+      "category": "laboratory"
+    }
+  ],
+  "allergies": []
+}

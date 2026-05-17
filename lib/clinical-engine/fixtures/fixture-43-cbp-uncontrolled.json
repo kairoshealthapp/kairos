@@ -1,0 +1,47 @@
+{
+  "patient": {
+    "id": "fixture-43",
+    "name": "Test Patient 43 — 62yo M HTN, BP 156/94, uncontrolled",
+    "dob": "1963-11-04",
+    "sex": "male"
+  },
+  "conditions": [
+    {
+      "code": "I10",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Essential (primary) hypertension",
+      "status": "active",
+      "onsetDate": "2017-03-10"
+    }
+  ],
+  "medications": [
+    {
+      "rxnormCode": "29046",
+      "name": "lisinopril 20 MG Oral Tablet",
+      "genericName": "lisinopril",
+      "dose": "20 mg once daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2017-03-15"
+    }
+  ],
+  "observations": [
+    {
+      "loincCode": "8480-6",
+      "display": "Systolic blood pressure",
+      "value": 156,
+      "unit": "mm[Hg]",
+      "effectiveDate": "2026-04-08",
+      "category": "vital-signs"
+    },
+    {
+      "loincCode": "8462-4",
+      "display": "Diastolic blood pressure",
+      "value": 94,
+      "unit": "mm[Hg]",
+      "effectiveDate": "2026-04-08",
+      "category": "vital-signs"
+    }
+  ],
+  "allergies": []
+}

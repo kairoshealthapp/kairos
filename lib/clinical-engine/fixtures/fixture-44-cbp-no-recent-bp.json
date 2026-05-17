@@ -1,0 +1,47 @@
+{
+  "patient": {
+    "id": "fixture-44",
+    "name": "Test Patient 44 — 58yo F HTN, no BP in last 12 months",
+    "dob": "1968-02-22",
+    "sex": "female"
+  },
+  "conditions": [
+    {
+      "code": "I11.9",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Hypertensive heart disease without heart failure",
+      "status": "active",
+      "onsetDate": "2019-08-01"
+    }
+  ],
+  "medications": [
+    {
+      "rxnormCode": "38454",
+      "name": "amlodipine 5 MG Oral Tablet",
+      "genericName": "amlodipine",
+      "dose": "5 mg once daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2019-08-05"
+    }
+  ],
+  "observations": [
+    {
+      "loincCode": "8480-6",
+      "display": "Systolic blood pressure",
+      "value": 128,
+      "unit": "mm[Hg]",
+      "effectiveDate": "2024-09-18",
+      "category": "vital-signs"
+    },
+    {
+      "loincCode": "8462-4",
+      "display": "Diastolic blood pressure",
+      "value": 78,
+      "unit": "mm[Hg]",
+      "effectiveDate": "2024-09-18",
+      "category": "vital-signs"
+    }
+  ],
+  "allergies": []
+}

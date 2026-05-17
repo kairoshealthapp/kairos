@@ -1,0 +1,20 @@
+{
+  "patient": {
+    "id": "fixture-49",
+    "name": "Test Patient 49 — 58yo M, no documented colorectal screening",
+    "dob": "1967-08-14",
+    "sex": "male"
+  },
+  "conditions": [
+    {
+      "code": "I10",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Essential hypertension",
+      "status": "active",
+      "onsetDate": "2015-06-01"
+    }
+  ],
+  "medications": [],
+  "observations": [],
+  "allergies": []
+}

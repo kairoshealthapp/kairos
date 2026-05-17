@@ -1,0 +1,18 @@
+{
+  "patient": {
+    "id": "fixture-50",
+    "name": "Test Patient 50 — 62yo F, screening colonoscopy 4 years ago",
+    "dob": "1963-03-09",
+    "sex": "female"
+  },
+  "conditions": [],
+  "medications": [],
+  "observations": [
+    {
+      "display": "Screening colonoscopy, no adenomatous polyps",
+      "effectiveDate": "2022-05-17",
+      "category": "procedure"
+    }
+  ],
+  "allergies": []
+}

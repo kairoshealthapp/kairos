@@ -1,0 +1,12 @@
+{
+  "patient": {
+    "id": "fixture-53",
+    "name": "Test Patient 53 — 55yo F, no mammogram on file",
+    "dob": "1970-04-19",
+    "sex": "female"
+  },
+  "conditions": [],
+  "medications": [],
+  "observations": [],
+  "allergies": []
+}

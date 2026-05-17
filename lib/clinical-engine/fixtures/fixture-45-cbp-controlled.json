@@ -1,0 +1,47 @@
+{
+  "patient": {
+    "id": "fixture-45",
+    "name": "Test Patient 45 — 70yo M HTN, BP 124/76, controlled",
+    "dob": "1955-06-30",
+    "sex": "male"
+  },
+  "conditions": [
+    {
+      "code": "I10",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Essential (primary) hypertension",
+      "status": "active",
+      "onsetDate": "2010-01-15"
+    }
+  ],
+  "medications": [
+    {
+      "rxnormCode": "29046",
+      "name": "lisinopril 40 MG Oral Tablet",
+      "genericName": "lisinopril",
+      "dose": "40 mg once daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2010-01-20"
+    }
+  ],
+  "observations": [
+    {
+      "loincCode": "8480-6",
+      "display": "Systolic blood pressure",
+      "value": 124,
+      "unit": "mm[Hg]",
+      "effectiveDate": "2026-03-22",
+      "category": "vital-signs"
+    },
+    {
+      "loincCode": "8462-4",
+      "display": "Diastolic blood pressure",
+      "value": 76,
+      "unit": "mm[Hg]",
+      "effectiveDate": "2026-03-22",
+      "category": "vital-signs"
+    }
+  ],
+  "allergies": []
+}

@@ -1,0 +1,20 @@
+{
+  "patient": {
+    "id": "fixture-52",
+    "name": "Test Patient 52 — 65yo F, status-post total colectomy (Z90.49)",
+    "dob": "1960-07-04",
+    "sex": "female"
+  },
+  "conditions": [
+    {
+      "code": "Z90.49",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Acquired absence of other specified parts of digestive tract",
+      "status": "active",
+      "onsetDate": "2019-09-12"
+    }
+  ],
+  "medications": [],
+  "observations": [],
+  "allergies": []
+}
