@@ -13,7 +13,7 @@ import VersionStamp from "./VersionStamp";
 
 export default function AppChrome({ children }) {
   const pathname = usePathname();
-  if (pathname === "/" || pathname === "/executive") return <>{children}</>;
+  if (pathname === "/") return <>{children}</>;
   return (
     <>
       <Banner />

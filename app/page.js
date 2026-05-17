@@ -5,7 +5,7 @@
 // rules-in-code differentiator, repo-verified proof points, and links
 // to the GitHub repo / README. Built for the builder/provider audience.
 //
-// Section 2 (.kl-tiles-section): role picker — five role tiles, each
+// Section 2 (.kl-tiles-section): role picker — four role tiles, each
 // with a one-line description of what that surface shows. Built for the
 // clinical audience.
 //
@@ -24,8 +24,8 @@
 // collapses to a vertical stack. Entry animations and the ambient
 // sweep are gated on (prefers-reduced-motion: no-preference).
 //
-// Routes confirmed live: /rn (guided tour), /provider (guided tour),
-// /executive (static readout); /scribe and /frontdesk are scaffolded.
+// Routes confirmed live: /rn (guided tour), /provider (guided tour);
+// /scribe and /frontdesk are scaffolded.
 
 import Link from "next/link";
 
@@ -76,14 +76,6 @@ const TILES = [
     status: "In development",
     live: false,
     blurb: "Front-desk intake and scheduling surface — scaffolded, not yet built out.",
-  },
-  {
-    label: "Executive",
-    href: "/executive",
-    status: "Live",
-    live: true,
-    blurb:
-      "The leadership-audience readout — the case for the architecture, written for hospital decision-makers.",
   },
 ];
 
