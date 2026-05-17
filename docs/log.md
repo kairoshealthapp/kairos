@@ -1960,7 +1960,7 @@ Stop interpreting kairoshealth.app and start copying it. Brandon owns the source
 
 ## [2026-04-29] kairos | Phase 3.3 design doc drafted at docs/PHASE-3.3-DESIGN.md, 14-pattern taxonomy and 4-pane spec captured, ready for cold-eyes review
 
-## [2026-04-29] kairos | Phase 3.3 simulation build complete. 8/24 fixtures fully scripted (aldington-tte, hesperdale-crestor, brexley-statin, underwell-full-lifecycle, larvendel-denial-cascade, wexbury-phone, volkenmark-dme-pa, ravensdale-cpap), 16/24 skeleton-only (wendelfaer-pcp, esselbach-urgent, kvalheim-coordination, maundrell-contradiction, norreys-transactional, volkenmark-lab-review, reiner-multilab, quelthorne-async, heldenmark-securechat, quennell-scope, strathorne-doe, frazier-handoff, wood-lipid, czeschin-bp, besemer-bnp, vrabel-referral). DataSource abstraction (lib/dataSource.js) with simulationDataSource active and liveDataSource stubbed for 3.4. SimulationEngine yields async-iterable SimulationEvent stream consumed by EncounterDetail (4-pane shell + animation state machine). TypingText typewriter primitive at ~60-80 cps. Card fly-off animation on Authorize → sessionStorage flag → dashboard filter. Back button preserves dashboard tab via ?tab= search param. AddContextRow rendered DISABLED with "wired in 3.4" tooltip. lib/consistency.js + lib/investigation.js exist as stubs (NOT invoked). Build passes; 24 encounter routes pre-rendered. HTML smoke verified Patterns 2 (aldington), 4 (hesperdale), 5 (brexley phiGuard regen banner), 7b (underwell 4-stage actions), 13 (larvendel denial cascade timeline + peer-to-peer), 14 (wexbury PhoneScriptPane mounts in lieu of MyChart). Mock encounters at C:/Users/kents/kairos/data/fixtures/encounters/.
+## [2026-04-29] kairos | Phase 3.3 simulation build complete. 8/24 fixtures fully scripted (aldington-tte, hesperdale-crestor, brexley-statin, underwell-full-lifecycle, larvendel-denial-cascade, wexbury-phone, halbrook-dme-pa, ravensdale-cpap), 16/24 skeleton-only (wendelfaer-pcp, esselbach-urgent, kvalheim-coordination, maundrell-contradiction, norreys-transactional, halbrook-lab-review, reiner-multilab, quelthorne-async, heldenmark-securechat, quennell-scope, strathorne-doe, frazier-handoff, wood-lipid, czeschin-bp, besemer-bnp, vrabel-referral). DataSource abstraction (lib/dataSource.js) with simulationDataSource active and liveDataSource stubbed for 3.4. SimulationEngine yields async-iterable SimulationEvent stream consumed by EncounterDetail (4-pane shell + animation state machine). TypingText typewriter primitive at ~60-80 cps. Card fly-off animation on Authorize → sessionStorage flag → dashboard filter. Back button preserves dashboard tab via ?tab= search param. AddContextRow rendered DISABLED with "wired in 3.4" tooltip. lib/consistency.js + lib/investigation.js exist as stubs (NOT invoked). Build passes; 24 encounter routes pre-rendered. HTML smoke verified Patterns 2 (aldington), 4 (hesperdale), 5 (brexley phiGuard regen banner), 7b (underwell 4-stage actions), 13 (larvendel denial cascade timeline + peer-to-peer), 14 (wexbury PhoneScriptPane mounts in lieu of MyChart). Mock encounters at C:/Users/kents/kairos/data/fixtures/encounters/.
 
 ## [2026-04-29] kairos | docs/NURSE-DEMO-INTRO.md drafted for tomorrow's nurse tour share-out.
 
@@ -3056,12 +3056,12 @@ Tab keys: `results`, `resultsfu`, `rxrequest`, `patientcall`, `patientadvice`, `
 
 All 24 existing fixtures' `tab` field re-mapped per the source channel of the message:
 
-- **resultsfu** (13): aldington-tte, besemer-bnp, brexley-statin, hesperdale-crestor, czeschin-bp, wendelfaer-pcp, esselbach-urgent, frazier-handoff, volkenmark-lab-review, quennell-scope, reiner-multilab, wexbury-phone, wood-lipid
+- **resultsfu** (13): aldington-tte, besemer-bnp, brexley-statin, hesperdale-crestor, czeschin-bp, wendelfaer-pcp, esselbach-urgent, frazier-handoff, halbrook-lab-review, quennell-scope, reiner-multilab, wexbury-phone, wood-lipid
 - **results** (1 + crider-inr = 2): maundrell-contradiction, crider-inr
 - **rxrequest** (1): norreys-transactional
 - **patientcall** (3 + lockner-medcheckin = 4): kvalheim-coordination, strathorne-doe, underwell-full-lifecycle, lockner-medcheckin
 - **patientadvice** (1): quelthorne-async
-- **securechat** (5): volkenmark-dme-pa, ravensdale-cpap, heldenmark-securechat, larvendel-denial-cascade, vrabel-referral
+- **securechat** (5): halbrook-dme-pa, ravensdale-cpap, heldenmark-securechat, larvendel-denial-cascade, vrabel-referral
 
 Net 26 fixtures, distributed across all six baskets.
 
@@ -3070,7 +3070,7 @@ Net 26 fixtures, distributed across all six baskets.
 Audited every fixture's `sourceArtifact.body` for non-verbatim chart text. Edited 4 fixtures:
 
 - **heldenmark-securechat.js** — removed bracketed observation about Brandon seeing it 4h+ later and the silent-failure-surface meta-comment. Body now reads as a single Secure Chat message.
-- **volkenmark-dme-pa.js** — stripped the workflow-discovery bracket and the "Workflow not in any nurse playbook here" line. Body is the verbatim Secure Chat message text only.
+- **halbrook-dme-pa.js** — stripped the workflow-discovery bracket and the "Workflow not in any nurse playbook here" line. Body is the verbatim Secure Chat message text only.
 - **kvalheim-coordination.js** — removed the Recent Patient Communication panel analysis. Body is the front-desk-typed routing note only.
 - **larvendel-denial-cascade.js** — replaced narrative cascade with a structured `messages` array (sender, role, timestamp, text per entry) modeling Epic Secure Chat rendering. 7 entries spanning 2026-04-21 through 2026-04-29. Stub `body: "Secure Chat thread — see messages below."` for fallback rendering. **Note for follow-up:** EncounterDetail will need a Secure-Chat thread renderer to consume `sourceArtifact.messages` instead of `body` — flagged for next sprint.
 
@@ -3103,7 +3103,7 @@ CursorGhost listens to `beat-start` (begin movement at `startTime`, arrive at `a
 - **`npm run build`** ✓ clean (after `rm -rf .next`). 26 encounter routes generated (was 24, +2 for Lockner + Crider). `/rn` 3.21 kB. `/encounter/[id]` 8.95 kB.
 - **Nav structure**: `/rn` shows the six Epic basket labels; no NOTIFY/REFILL/TRIAGE/ADVICE/INR/OTHER in any UI surface.
 - **Fixture distribution**: counts above add to 26.
-- **Heldenmark / Volkenmark DME / Larvendel**: source `body` verbatim; Larvendel has structured `messages` array.
+- **Heldenmark / Halbrook DME / Larvendel**: source `body` verbatim; Larvendel has structured `messages` array.
 - **Lockner / Crider**: registered + visible on dashboard.
 - **Borders**: NurseNote and MyChart panes have no left-border accent (verified earlier in this session).
 - **CursorGhost**: mounted in AppChrome.
@@ -3127,7 +3127,7 @@ CursorGhost listens to `beat-start` (begin movement at `startTime`, arrive at `a
 - `app/rn/page.js`
 - `components/{InboxBoard,EncounterDetail,TourMode,ActionBar,PatientCard,AppChrome,CursorGhost}.js`
 - `lib/tourScript.js`
-- `data/fixtures/encounters/{index,heldenmark-securechat,volkenmark-dme-pa,kvalheim-coordination,larvendel-denial-cascade,lockner-medcheckin,crider-inr}.js` plus tab-field updates on the other 22 fixtures
+- `data/fixtures/encounters/{index,heldenmark-securechat,halbrook-dme-pa,kvalheim-coordination,larvendel-denial-cascade,lockner-medcheckin,crider-inr}.js` plus tab-field updates on the other 22 fixtures
 
 ---
 
@@ -3319,7 +3319,7 @@ demo. This entry records the audit (Step 1) and the proposed replacement mapping
 
 **Patient names (29 distinct, 26 in fixtures + 3 mock-only):**
 Aldington, Besemer, Brexley, Hesperdale, Crider, Czeschin, Wendelfaer, Esselbach,
-Frazier, Volkenmark (2 fixtures), Halverson, Lockner, Kvalheim, Maundrell,
+Frazier, Halbrook (2 fixtures), Halverson, Lockner, Kvalheim, Maundrell,
 Norreys, Strathorne, Quennell, Ravensdale, Sellman, Quelthorne, Heldenmark, Underwell,
 Larvendel, Vrabel, Wexbury, Wood. Mock-only: Crestwood, Brindelhart, Marlowe.
 
@@ -3617,8 +3617,8 @@ Read-only audit of every issue surfaced in tonight's tour walkthrough. No files 
 | wendelfaer-pcp.js | Cassiel Lindqvist | 28F | resultsfu | 6 SYNTHESIS+HANDOFF | PCP referral |
 | esselbach-urgent.js | Maja Nascimento | 87F | resultsfu | 7 URGENT | BNP 1024 pre-op urgent |
 | frazier-handoff.js | Maximus Quiñones | 81M | resultsfu | 5 SYNTHESIS+CHOICE | BNP + Heart Logic Index |
-| volkenmark-dme-pa.js | Thessaly Karpinski | 72F | securechat | 10 COORDINATION | DME PA |
-| volkenmark-lab-review.js | Thessaly Karpinski | 72F | resultsfu | 1 SYNTHESIS only | Toprol-XL increase |
+| halbrook-dme-pa.js | Thessaly Karpinski | 72F | securechat | 10 COORDINATION | DME PA |
+| halbrook-lab-review.js | Thessaly Karpinski | 72F | resultsfu | 1 SYNTHESIS only | Toprol-XL increase |
 | lockner-medcheckin.js | Tessandra Rasmussen | 63F | patientcall | 11 ADMIN/check-in | (med check-in) |
 | kvalheim-coordination.js | Auberon Iwasaki | 66M | patientcall | 10 COORDINATION | (multi-task) |
 | maundrell-contradiction.js | Roderic Solberg | 74M | results | 8 CONTRADICTION | INR overdue / pt says stopped |
@@ -3645,18 +3645,18 @@ User spec from Prompt A vs current `tab` field:
 - **kvalheim-coordination (Iwasaki)** — `patientcall`, not in user's spec list (Lockner, Patton, Strathorne, Underwell). Patton not present in fixtures.
 - **pelc-va-rfs (Volkov)** — `patientcall`, not in user's spec list.
 - **quelthorne-async (Yamashita)** — `patientadvice`, but user's ADVICE list says Sturges + Forshey. Neither Sturges nor Forshey present in fixtures.
-- **ravensdale-cpap (Höglund)** — `securechat`, not in user's SECURE CHAT list (Heldenmark, Volkenmark DME, Larvendel).
+- **ravensdale-cpap (Höglund)** — `securechat`, not in user's SECURE CHAT list (Heldenmark, Halbrook DME, Larvendel).
 - **vrabel-referral (Hadjipateras)** — `securechat`, not in user's spec list.
 - **sellman-cpap-referral (Bellomo)** — `resultsfu`, not in user's spec list.
 
-All the spec-listed fixtures that *are* present (Aldington, Wood/Hartvigsen, Hesperdale/Petrosyan, Czeschin/Faroldi, Wendelfaer/Lindqvist, Esselbach/Nascimento, Frazier/Quiñones, Volkenmark lab review/Karpinski, Quennell/Skarsgård, Wexbury/Tikhonova, Brexley/Yamashiro, Lockner/Rasmussen, Strathorne/Dimopoulos, Underwell/Klausen, Heldenmark/Drozdov, Volkenmark DME/Karpinski, Larvendel/Adesanya) are in the correct basket already. Spec-listed names not found in fixtures: Patton, Sturges, Forshey, Reiner is present (filename) but renamed to Skarsgård.
+All the spec-listed fixtures that *are* present (Aldington, Wood/Hartvigsen, Hesperdale/Petrosyan, Czeschin/Faroldi, Wendelfaer/Lindqvist, Esselbach/Nascimento, Frazier/Quiñones, Halbrook lab review/Karpinski, Quennell/Skarsgård, Wexbury/Tikhonova, Brexley/Yamashiro, Lockner/Rasmussen, Strathorne/Dimopoulos, Underwell/Klausen, Heldenmark/Drozdov, Halbrook DME/Karpinski, Larvendel/Adesanya) are in the correct basket already. Spec-listed names not found in fixtures: Patton, Sturges, Forshey, Reiner is present (filename) but renamed to Skarsgård.
 
 ### C. Duplicate patient names
 
 | displayName | Files | Notes |
 |-------------|-------|-------|
 | **Coralie Skarsgård, 64F** | data/fixtures/encounters/reiner-multilab.js:22, data/fixtures/encounters/quennell-scope.js:24 | Both `tab: "resultsfu"`. Both 64F. Rename audit collapsed two distinct cases (Reiner-redux/Quennell scope) onto the same identity. data/mock-encounters/enc-012.json also references "Skarsgård, Coralie". |
-| Thessaly Karpinski, 72F | volkenmark-lab-review.js, volkenmark-dme-pa.js | Same patient, different basket — intentional (lab review in resultsfu, DME PA in securechat). Not a collision. |
+| Thessaly Karpinski, 72F | halbrook-lab-review.js, halbrook-dme-pa.js | Same patient, different basket — intentional (lab review in resultsfu, DME PA in securechat). Not a collision. |
 
 ### D. Encoding corruption (UTF-8 bytes decoded as Latin-1)
 
@@ -3835,7 +3835,7 @@ The "sparse narration" symptom — "Eighty-three. No MyChart." — is the **disp
 | data/fixtures/encounters/brexley-statin.js:125 | NURSE NOTE | `"[As drafted above]"` |
 | data/fixtures/encounters/brexley-statin.js:126 | MYCHART MESSAGE | `"[As drafted — corrected version after phiGuard regen]"` |
 | data/fixtures/encounters/hesperdale-crestor.js:131-132 | NURSE NOTE / MYCHART | `"[As drafted above]"` |
-| data/fixtures/encounters/volkenmark-dme-pa.js:70-71 | NURSE NOTE / MYCHART | `"[As drafted above]"` |
+| data/fixtures/encounters/halbrook-dme-pa.js:70-71 | NURSE NOTE / MYCHART | `"[As drafted above]"` |
 | data/fixtures/encounters/maundrell-contradiction.js:82 | MYCHART MESSAGE | `"[Held until provider confirms]"` (this one is intentional — it's the held-message UX) |
 | data/fixtures/encounters/norreys-transactional.js:101 | MYCHART MESSAGE | `"[As drafted above]"` |
 | data/fixtures/encounters/quennell-scope.js:75 | MYCHART MESSAGE | `"[As drafted above]"` |
@@ -5927,7 +5927,7 @@ Rebuild the EncounterDetail view into a four-panel card layout with conditional 
 
 `derivePanelContent(fixture)` walks the fixture's existing `actionScripts` for the final `pane-update` content per target, then falls back to `finalSignedState` fields for skeleton fixtures with empty actionScripts. `inferPanels(fixture)` returns the panel ID list from the derived content. `deriveSourceContent(fixture)` returns the verbatim Epic inbox body.
 
-This avoids duplicating clinical content into a new `panelContent` field on each fixture. The 16 skeleton fixtures (besemer-bnp, crider-inr, czeschin-bp, wendelfaer-pcp, esselbach-urgent, frazier-handoff, volkenmark-lab-review, lockner-medcheckin, kvalheim-coordination, pelc-va-rfs, strathorne-doe, reiner-multilab, sellman-cpap-referral, quelthorne-async, heldenmark-securechat, vrabel-referral) which previously animated nothing now surface their `finalSignedState` content statically through the new panels.
+This avoids duplicating clinical content into a new `panelContent` field on each fixture. The 16 skeleton fixtures (besemer-bnp, crider-inr, czeschin-bp, wendelfaer-pcp, esselbach-urgent, frazier-handoff, halbrook-lab-review, lockner-medcheckin, kvalheim-coordination, pelc-va-rfs, strathorne-doe, reiner-multilab, sellman-cpap-referral, quelthorne-async, heldenmark-securechat, vrabel-referral) which previously animated nothing now surface their `finalSignedState` content statically through the new panels.
 
 **EncounterDetail.js**
 
@@ -6091,9 +6091,9 @@ maundrell-contradiction.js: RN Note rewritten to quote the actual provider note 
 
 ### Fix 7 — Order Pad coverage audit
 
-Five fixtures gained an orderPad panel + structured panelContent.orderPad orders: volkenmark-lab-review (Toprol-XL bump + BP log), reiner-multilab (Hematology referral + Mg supplement + repeat labs), sellman-cpap-referral (CPAP DME + Sleep Med referral), frazier-handoff (BNP draw + Heart Logic device-nurse follow-up), kvalheim-coordination (Albuterol HFA refill).
+Five fixtures gained an orderPad panel + structured panelContent.orderPad orders: halbrook-lab-review (Toprol-XL bump + BP log), reiner-multilab (Hematology referral + Mg supplement + repeat labs), sellman-cpap-referral (CPAP DME + Sleep Med referral), frazier-handoff (BNP draw + Heart Logic device-nurse follow-up), kvalheim-coordination (Albuterol HFA refill).
 
-Confirmed no orders needed for: czeschin-bp, esselbach-urgent, volkenmark-dme-pa, vrabel-referral, wendelfaer-pcp, quelthorne-async, heldenmark-securechat, lockner-medcheckin.
+Confirmed no orders needed for: czeschin-bp, esselbach-urgent, halbrook-dme-pa, vrabel-referral, wendelfaer-pcp, quelthorne-async, heldenmark-securechat, lockner-medcheckin.
 
 ### Fix 8 — Patient-education MyChart messages (16 rewrites)
 
@@ -6101,9 +6101,9 @@ Every MyChart panel now follows the 5-part template: what changed/why, what to d
 
 Rewritten across animated fixtures (actionScripts pane-update content) and skeleton fixtures (finalSignedState.mychartMessage):
 
-whitfield-inr, aldington-tte, beasley-ep-referral, brexley-statin, hesperdale-crestor, norreys-transactional, quennell-scope, ravensdale-cpap, volkenmark-dme-pa, besemer-bnp, czeschin-bp, wendelfaer-pcp, frazier-handoff, quelthorne-async, vrabel-referral, heldenmark-securechat.
+whitfield-inr, aldington-tte, beasley-ep-referral, brexley-statin, hesperdale-crestor, norreys-transactional, quennell-scope, ravensdale-cpap, halbrook-dme-pa, besemer-bnp, czeschin-bp, wendelfaer-pcp, frazier-handoff, quelthorne-async, vrabel-referral, heldenmark-securechat.
 
-Already met the bar (no change): wood-lipid, larvendel-denial-cascade. Updated as part of Fix 6/7/10: maundrell-contradiction, volkenmark-lab-review, reiner-multilab, sellman-cpap-referral.
+Already met the bar (no change): wood-lipid, larvendel-denial-cascade. Updated as part of Fix 6/7/10: maundrell-contradiction, halbrook-lab-review, reiner-multilab, sellman-cpap-referral.
 
 ### Fix 9 — Triage rework
 
@@ -6152,7 +6152,7 @@ components/EncounterDetail.js, components/TriageEncounter.js, components/Referra
 
 ### Files modified (fixtures, 16)
 
-maundrell-contradiction, sellman-cpap-referral, volkenmark-lab-review, reiner-multilab, frazier-handoff, kvalheim-coordination, whitfield-inr, aldington-tte, beasley-ep-referral, brexley-statin, hesperdale-crestor, norreys-transactional, quennell-scope, ravensdale-cpap, volkenmark-dme-pa, besemer-bnp, czeschin-bp, wendelfaer-pcp, quelthorne-async, vrabel-referral, heldenmark-securechat.
+maundrell-contradiction, sellman-cpap-referral, halbrook-lab-review, reiner-multilab, frazier-handoff, kvalheim-coordination, whitfield-inr, aldington-tte, beasley-ep-referral, brexley-statin, hesperdale-crestor, norreys-transactional, quennell-scope, ravensdale-cpap, halbrook-dme-pa, besemer-bnp, czeschin-bp, wendelfaer-pcp, quelthorne-async, vrabel-referral, heldenmark-securechat.
 
 ### Off-limits
 
@@ -6287,12 +6287,12 @@ The legacy tour walked the old ActionBar (Generate → typing animations → Aut
 
 7 cards, one per dashboard inbox category:
 1. Whitfield (RESULTS · Coumadin) — RN Note + MyChart
-2. Kevin Halbrook (RESULTS F/U · med change + orders) — fixture `volkenmark-lab-review` — RN Note + MyChart + Order Pad
+2. Kevin Halbrook (RESULTS F/U · med change + orders) — fixture `halbrook-lab-review` — RN Note + MyChart + Order Pad
 3. Kevin Morris (RESULTS F/U · referral packet) — fixture `sellman-cpap-referral` — RN Note + MyChart + Order Pad + Referral Packet
 4. Daniel Stewart (RX REQUEST · refill) — fixture `norreys-transactional` — RN Note
 5. Eleanor Greene (PATIENT CALL · phone) — fixture `wexbury-phone` — Call Script + RN Note
 6. Barbara Reed (PATIENT ADVICE REQUEST · triage) — fixture `underwell-full-lifecycle` — assessment + Generate SBAR + Forward
-7. Volkenmark DME (SECURE CHAT) — fixture `volkenmark-dme-pa` — RN Note
+7. Halbrook DME (SECURE CHAT) — fixture `halbrook-dme-pa` — RN Note
 
 Single tier — Quick/Deep buttons collapsed to one **Take the tour** button (per spec: "Drop the Quick/Deep distinction — one focused tour at the natural pace"). Each bubble carries only `quickVoiceText`; `estimateTourMinutes` walks `walkBubbles` which now also yields the new pre-action `spotlight` field. Old script archived at `lib/tourScript.preMP2-backup.js`.
 
@@ -6406,9 +6406,9 @@ Already addressed in Fix 2a (default framing changed from "wide" to "top" with 8
 
 **Diagnosis:** Card 4 (Norreys) was the smoking gun. Fixture declared `panels: ["rnNote", "myChart", "orderPad"]` but the tour script only walks `panel:rnNote.done`. After RN Note collapsed, completedCount=1 vs totalActionPanels=3 → card-completion effect never fired `handleAuthorize` → no `flown-off` event → TourMode `await waitForEvent("flown-off")` hung indefinitely.
 
-**Fix:** Reduce fixture panel lists to match the new tour's intent. Norreys → `["rnNote"]`. Volkenmark DME → `["rnNote"]` (Card 7 also walks just RN Note; secure chat reply IS the note posted back). Both fixtures got matching `panelContent` overrides where the actionScripts didn't already populate the panel via `derivePanelContent`.
+**Fix:** Reduce fixture panel lists to match the new tour's intent. Norreys → `["rnNote"]`. Halbrook DME → `["rnNote"]` (Card 7 also walks just RN Note; secure chat reply IS the note posted back). Both fixtures got matching `panelContent` overrides where the actionScripts didn't already populate the panel via `derivePanelContent`.
 
-Files: [data/fixtures/encounters/norreys-transactional.js](data/fixtures/encounters/norreys-transactional.js), [data/fixtures/encounters/volkenmark-dme-pa.js](data/fixtures/encounters/volkenmark-dme-pa.js).
+Files: [data/fixtures/encounters/norreys-transactional.js](data/fixtures/encounters/norreys-transactional.js), [data/fixtures/encounters/halbrook-dme-pa.js](data/fixtures/encounters/halbrook-dme-pa.js).
 
 ### Bug 4: RN Note empty on Card 4
 
@@ -6510,7 +6510,7 @@ The Fix 2a sort order put pane-fraction first; "top" had 0 pane-overlap so it wo
 **Fix:** Treat large `clipArea` (>5000 px²) as effective pane-overlap by adding a +1.0 penalty to the candidate's `paneFraction`. A clipped candidate now competes with covered candidates instead of always winning, so the picker prefers an in-viewport position even when it has minor pane overlap. ([components/SpotlightOverlay.js:153-161](components/SpotlightOverlay.js:153))
 
 ### Bug 5: Card 7 "the reply" stutter
-Regenerated `mp2-volkenmark-rnnote.mp3`. Same source text — TTS-1 occasionally stutters on idiosyncratic phrasing; a clean regeneration usually resolves it. Cost: $0.003.
+Regenerated `mp2-halbrook-rnnote.mp3`. Same source text — TTS-1 occasionally stutters on idiosyncratic phrasing; a clean regeneration usually resolves it. Cost: $0.003.
 
 ### Verification
 
@@ -6526,7 +6526,7 @@ Shrunk `NarratorCorner` HUD by ~30%: `w-[340px]` → `w-[260px]`, `p-4` → `p-3
 
 ### A2: Card 7 RN Note clinical text
 
-Replaced the Card 7 (Volkenmark DME) RN Note content. Removed the line `"Playbook captured in Workflow Playbook Library — auto-attaches to next dual-eligible DME PA card for any nurse."` — that's Kairos system reasoning that should never appear in a clinical note headed for Epic. New text reads as standard nursing documentation: ICD-10, AHI, NPI, MO HealthNet PA call, approval routed to Apria, patient notified via MyChart. No Kairos internals, no playbook references. ([data/fixtures/encounters/volkenmark-dme-pa.js:61](data/fixtures/encounters/volkenmark-dme-pa.js:61))
+Replaced the Card 7 (Halbrook DME) RN Note content. Removed the line `"Playbook captured in Workflow Playbook Library — auto-attaches to next dual-eligible DME PA card for any nurse."` — that's Kairos system reasoning that should never appear in a clinical note headed for Epic. New text reads as standard nursing documentation: ICD-10, AHI, NPI, MO HealthNet PA call, approval routed to Apria, patient notified via MyChart. No Kairos internals, no playbook references. ([data/fixtures/encounters/halbrook-dme-pa.js:61](data/fixtures/encounters/halbrook-dme-pa.js:61))
 
 ### Part B: Opening bookend (~20s)
 
@@ -8616,7 +8616,7 @@ Two-phase scrub initiated. **Phase 1** (this commit) — clean HEAD of all real 
 ### Rule applied
 > No real surnames from anyone in Brandon's work life — providers, staff, patients, anyone — appear in the codebase. Brandon Sterne is the only real name allowed.
 
-The prior 4/29 and 4/30 mapping docs were treated as untrustworthy for distinguishing real vs. fake — any surname with non-trivial collision risk was replaced with a clearly-invented compound surname (Volkenmark, Strathorne, Hesperdale, Kvalheim, etc.). New mapping committed to `.private/.name-scrub-mapping-2026-05-17.md` (local-only, gitignored).
+The prior 4/29 and 4/30 mapping docs were treated as untrustworthy for distinguishing real vs. fake — any surname with non-trivial collision risk was replaced with a clearly-invented compound surname (Halbrook, Strathorne, Hesperdale, Kvalheim, etc.). New mapping committed to `.private/.name-scrub-mapping-2026-05-17.md` (local-only, gitignored).
 
 ### Replacements applied
 - Real names per explicit Phase 1 list — Riverside Pharmacy, Velkander, Aldermane, Sandriden, Castelvar, Holvenmark (real instances), Tysander, Devin, Renata Beaucharn, Linwarth, Rashid/Vorhelden, Konstantinos Manolinder, Aaron Pendrelle, Beckweldon, Brennelmark, Espelheim, Carwelden, Quintessar, Lindmaer, Halsendreth, Camberwell, Sandholm, Marley, Larvendrel, Tannenbaum, Roland P Hardenkvist.
@@ -8626,8 +8626,8 @@ The prior 4/29 and 4/30 mapping docs were treated as untrustworthy for distingui
 - `Pendrelle` → `Pendrelle` across all fixtures (PA clinician collision with patient `Pendrelle→Underwell` mapping).
 
 ### File renames
-- `data/fixtures/encounters/halbrook-dme-pa.js` → `volkenmark-dme-pa.js`
-- `data/fixtures/encounters/halbrook-lab-review.js` → `volkenmark-lab-review.js`
+- `data/fixtures/encounters/halbrook-dme-pa.js` → `halbrook-dme-pa.js`
+- `data/fixtures/encounters/halbrook-lab-review.js` → `halbrook-lab-review.js`
 - `data/fixtures/encounters/strathorne-doe.js` → `strathorne-doe.js`
 - `data/fixtures/encounters/hesperdale-crestor.js` → `hesperdale-crestor.js`
 - `data/fixtures/encounters/wendelfaer-pcp.js` → `wendelfaer-pcp.js`
@@ -8637,14 +8637,14 @@ The prior 4/29 and 4/30 mapping docs were treated as untrustworthy for distingui
 - `data/fixtures/encounters/larvendel-denial-cascade.js` → `larvendel-denial-cascade.js`
 - `_retired/data/patients/tysander.json` → `tysander.json`
 - `_retired/data/preVisitTasks/cosgrove_001.json` → `tysander_001.json`
-- `public/tour-audio/mp2-halbrook-*.mp3` → `mp2-volkenmark-*.mp3` (3 files)
+- `public/tour-audio/mp2-halbrook-*.mp3` → `mp2-halbrook-*.mp3` (3 files)
 - `docs/KAIROS-SESSION-2026-04-29-AFTERNOON.md` → `.private/KAIROS-SESSION-2026-04-29-AFTERNOON.md`
 
 ### docs/log.md rename-mapping tables extracted to .private/
 The four PII-heavy historical sections of `docs/log.md` (PHI Sweep Audit pre-rename inventory, Patient name rename proposal pass 2, Patient/provider/clinic rename mapping LOCKED, PHI rename mapping execution Phases 1-3-4) were extracted to four files under `.private/log-extract-*.md` and replaced in-log with brief redaction notices. The earlier mapping content was a complete deanonymization key — a single file pairing every real name with its replacement.
 
 ### Audio caveat — Phase 1.5 follow-up
-Three tour-audio MP3 files renamed from `mp2-halbrook-*` to `mp2-volkenmark-*`. The **spoken content** in those MP3s still says "Halbrook" out loud. Audio re-recording is a Phase 1.5 follow-up — text/code identifiers are scrubbed but the audio mismatch will be audible until tts re-generation.
+Three tour-audio MP3 files renamed from `mp2-halbrook-*` to `mp2-halbrook-*`. The **spoken content** in those MP3s still says "Halbrook" out loud. Audio re-recording is a Phase 1.5 follow-up — text/code identifiers are scrubbed but the audio mismatch will be audible until tts re-generation.
 
 ### Untouched and surfaced for Brandon
 The following items contain plausibly-collidable real surnames but were not scrubbed in this commit. Brandon's call whether to extend:
@@ -8658,4 +8658,4 @@ The following items contain plausibly-collidable real surnames but were not scru
 
 ### Still open (waiting for Brandon)
 - Phase 2 (git history rewrite via git-filter-repo) — **NOT** started, awaiting explicit go-ahead.
-- Phase 1.5 follow-ups: tour-audio re-recording for Volkenmark cards; cardiology providerSchedule cascade decision; phiGuard allowlist review.
+- Phase 1.5 follow-ups: tour-audio re-recording for Halbrook cards; cardiology providerSchedule cascade decision; phiGuard allowlist review.

@@ -1,10 +1,10 @@
-// Pattern 1 — SYNTHESIS only (skeleton; ADDENDUM Howard reference)
+// Pattern 1 — SYNTHESIS only (skeleton; ADDENDUM Halbrook reference)
 // Source: docs/KAIROS-CONTEXT-ADDENDUM-2026-04-28.md Pattern 1 examples
-// Different clinical issue than volkenmark-dme-pa (same patient, different day).
+// Different clinical issue than halbrook-dme-pa (same patient, different day).
 
 const fixture = {
-  id: "volkenmark-lab-review",
-  slug: "volkenmark-lab-review",
+  id: "halbrook-lab-review",
+  slug: "halbrook-lab-review",
   patternId: 1,
   patternName: "SYNTHESIS only",
   tab: "resultsfu",
@@ -22,7 +22,7 @@ const fixture = {
     name: "Halbrook, Kevin",
     displayName: "Kevin Halbrook",
     age: 72,
-    sex: "F",
+    sex: "M",
     dob: "1954-02-19",
     mrn: "61204911",
     proxyName: null,

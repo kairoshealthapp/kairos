@@ -2,8 +2,8 @@
 // Source: docs/KAIROS-SESSION-2026-04-29-AFTERNOON.md CASE 16
 
 const fixture = {
-  id: "volkenmark-dme-pa",
-  slug: "volkenmark-dme-pa",
+  id: "halbrook-dme-pa",
+  slug: "halbrook-dme-pa",
   patternId: 10,
   patternName: "COORDINATION",
   tab: "securechat",
@@ -21,7 +21,7 @@ const fixture = {
     name: "Halbrook, Kevin",
     displayName: "Kevin Halbrook",
     age: 72,
-    sex: "F",
+    sex: "M",
     dob: "1954-02-19",
     mrn: "61204911",
     proxyName: null,
