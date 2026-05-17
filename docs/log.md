@@ -8773,3 +8773,33 @@ Parallel to Session 53's engine work. Replaced the dropdown-per-clinic surface w
 
 ### Not committed / not pushed
 docs/log.md update + this entry will land as a single docs commit. No push.
+
+## 2026-05-17 — Session C: /executive route deleted + INDEX.md broken-link fix
+
+### Scope
+Two-part cleanup. The Executive tile was removed from the landing role-picker earlier in the day (commit `fc3f61a` window of work); this session removed the /executive route entirely from the codebase, then patched a stale `docs/INDEX.md` entry pointing at a session doc that does not exist in the repo.
+
+### /executive removal
+- **Deleted**: `app/executive/page.js` (full long-scroll editorial readout, ~640 lines).
+- **Trimmed** `app/globals.css`: removed the entire `.kairos-executive` scoped block (lines 836–1191, ~356 lines of CSS that no longer has a mount point). Also updated the stale Phase-3.7 landing-page comment from "five-tile orbit pulse" → "four-tile orbit pulse" and removed Executive from the clockwise tile-order annotation.
+- **Pruned** `components/AppChrome.js`: the chrome short-circuit was `pathname === "/" || pathname === "/executive"`; now just `pathname === "/"` since /executive no longer needs chromeless rendering (because it no longer exists).
+- **Pruned** `app/page.js`: stale comment line ("/executive is still reachable by direct URL but no longer surfaced on the landing page") removed. The role-picker tile entry itself was removed in an earlier change.
+
+### INDEX.md fix
+- Removed the entry `- [KAIROS-SESSION-2026-04-29-AFTERNOON.md](…) — Snapshot of the 2026-04-29 afternoon working session.` The target file does not exist in the repo; preference was to drop the link rather than fabricate a placeholder.
+
+### Verification
+- `npm run build`: clean. Route listing confirms /executive is no longer in the build output. `/`, `/rn`, `/provider`, `/scribe`, `/frontdesk` all present.
+- Localhost dev server probed: `/` → 200 (homepage HTML contains 0 occurrences of "Executive", 4 tiles total), `/rn` → 200, `/provider` → 200, `/executive` → 404.
+- `docs/INDEX.md` grep for `KAIROS-SESSION-2026-04-29-AFTERNOON` → 0 hits.
+- Chrome computer-use handoff: T1 (tile inventory: Nurse / Provider / Scribe / Front Desk, no Executive), T2 (Nurse + Provider tile navigation), T3 (/executive returns 404). Brandon reported PASS.
+
+### Commits
+- `b250aab` remove /executive page and all references
+- `d7288fa` fix INDEX.md broken link to nonexistent session doc
+
+Both pushed to `origin/main`. Vercel production rebuild pending green confirmation.
+
+### Boundaries respected
+- Historical references to `/executive` in `docs/log.md` (session entries from April/early May) are left untouched — those are history, not navigation.
+- No real names introduced.
