@@ -12,11 +12,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import useTourActive from "@/lib/useTourActive";
-import { gdmtHfrefRule, GDMT_PILLARS } from "@/lib/clinical-engine";
-import trenthamFixture from "@/lib/clinical-engine/fixtures/fixture-02-tartrate-trap.json";
-
-const TRENTHAM_BRIEFING_ID = "card-cardiac-arrest";
-const TRENTHAM_GDMT_FINDINGS = gdmtHfrefRule(trenthamFixture);
+import buildBundle from "../lib/buildBundle";
+import runAllRules from "../lib/runAllRules";
 
 const SECTION_LABELS = {
   "01": "01 · WHO THIS IS",
@@ -528,35 +525,41 @@ function Section12Body({ briefing }) {
   );
 }
 
-function Section09GdmtFindings({ findings }) {
+function Section09Findings({ findings, fallback }) {
   if (!findings || findings.length === 0) {
-    return <p>Full GDMT — no gaps identified.</p>;
+    if (fallback) return <p>{fallback}</p>;
+    return <p className="text-bone-muted italic">No deterministic-rule findings on this chart.</p>;
   }
   return (
     <ul className="space-y-2">
       {findings.map((f, idx) => {
-        const isInfo = f.status === "contraindicated";
+        const isInfo = f.status === "contraindicated" || f.severity === "info";
         const toneBox = isInfo
           ? "border border-teal/60 bg-teal/10"
           : "border border-amber/50 bg-amber/10";
         const toneLabel = isInfo ? "text-teal" : "text-amber";
         const toneLabelMuted = isInfo ? "text-teal/80" : "text-amber/80";
-        const pillarName =
-          (GDMT_PILLARS[f.subcategory] && GDMT_PILLARS[f.subcategory].displayName) ||
-          f.subcategory ||
-          "GDMT pillar";
+        const ruleLabel = f.subcategory || f.ruleId || "rule";
         return (
           <li
-            key={idx}
+            key={f.ruleId + ":" + idx}
             data-finding-status={f.status}
             data-finding-severity={f.severity}
             className={`rounded ${toneBox} px-3 py-2`}
           >
             <div className="flex items-center justify-between text-[11px] uppercase tracking-wider mb-1">
-              <span className={toneLabel}>{pillarName}</span>
-              <span className={toneLabelMuted}>{f.status.replace(/-/g, " ")}</span>
+              <span className={toneLabel}>{ruleLabel}</span>
+              <span className={toneLabelMuted}>{String(f.status).replace(/-/g, " ")}</span>
             </div>
             <p className="text-[13px] leading-snug text-bone">{f.summary}</p>
+            {f.recommendation && (
+              <p className="text-[12px] leading-snug text-bone-muted mt-1.5">{f.recommendation}</p>
+            )}
+            {f.ruleName && (
+              <p className="text-[10.5px] leading-snug text-bone-muted/80 mt-1.5 italic">
+                Source: {f.ruleName}
+              </p>
+            )}
           </li>
         );
       })}
@@ -564,10 +567,9 @@ function Section09GdmtFindings({ findings }) {
   );
 }
 
-function BriefingBody({ briefing, briefingId }) {
+function BriefingBody({ briefing, briefingId, findings }) {
   if (!briefing) return null;
   const showHospital = briefing.kind === "postHospital";
-  const isTrentham = briefingId === TRENTHAM_BRIEFING_ID;
   return (
     <>
       <Section sectionId="01">
@@ -601,11 +603,7 @@ function BriefingBody({ briefing, briefingId }) {
         <Para value={briefing.allergies} />
       </Section>
       <Section sectionId="09">
-        {isTrentham ? (
-          <Section09GdmtFindings findings={TRENTHAM_GDMT_FINDINGS} />
-        ) : (
-          <Para value={briefing.patternsKairosSurfaces} />
-        )}
+        <Section09Findings findings={findings} fallback={briefing.patternsKairosSurfaces} />
       </Section>
       <Section sectionId="10">
         <Para value={briefing.riskContext} />
@@ -626,6 +624,7 @@ function BriefingBody({ briefing, briefingId }) {
 
 export default function BriefingDrawer({ open, visit, briefing, briefingId, specialty, onClose }) {
   const closeBtnRef = useRef(null);
+  const findings = visit ? runAllRules(buildBundle(visit)) : [];
 
   useEffect(() => {
     if (!open) return undefined;
@@ -704,7 +703,7 @@ export default function BriefingDrawer({ open, visit, briefing, briefingId, spec
           <ChartChat briefingId={briefingId} specialty={specialty} />
 
           {briefing ? (
-            <BriefingBody briefing={briefing} briefingId={briefingId} />
+            <BriefingBody briefing={briefing} briefingId={briefingId} findings={findings} />
           ) : (
             <div className="text-[13px] text-bone-muted italic">
               No briefing available for this visit.
