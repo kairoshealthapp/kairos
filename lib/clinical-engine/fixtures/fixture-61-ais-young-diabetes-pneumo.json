@@ -1,0 +1,20 @@
+{
+  "patient": {
+    "id": "fixture-61",
+    "name": "Test Patient 61 — 42yo F T2DM, no vaccines (pneumo qualifier)",
+    "dob": "1983-07-14",
+    "sex": "female"
+  },
+  "conditions": [
+    {
+      "code": "E11.9",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Type 2 diabetes mellitus",
+      "status": "active",
+      "onsetDate": "2020-05-01"
+    }
+  ],
+  "medications": [],
+  "observations": [],
+  "allergies": []
+}

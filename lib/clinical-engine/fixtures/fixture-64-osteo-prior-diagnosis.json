@@ -1,0 +1,20 @@
+{
+  "patient": {
+    "id": "fixture-64",
+    "name": "Test Patient 64 — 72yo F, known osteoporosis M81.0 (suppression)",
+    "dob": "1953-02-14",
+    "sex": "female"
+  },
+  "conditions": [
+    {
+      "code": "M81.0",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Age-related osteoporosis without current pathological fracture",
+      "status": "active",
+      "onsetDate": "2019-11-18"
+    }
+  ],
+  "medications": [],
+  "observations": [],
+  "allergies": []
+}

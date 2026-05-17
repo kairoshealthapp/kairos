@@ -1,0 +1,12 @@
+{
+  "patient": {
+    "id": "fixture-65",
+    "name": "Test Patient 65 — 35yo M, no PHQ-2 in last 12 months",
+    "dob": "1990-08-14",
+    "sex": "male"
+  },
+  "conditions": [],
+  "medications": [],
+  "observations": [],
+  "allergies": []
+}

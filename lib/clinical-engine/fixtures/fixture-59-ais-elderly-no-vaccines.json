@@ -1,0 +1,12 @@
+{
+  "patient": {
+    "id": "fixture-59",
+    "name": "Test Patient 59 — 72yo F, no vaccines on file",
+    "dob": "1953-04-08",
+    "sex": "female"
+  },
+  "conditions": [],
+  "medications": [],
+  "observations": [],
+  "allergies": []
+}

@@ -1,0 +1,12 @@
+{
+  "patient": {
+    "id": "fixture-62",
+    "name": "Test Patient 62 — 68yo F, no DEXA on file",
+    "dob": "1957-05-23",
+    "sex": "female"
+  },
+  "conditions": [],
+  "medications": [],
+  "observations": [],
+  "allergies": []
+}

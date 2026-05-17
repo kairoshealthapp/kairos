@@ -1,0 +1,19 @@
+{
+  "patient": {
+    "id": "fixture-63",
+    "name": "Test Patient 63 — 70yo F, DEXA 3 years ago",
+    "dob": "1955-09-19",
+    "sex": "female"
+  },
+  "conditions": [],
+  "medications": [],
+  "observations": [
+    {
+      "loincCode": "38269-7",
+      "display": "DXA Bone density study",
+      "effectiveDate": "2023-04-10",
+      "category": "imaging"
+    }
+  ],
+  "allergies": []
+}

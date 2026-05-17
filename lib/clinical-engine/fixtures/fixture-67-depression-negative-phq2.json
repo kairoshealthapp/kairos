@@ -1,0 +1,21 @@
+{
+  "patient": {
+    "id": "fixture-67",
+    "name": "Test Patient 67 — 52yo M, PHQ-2 score 1 (negative) — no gap",
+    "dob": "1973-06-20",
+    "sex": "male"
+  },
+  "conditions": [],
+  "medications": [],
+  "observations": [
+    {
+      "loincCode": "55758-7",
+      "display": "Patient Health Questionnaire 2 item total score",
+      "value": 1,
+      "unit": "{score}",
+      "effectiveDate": "2026-03-04",
+      "category": "survey"
+    }
+  ],
+  "allergies": []
+}

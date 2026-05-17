@@ -1,0 +1,37 @@
+{
+  "patient": {
+    "id": "fixture-58",
+    "name": "Test Patient 58 — 64yo M CKD3, no HTN, normal UACR — no gap",
+    "dob": "1961-12-30",
+    "sex": "male"
+  },
+  "conditions": [
+    {
+      "code": "N18.3",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "CKD stage 3",
+      "status": "active",
+      "onsetDate": "2023-01-08"
+    }
+  ],
+  "medications": [],
+  "observations": [
+    {
+      "loincCode": "33914-3",
+      "display": "eGFR",
+      "value": 45,
+      "unit": "mL/min/{1.73_m2}",
+      "effectiveDate": "2026-04-22",
+      "category": "laboratory"
+    },
+    {
+      "loincCode": "9318-7",
+      "display": "UACR",
+      "value": 12,
+      "unit": "mg/g",
+      "effectiveDate": "2026-04-22",
+      "category": "laboratory"
+    }
+  ],
+  "allergies": []
+}

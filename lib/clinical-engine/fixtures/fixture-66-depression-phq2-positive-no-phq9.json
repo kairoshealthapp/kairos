@@ -1,0 +1,21 @@
+{
+  "patient": {
+    "id": "fixture-66",
+    "name": "Test Patient 66 — 44yo F, PHQ-2 score 4 (positive), no PHQ-9",
+    "dob": "1981-12-02",
+    "sex": "female"
+  },
+  "conditions": [],
+  "medications": [],
+  "observations": [
+    {
+      "loincCode": "55758-7",
+      "display": "Patient Health Questionnaire 2 item total score",
+      "value": 4,
+      "unit": "{score}",
+      "effectiveDate": "2026-02-19",
+      "category": "survey"
+    }
+  ],
+  "allergies": []
+}

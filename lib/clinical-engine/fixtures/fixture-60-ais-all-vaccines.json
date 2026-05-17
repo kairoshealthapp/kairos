@@ -1,0 +1,18 @@
+{
+  "patient": {
+    "id": "fixture-60",
+    "name": "Test Patient 60 — 70yo M, fully vaccinated",
+    "dob": "1955-09-11",
+    "sex": "male"
+  },
+  "conditions": [],
+  "medications": [],
+  "observations": [
+    { "loincCode": "150", "display": "Influenza, injectable, quadrivalent (CVX 150)", "effectiveDate": "2025-10-12", "category": "immunization" },
+    { "loincCode": "115", "display": "Tdap (CVX 115)", "effectiveDate": "2021-06-04", "category": "immunization" },
+    { "loincCode": "216", "display": "PCV20 (CVX 216)", "effectiveDate": "2022-01-18", "category": "immunization" },
+    { "loincCode": "187", "display": "Zoster recombinant Shingrix (CVX 187)", "effectiveDate": "2020-08-22", "category": "immunization" },
+    { "loincCode": "302", "display": "COVID-19 2025-2026 formulation (CVX 302)", "effectiveDate": "2025-10-18", "category": "immunization" }
+  ],
+  "allergies": []
+}

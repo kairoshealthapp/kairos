@@ -1,0 +1,46 @@
+{
+  "patient": {
+    "id": "fixture-56",
+    "name": "Test Patient 56 — 68yo M CKD3 + HTN, on amlodipine, no ACEi/ARB",
+    "dob": "1957-05-23",
+    "sex": "male"
+  },
+  "conditions": [
+    {
+      "code": "N18.3",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Chronic kidney disease, stage 3 (moderate)",
+      "status": "active",
+      "onsetDate": "2020-11-12"
+    },
+    {
+      "code": "I10",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Essential hypertension",
+      "status": "active",
+      "onsetDate": "2010-06-15"
+    }
+  ],
+  "medications": [
+    {
+      "rxnormCode": "38454",
+      "name": "amlodipine 10 MG Oral Tablet",
+      "genericName": "amlodipine",
+      "dose": "10 mg once daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2020-11-15"
+    }
+  ],
+  "observations": [
+    {
+      "loincCode": "33914-3",
+      "display": "Glomerular filtration rate/1.73 sq M predicted",
+      "value": 42,
+      "unit": "mL/min/{1.73_m2}",
+      "effectiveDate": "2026-04-01",
+      "category": "laboratory"
+    }
+  ],
+  "allergies": []
+}

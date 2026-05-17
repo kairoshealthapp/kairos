@@ -1,0 +1,47 @@
+{
+  "patient": {
+    "id": "fixture-57",
+    "name": "Test Patient 57 — 60yo F CKD2 + UACR 85, on lisinopril",
+    "dob": "1965-08-19",
+    "sex": "female"
+  },
+  "conditions": [
+    {
+      "code": "N18.2",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Chronic kidney disease, stage 2 (mild)",
+      "status": "active",
+      "onsetDate": "2022-04-08"
+    }
+  ],
+  "medications": [
+    {
+      "rxnormCode": "29046",
+      "name": "lisinopril 20 MG Oral Tablet",
+      "genericName": "lisinopril",
+      "dose": "20 mg once daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2022-04-10"
+    }
+  ],
+  "observations": [
+    {
+      "loincCode": "33914-3",
+      "display": "Glomerular filtration rate/1.73 sq M predicted",
+      "value": 75,
+      "unit": "mL/min/{1.73_m2}",
+      "effectiveDate": "2026-03-12",
+      "category": "laboratory"
+    },
+    {
+      "loincCode": "9318-7",
+      "display": "Albumin/Creatinine [Mass Ratio] in Urine",
+      "value": 85,
+      "unit": "mg/g",
+      "effectiveDate": "2026-03-12",
+      "category": "laboratory"
+    }
+  ],
+  "allergies": []
+}
