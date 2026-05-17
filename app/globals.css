@@ -588,7 +588,7 @@ details[open] > summary .drawer-chev { transform: rotate(90deg); }
 
 .kl-tiles {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   align-content: center;
 }
@@ -715,18 +715,15 @@ details[open] > summary .drawer-chev { transform: rotate(90deg); }
 /* responsive ───────────────────────────────────────── */
 @media (max-width: 1023px) and (min-width: 768px) {
   .kl-tiles {
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 12px;
   }
   .kl-tile {
     aspect-ratio: auto;
     min-height: 210px;
-    grid-column: span 2;
     max-height: none;
     padding: 20px 22px 18px;
   }
-  .kl-tile:nth-child(4) { grid-column: 2 / span 2; }
-  .kl-tile:nth-child(5) { grid-column: 4 / span 2; }
   .kl-tile-role { font-size: 24px; }
   .kl-tiles-section {
     padding-top: 48px;
