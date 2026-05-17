@@ -39,11 +39,11 @@ const REPO_URL = "https://github.com/kairoshealthapp/kairos";
 
 // Repo-verified proof points — these must match README.md exactly.
 const PROOF = [
-  { num: "11", label: "deterministic rules" },
+  { num: "23", label: "deterministic rules" },
   { num: "4", label: "clinical areas" },
-  { num: "431", label: "unit tests" },
-  { num: "6", label: "guideline sources" },
-  { num: "16", label: "ADRs" },
+  { num: "1508", label: "unit tests" },
+  { num: "9", label: "guideline sources" },
+  { num: "28", label: "ADRs" },
 ];
 
 const TILES = [
