@@ -8904,3 +8904,23 @@ All three pushed to `origin/main`. Vercel production build on HEAD `9686605` (de
 - No engine/rule logic touched. Counts audited from current state, not invented.
 - No real names introduced.
 - Audio re-record for Halbrook tour MP3s remains a Phase 1.5 follow-up (Session D carry-over).
+
+## 2026-05-17 — Session F: Apache 2.0 LICENSE added
+
+### Scope
+Repo had no license file. Added the official Apache License 2.0 at the repo root and a brief License section to the README pointing at it.
+
+### Changes
+- `LICENSE` (new) — verbatim official text from `https://www.apache.org/licenses/LICENSE-2.0.txt` (202 lines), with a trailing copyright line:
+  > Copyright 2026 Brandon Sterne
+- `README.md` — appended a `## License` section after the Status & disclosure block, linking to `LICENSE`.
+
+No code touched. No engine, rule, or surface changes.
+
+### Verification
+- Vercel production build on HEAD `50c1c56` (deployment `dpl_Bosc8yFZ1KFrQNWs5M1i7GTCsGwA`): READY in ~25s. License-only push, as expected — no route or bundle change.
+
+### Commit
+- `50c1c56` add Apache 2.0 LICENSE
+
+Pushed to `origin/main`.
