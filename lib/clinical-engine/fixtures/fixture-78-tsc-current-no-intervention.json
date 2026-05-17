@@ -1,0 +1,19 @@
+{
+  "patient": {
+    "id": "fixture-78",
+    "name": "Test Patient 78 — 52yo F current smoker, no counseling, no pharmacotherapy",
+    "dob": "1973-08-30",
+    "sex": "female"
+  },
+  "conditions": [],
+  "medications": [],
+  "observations": [
+    {
+      "loincCode": "72166-2",
+      "display": "Current some day smoker",
+      "effectiveDate": "2026-02-10",
+      "category": "social-history"
+    }
+  ],
+  "allergies": []
+}

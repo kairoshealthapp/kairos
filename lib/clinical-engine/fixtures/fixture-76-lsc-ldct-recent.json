@@ -1,0 +1,32 @@
+{
+  "patient": {
+    "id": "fixture-76",
+    "name": "Test Patient 76 — 65yo M current smoker 40 pack-years, LDCT 6 months ago",
+    "dob": "1960-11-08",
+    "sex": "male"
+  },
+  "conditions": [],
+  "medications": [],
+  "observations": [
+    {
+      "loincCode": "72166-2",
+      "display": "Current every day smoker",
+      "effectiveDate": "2026-03-20",
+      "category": "social-history"
+    },
+    {
+      "loincCode": "88029-4",
+      "display": "Pack years",
+      "value": 40,
+      "unit": "{pack-year}",
+      "effectiveDate": "2026-03-20",
+      "category": "social-history"
+    },
+    {
+      "display": "LDCT chest, lung cancer screening (CPT 71271) — negative",
+      "effectiveDate": "2025-11-22",
+      "category": "imaging"
+    }
+  ],
+  "allergies": []
+}

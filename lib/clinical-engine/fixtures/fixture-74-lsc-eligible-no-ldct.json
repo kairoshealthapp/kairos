@@ -1,0 +1,27 @@
+{
+  "patient": {
+    "id": "fixture-74",
+    "name": "Test Patient 74 — 60yo M current smoker 30 pack-years, no LDCT",
+    "dob": "1965-04-19",
+    "sex": "male"
+  },
+  "conditions": [],
+  "medications": [],
+  "observations": [
+    {
+      "loincCode": "72166-2",
+      "display": "Current every day smoker",
+      "effectiveDate": "2026-01-12",
+      "category": "social-history"
+    },
+    {
+      "loincCode": "88029-4",
+      "display": "Pack years",
+      "value": 30,
+      "unit": "{pack-year}",
+      "effectiveDate": "2026-01-12",
+      "category": "social-history"
+    }
+  ],
+  "allergies": []
+}

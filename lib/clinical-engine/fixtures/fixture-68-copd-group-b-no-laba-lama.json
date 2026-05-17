@@ -1,0 +1,64 @@
+{
+  "patient": {
+    "id": "fixture-68",
+    "name": "Test Patient 68 — 67yo M COPD, mMRC 3, no exacerbations, on tiotropium only (Group B gap)",
+    "dob": "1958-11-15",
+    "sex": "male"
+  },
+  "conditions": [
+    {
+      "code": "J44.9",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Chronic obstructive pulmonary disease, unspecified",
+      "status": "active",
+      "onsetDate": "2018-03-22"
+    }
+  ],
+  "medications": [
+    {
+      "rxnormCode": "274535",
+      "name": "tiotropium 18 MCG Inhalation Capsule",
+      "genericName": "tiotropium",
+      "dose": "18 mcg inhaled once daily",
+      "route": "inhalation",
+      "status": "active",
+      "prescribedDate": "2018-04-02"
+    },
+    {
+      "rxnormCode": "435",
+      "name": "albuterol 90 MCG/ACT Inhaler",
+      "genericName": "albuterol",
+      "dose": "2 puffs inhaled q4h prn",
+      "route": "inhalation",
+      "status": "active",
+      "prescribedDate": "2018-04-02"
+    }
+  ],
+  "observations": [
+    {
+      "loincCode": "19926-5",
+      "display": "FEV1",
+      "value": 1.85,
+      "unit": "L",
+      "effectiveDate": "2025-09-10",
+      "category": "laboratory"
+    },
+    {
+      "loincCode": "19868-9",
+      "display": "FVC",
+      "value": 3.20,
+      "unit": "L",
+      "effectiveDate": "2025-09-10",
+      "category": "laboratory"
+    },
+    {
+      "loincCode": "89270-4",
+      "display": "mMRC dyspnea scale",
+      "value": 3,
+      "unit": "{score}",
+      "effectiveDate": "2025-09-10",
+      "category": "survey"
+    }
+  ],
+  "allergies": []
+}

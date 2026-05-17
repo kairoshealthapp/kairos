@@ -1,0 +1,33 @@
+{
+  "patient": {
+    "id": "fixture-75",
+    "name": "Test Patient 75 — 68yo F former smoker, quit 20 years ago (out of window)",
+    "dob": "1957-09-22",
+    "sex": "female"
+  },
+  "conditions": [],
+  "medications": [],
+  "observations": [
+    {
+      "loincCode": "72166-2",
+      "display": "Former smoker",
+      "effectiveDate": "2026-02-04",
+      "category": "social-history"
+    },
+    {
+      "loincCode": "88029-4",
+      "display": "Pack years",
+      "value": 25,
+      "unit": "{pack-year}",
+      "effectiveDate": "2026-02-04",
+      "category": "social-history"
+    },
+    {
+      "loincCode": "74010-0",
+      "display": "Date quit smoking",
+      "effectiveDate": "2005-06-01",
+      "category": "social-history"
+    }
+  ],
+  "allergies": []
+}

@@ -1,0 +1,12 @@
+{
+  "patient": {
+    "id": "fixture-77",
+    "name": "Test Patient 77 — 45yo M, no tobacco screen documented",
+    "dob": "1980-05-04",
+    "sex": "male"
+  },
+  "conditions": [],
+  "medications": [],
+  "observations": [],
+  "allergies": []
+}

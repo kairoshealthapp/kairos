@@ -1,0 +1,29 @@
+{
+  "patient": {
+    "id": "fixture-79",
+    "name": "Test Patient 79 — 48yo M current smoker on varenicline (suppressed)",
+    "dob": "1977-12-12",
+    "sex": "male"
+  },
+  "conditions": [],
+  "medications": [
+    {
+      "rxnormCode": "588227",
+      "name": "varenicline 1 MG Oral Tablet",
+      "genericName": "varenicline",
+      "dose": "1 mg twice daily",
+      "route": "oral",
+      "status": "active",
+      "prescribedDate": "2026-03-04"
+    }
+  ],
+  "observations": [
+    {
+      "loincCode": "72166-2",
+      "display": "Current every day smoker",
+      "effectiveDate": "2026-03-04",
+      "category": "social-history"
+    }
+  ],
+  "allergies": []
+}

@@ -1,0 +1,47 @@
+{
+  "patient": {
+    "id": "fixture-70",
+    "name": "Test Patient 70 — 60yo F COPD, mMRC 1, no exacerbations, on albuterol (Group A satisfied)",
+    "dob": "1965-04-30",
+    "sex": "female"
+  },
+  "conditions": [
+    {
+      "code": "J44.9",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "COPD",
+      "status": "active",
+      "onsetDate": "2021-10-04"
+    }
+  ],
+  "medications": [
+    {
+      "rxnormCode": "435",
+      "name": "albuterol 90 MCG/ACT Inhaler",
+      "genericName": "albuterol",
+      "dose": "2 puffs q4-6h prn",
+      "route": "inhalation",
+      "status": "active",
+      "prescribedDate": "2021-10-15"
+    }
+  ],
+  "observations": [
+    {
+      "loincCode": "33365-8",
+      "display": "FEV1/FVC ratio",
+      "value": 0.62,
+      "unit": "{ratio}",
+      "effectiveDate": "2026-01-20",
+      "category": "laboratory"
+    },
+    {
+      "loincCode": "89270-4",
+      "display": "mMRC dyspnea scale",
+      "value": 1,
+      "unit": "{score}",
+      "effectiveDate": "2026-01-20",
+      "category": "survey"
+    }
+  ],
+  "allergies": []
+}

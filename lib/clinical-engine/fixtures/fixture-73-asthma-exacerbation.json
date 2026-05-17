@@ -1,0 +1,27 @@
+{
+  "patient": {
+    "id": "fixture-73",
+    "name": "Test Patient 73 — 35yo F asthma, recent exacerbation, no ICS",
+    "dob": "1990-11-30",
+    "sex": "female"
+  },
+  "conditions": [
+    {
+      "code": "J45.41",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Moderate persistent asthma with (acute) exacerbation",
+      "status": "resolved",
+      "onsetDate": "2026-02-18"
+    },
+    {
+      "code": "J45.40",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Moderate persistent asthma, uncomplicated",
+      "status": "active",
+      "onsetDate": "2018-01-01"
+    }
+  ],
+  "medications": [],
+  "observations": [],
+  "allergies": []
+}

@@ -1,0 +1,30 @@
+{
+  "patient": {
+    "id": "fixture-71",
+    "name": "Test Patient 71 — 28yo F asthma, albuterol only, no ICS (SABA-only gap)",
+    "dob": "1997-06-08",
+    "sex": "female"
+  },
+  "conditions": [
+    {
+      "code": "J45.40",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Moderate persistent asthma, uncomplicated",
+      "status": "active",
+      "onsetDate": "2015-09-01"
+    }
+  ],
+  "medications": [
+    {
+      "rxnormCode": "435",
+      "name": "albuterol 90 MCG/ACT Inhaler",
+      "genericName": "albuterol",
+      "dose": "2 puffs prn",
+      "route": "inhalation",
+      "status": "active",
+      "prescribedDate": "2024-04-12"
+    }
+  ],
+  "observations": [],
+  "allergies": []
+}

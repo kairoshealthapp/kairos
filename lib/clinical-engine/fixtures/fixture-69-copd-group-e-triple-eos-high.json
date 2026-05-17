@@ -1,0 +1,68 @@
+{
+  "patient": {
+    "id": "fixture-69",
+    "name": "Test Patient 69 — 72yo M COPD, 3 exacerbations in past year, eos 420, on LABA+LAMA only (group E missing triple)",
+    "dob": "1953-02-08",
+    "sex": "male"
+  },
+  "conditions": [
+    {
+      "code": "J44.9",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "COPD",
+      "status": "active",
+      "onsetDate": "2014-06-11"
+    },
+    {
+      "code": "J44.1",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "COPD with acute exacerbation",
+      "status": "resolved",
+      "onsetDate": "2025-09-04"
+    },
+    {
+      "code": "J44.1",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "COPD with acute exacerbation",
+      "status": "resolved",
+      "onsetDate": "2026-01-22"
+    },
+    {
+      "code": "J44.1",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "COPD with acute exacerbation",
+      "status": "resolved",
+      "onsetDate": "2026-03-30"
+    }
+  ],
+  "medications": [
+    {
+      "rxnormCode": "1487535",
+      "name": "umeclidinium/vilanterol inhaler",
+      "genericName": "umeclidinium/vilanterol",
+      "dose": "1 inhalation daily",
+      "route": "inhalation",
+      "status": "active",
+      "prescribedDate": "2024-11-12"
+    }
+  ],
+  "observations": [
+    {
+      "loincCode": "33365-8",
+      "display": "FEV1/FVC ratio",
+      "value": 0.58,
+      "unit": "{ratio}",
+      "effectiveDate": "2026-04-05",
+      "category": "laboratory"
+    },
+    {
+      "loincCode": "26449-9",
+      "display": "Eosinophils [#/volume] in Blood",
+      "value": 420,
+      "unit": "{#}/uL",
+      "effectiveDate": "2026-04-05",
+      "category": "laboratory"
+    }
+  ],
+  "allergies": []
+}

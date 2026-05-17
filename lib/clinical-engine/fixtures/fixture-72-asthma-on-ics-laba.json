@@ -1,0 +1,39 @@
+{
+  "patient": {
+    "id": "fixture-72",
+    "name": "Test Patient 72 — 42yo M asthma, on budesonide-formoterol (controlled)",
+    "dob": "1983-01-22",
+    "sex": "male"
+  },
+  "conditions": [
+    {
+      "code": "J45.40",
+      "codeSystem": "http://hl7.org/fhir/sid/icd-10-cm",
+      "display": "Moderate persistent asthma",
+      "status": "active",
+      "onsetDate": "2010-03-15"
+    }
+  ],
+  "medications": [
+    {
+      "rxnormCode": "896188",
+      "name": "budesonide 160 MCG / formoterol 4.5 MCG Inhalation Powder",
+      "genericName": "budesonide/formoterol",
+      "dose": "2 inhalations twice daily",
+      "route": "inhalation",
+      "status": "active",
+      "prescribedDate": "2020-06-08"
+    },
+    {
+      "rxnormCode": "435",
+      "name": "albuterol 90 MCG/ACT Inhaler",
+      "genericName": "albuterol",
+      "dose": "2 puffs prn",
+      "route": "inhalation",
+      "status": "active",
+      "prescribedDate": "2020-06-08"
+    }
+  ],
+  "observations": [],
+  "allergies": []
+}
