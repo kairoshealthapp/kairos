@@ -1,13 +1,14 @@
-// /provider — provider day-in-the-life surface, clinic-dropdown
-// architecture. Three persistent clinic buttons at the top of the page
-// each open a dropdown menu containing that clinic's patient list.
-// Clicking a patient row opens the briefing card (drawer). When the
-// card is open, the clinic nav and dropdowns are unmounted (not just
-// hidden) so nothing bleeds through.
+// /provider — 4-column day-in-the-life surface. One column per clinic
+// (Cardiology / Family Practice / Internal Medicine / Pulmonology),
+// equal width on desktop, vertical-stack on mobile with tap-to-
+// collapse. Each card runs the clinical engine against its patient
+// bundle and shows firing rule findings inline.
 //
 // Tour control flows through the same callbacks the user uses, so
 // tour-driven and user-driven interactions are indistinguishable from
-// the data layer's perspective.
+// the data layer's perspective. Per-clinic tour buttons sit in each
+// column's header and dispatch a "kairos-provider-tour:start-clinic"
+// event handled by ProviderTour.
 
 "use client";
 
@@ -15,34 +16,53 @@ import { useCallback, useState } from "react";
 import Link from "next/link";
 
 import CARDIOLOGY_SCHEDULE from "@/lib/fixtures/providerSchedule.cardiology";
-import PULMONOLOGY_SCHEDULE from "@/lib/fixtures/providerSchedule.pulmonology";
+import FAMILY_PRACTICE_SCHEDULE from "@/lib/fixtures/providerSchedule.familyPractice";
 import INTERNAL_MEDICINE_SCHEDULE from "@/lib/fixtures/providerSchedule.internalMedicine";
+import PULMONOLOGY_SCHEDULE from "@/lib/fixtures/providerSchedule.pulmonology";
 
 import CARDIOLOGY_BRIEFINGS from "@/lib/fixtures/providerBriefings.cardiology";
-import PULMONOLOGY_BRIEFINGS from "@/lib/fixtures/providerBriefings.pulmonology";
+import FAMILY_PRACTICE_BRIEFINGS from "@/lib/fixtures/providerBriefings.familyPractice";
 import INTERNAL_MEDICINE_BRIEFINGS from "@/lib/fixtures/providerBriefings.internalMedicine";
+import PULMONOLOGY_BRIEFINGS from "@/lib/fixtures/providerBriefings.pulmonology";
 
-import ClinicNav from "./components/ClinicNav";
+import PatientColumn from "./components/PatientColumn";
 import BriefingDrawer from "./components/BriefingDrawer";
 import ProviderTour from "./components/ProviderTour";
-import ProviderTourLauncher from "./components/ProviderTourLauncher";
 
 const SCHEDULES = {
   cardiology: CARDIOLOGY_SCHEDULE,
-  pulmonology: PULMONOLOGY_SCHEDULE,
+  familyPractice: FAMILY_PRACTICE_SCHEDULE,
   internalMedicine: INTERNAL_MEDICINE_SCHEDULE,
+  pulmonology: PULMONOLOGY_SCHEDULE,
 };
 
 const BRIEFINGS = {
   cardiology: CARDIOLOGY_BRIEFINGS,
-  pulmonology: PULMONOLOGY_BRIEFINGS,
+  familyPractice: FAMILY_PRACTICE_BRIEFINGS,
   internalMedicine: INTERNAL_MEDICINE_BRIEFINGS,
+  pulmonology: PULMONOLOGY_BRIEFINGS,
 };
 
-// Open a clinic on load (and on reset) so the page shows a schedule
-// immediately instead of an empty body — a first-time visitor has no
-// affordance telling them to click a dropdown.
-const DEFAULT_CLINIC = "cardiology";
+// Column order left-to-right.
+const CLINIC_COLUMNS = [
+  { key: "cardiology", label: "Cardiology" },
+  { key: "familyPractice", label: "Family Practice" },
+  { key: "internalMedicine", label: "Internal Medicine" },
+  { key: "pulmonology", label: "Pulmonology" },
+];
+
+// Mobile-default expanded state — all 4 columns expanded on first
+// render so a viewer sees every clinic. User can tap headers to
+// collapse on mobile. md+ ignores collapsed state.
+function makeInitialCollapsed() {
+  const out = {};
+  for (const c of CLINIC_COLUMNS) out[c.key] = false;
+  return out;
+}
+
+// Visual "highlighted" clinic — replaces the old openClinic dropdown
+// state. Cardiology highlighted by default (preserves Fix 2 behavior).
+const DEFAULT_HIGHLIGHTED = "cardiology";
 
 function ResetIcon() {
   return (
@@ -54,21 +74,13 @@ function ResetIcon() {
 }
 
 export default function ProviderPage() {
-  // openClinic: which dropdown is open ('cardiology' | 'pulmonology' | 'internalMedicine' | null)
-  const [openClinic, setOpenClinic] = useState(DEFAULT_CLINIC);
-  // openVisit: { visit, specialty } or null. specialty is needed to
-  // resolve the briefing fixture lookup.
+  const [highlightedClinic, setHighlightedClinic] = useState(DEFAULT_HIGHLIGHTED);
+  const [collapsed, setCollapsed] = useState(makeInitialCollapsed);
+  // openVisit: { visit, specialty } or null.
   const [openVisit, setOpenVisit] = useState(null);
 
-  // ── User-facing handlers (also used by tour) ──
-  const handleClinicToggle = useCallback((clinic) => {
-    setOpenClinic((prev) => (prev === clinic ? null : clinic));
-  }, []);
-  const handleClinicOpen = useCallback((clinic) => {
-    setOpenClinic(clinic);
-  }, []);
-  const handleClinicClose = useCallback(() => {
-    setOpenClinic(null);
+  const handleClinicToggleCollapse = useCallback((clinic) => {
+    setCollapsed((prev) => ({ ...prev, [clinic]: !prev[clinic] }));
   }, []);
   const handleVisitOpen = useCallback((visit, specialty) => {
     if (!visit) return;
@@ -77,8 +89,18 @@ export default function ProviderPage() {
   const handleVisitClose = useCallback(() => {
     setOpenVisit(null);
   }, []);
+  const handleTourStart = useCallback((clinic) => {
+    if (typeof window === "undefined") return;
+    setHighlightedClinic(clinic);
+    window.dispatchEvent(
+      new CustomEvent("kairos-provider-tour:start-clinic", {
+        detail: { clinic },
+      })
+    );
+  }, []);
   const handleResetDemo = useCallback(() => {
-    setOpenClinic(DEFAULT_CLINIC);
+    setHighlightedClinic(DEFAULT_HIGHLIGHTED);
+    setCollapsed(makeInitialCollapsed());
     setOpenVisit(null);
   }, []);
 
@@ -99,7 +121,6 @@ export default function ProviderPage() {
               KAIROS
             </Link>
             <div className="flex items-center gap-3 text-[12px] shrink-0">
-              <ProviderTourLauncher />
               <span className="hidden sm:inline text-bone-muted">Provider</span>
               <button
                 type="button"
@@ -116,8 +137,8 @@ export default function ProviderPage() {
         </div>
       </header>
 
-      {/* Clinic nav + dropdowns. Unmounted while a card is open so the
-          schedule never bleeds through. */}
+      {/* 4-column clinic grid. Unmounted while a card is open so the
+          schedule never bleeds through the drawer. */}
       {!openVisit && (
         <>
           <div data-tour-anchor="page-title" className="mb-4">
@@ -128,13 +149,22 @@ export default function ProviderPage() {
               Provider Schedule · May 7, 2026
             </h1>
           </div>
-          <ClinicNav
-            openClinic={openClinic}
-            schedules={SCHEDULES}
-            onClinicToggle={handleClinicToggle}
-            onClinicClose={handleClinicClose}
-            onVisitOpen={handleVisitOpen}
-          />
+          <div className="flex flex-col md:flex-row md:items-stretch gap-3">
+            {CLINIC_COLUMNS.map((c) => (
+              <PatientColumn
+                key={c.key}
+                clinicKey={c.key}
+                label={c.label}
+                schedule={SCHEDULES[c.key] || []}
+                highlighted={highlightedClinic === c.key}
+                collapsed={collapsed[c.key]}
+                tourMinutes={2}
+                onToggleCollapse={() => handleClinicToggleCollapse(c.key)}
+                onVisitOpen={handleVisitOpen}
+                onTourStart={handleTourStart}
+              />
+            ))}
+          </div>
         </>
       )}
 
@@ -152,11 +182,10 @@ export default function ProviderPage() {
       )}
 
       <ProviderTour
-        openClinic={openClinic}
+        highlightedClinic={highlightedClinic}
         openVisit={openVisit}
         schedules={SCHEDULES}
-        onClinicOpen={handleClinicOpen}
-        onClinicClose={handleClinicClose}
+        onClinicHighlight={setHighlightedClinic}
         onVisitOpen={handleVisitOpen}
         onVisitClose={handleVisitClose}
       />
