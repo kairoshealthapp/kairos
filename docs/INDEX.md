@@ -57,7 +57,6 @@ Michael Nygard format. New ADRs go in `docs/decisions/` with the next available 
 - [hygiene-2026-05-13.md](hygiene-2026-05-13.md) — Lint, ts-prune, and depcheck findings (2026-05-13 sweep).
 - [sandbox-probe-2026-05-07.md](sandbox-probe-2026-05-07.md) — Epic FHIR R4 sandbox multi-patient probe results.
 - [vercel-clinai-kairos-audit.md](vercel-clinai-kairos-audit.md) — Vercel deployment audit (Kairos vs. clinai).
-- [KAIROS-SESSION-2026-04-29-AFTERNOON.md](KAIROS-SESSION-2026-04-29-AFTERNOON.md) — Snapshot of the 2026-04-29 afternoon working session.
 - [DEPLOY-CHECKLIST-2026-04-30.md](DEPLOY-CHECKLIST-2026-04-30.md) — Pre-deploy checklist used on 2026-04-30.
 
 ## Demo & narration
