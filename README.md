@@ -124,3 +124,7 @@ Kairos is a **design-stage prototype**. It runs entirely on **synthetic clinical
 It was built on personal infrastructure as a portfolio artifact — to demonstrate an architecture for safety-critical clinical decision support: deterministic rule engineering, guideline-sourced clinical logic, an explicit human-authorization governance model, and a language model kept deliberately out of the decision path.
 
 Built by Brandon Sterne, a registered nurse with 26 years of clinical experience, now working in cardiology — built from direct observation of how clinical workflow and clinical synthesis actually happen in practice.
+
+## License
+
+Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for the full text.
